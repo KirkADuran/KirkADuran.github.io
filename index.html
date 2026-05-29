@@ -1,7 +1,268 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kirk Duran</title>
+  <style>
+    :root {
+      --bg: #f7f7f5;
+      --text: #1f2933;
+      --muted: #5f6b7a;
+      --accent: #154c79;
+      --card: #ffffff;
+      --border: #d8dee4;
+    }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    header {
+      background: var(--accent);
+      color: white;
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2.7rem;
+      font-weight: normal;
+    }
+
+    header p {
+      margin: 0.5rem 0 0;
+      font-size: 1.2rem;
+    }
+
+    nav {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+      padding: 0.8rem;
+      position: sticky;
+      top: 0;
+    }
+
+    nav a {
+      color: var(--accent);
+      text-decoration: none;
+      margin: 0 0.8rem;
+      font-weight: bold;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    main {
+      max-width: 950px;
+      margin: 2rem auto;
+      padding: 0 1.2rem;
+    }
+
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    h2 {
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.3rem;
+      margin-top: 0;
+    }
+
+    h3 {
+      margin-bottom: 0.2rem;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .item {
+      margin-bottom: 1rem;
+    }
+
+    ul {
+      padding-left: 1.4rem;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      padding: 2rem;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 650px) {
+      header h1 {
+        font-size: 2.1rem;
+      }
+
+      nav a {
+        display: inline-block;
+        margin: 0.3rem 0.5rem;
+      }
+    }
+  </style>
+</head>
+
 <body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
+  <header>
+    <h1>Kirk Duran</h1>
+    <p>Full-Time Lecturer, Computer Science & Software Engineering</p>
+    <p>California Polytechnic State University, San Luis Obispo</p>
+  </header>
+
+  <nav>
+    <a href="#about">About</a>
+    <a href="#cv">CV</a>
+    <a href="#teaching">Teaching</a>
+    <a href="#publications">Publications</a>
+    <a href="#courses">Course Materials</a>
+  </nav>
+
+  <main>
+    <section id="about">
+      <h2>About</h2>
+      <p>
+        I am a Full-Time Lecturer in Computer Science & Software Engineering at
+        California Polytechnic State University, San Luis Obispo. My teaching and
+        academic interests include computer science education, algorithms,
+        artificial intelligence, machine learning, reinforcement learning,
+        robotics, and software development.
+      </p>
+    </section>
+
+    <section id="cv">
+      <h2>Curriculum Vitae</h2>
+
+      <h3>Academic Experience</h3>
+      <div class="item">
+        <strong>Full-Time Lecturer, Computer Science & Software Engineering</strong><br />
+        California Polytechnic State University, San Luis Obispo<br />
+        <span class="muted">Fall 2023 – Present</span>
+      </div>
+
+      <h3>Education</h3>
+      <div class="item">
+        <strong>Ph.D. Student, Computer Science</strong> — University of New Hampshire<br />
+        <span class="muted">Fall 2021 – Spring 2022, did not complete</span>
+      </div>
+      <div class="item">
+        <strong>M.S., Computer Engineering Science</strong> — Sonoma State University<br />
+        <span class="muted">Fall 2019 – Spring 2021</span>
+      </div>
+      <div class="item">
+        <strong>B.A., Applied Mathematics and Computer Science</strong> — University of California, Berkeley<br />
+        <span class="muted">Summer 2014 – Fall 2016</span>
+      </div>
+      <div class="item">
+        <strong>A.S., Mathematics, Physics, and Chemistry</strong> — Los Angeles Harbor College<br />
+        <span class="muted">Fall 2011 – Spring 2014</span>
+      </div>
+
+      <h3>Professional Experience</h3>
+      <div class="item">
+        <strong>Machine Learning Engineer</strong><br />
+        Remi AI, Santa Rosa, CA<br />
+        <span class="muted">March 2020 – March 2021</span>
+      </div>
+      <div class="item">
+        <strong>Applications Robotics Engineer</strong><br />
+        Physik Instrumente, Sausalito, CA<br />
+        <span class="muted">March 2017 – February 2020</span>
+      </div>
+
+      <h3>Other Experience</h3>
+      <div class="item">
+        <strong>Graduate Teaching Assistant, CS 416 – Introduction to Computer Science II</strong><br />
+        University of New Hampshire<br />
+        <span class="muted">Spring 2022</span>
+      </div>
+      <div class="item">
+        <strong>Graduate Teaching Assistant, CS 415 – Introduction to Computer Science I</strong><br />
+        University of New Hampshire<br />
+        <span class="muted">Fall 2021</span>
+      </div>
+      <div class="item">
+        <strong>Math Tutor</strong><br />
+        Los Angeles Harbor College, Learning Resource Center<br />
+        <span class="muted">Fall 2012 – Spring 2014</span>
+      </div>
+    </section>
+
+    <section id="teaching">
+      <h2>Teaching Assignments</h2>
+
+      <h3>California Polytechnic State University, San Luis Obispo</h3>
+
+      <ul>
+        <li><strong>Fall 2023:</strong> CS 101, CS 101, CS 101</li>
+        <li><strong>Winter 2024:</strong> CS 101, CS 101, CS 202</li>
+        <li><strong>Spring 2024:</strong> CS 202, CS 202, CS 202</li>
+        <li><strong>Summer 2024:</strong> CS 101</li>
+        <li><strong>Fall 2024:</strong> CS 202, CS 203, CS 203</li>
+        <li><strong>Winter 2025:</strong> CS 202, CS 101, CS 101</li>
+        <li><strong>Spring 2025:</strong> CS 480, CS 480, CS 202</li>
+        <li><strong>Summer 2025:</strong> CS 2480</li>
+        <li><strong>Winter 2026:</strong> CS 101, CS 101, CS 480</li>
+        <li><strong>Spring 2026:</strong> CS 202, CS 202, CS 349</li>
+      </ul>
+    </section>
+
+    <section id="publications">
+      <h2>Peer-Reviewed Publications</h2>
+
+      <p>
+        K. Duran, R. J. Hernandez, and S. Shrestha,
+        “Deep Reinforcement Learning for a Four Degree of Freedom Robot Arm
+        Accelerated by Human Demonstration,”
+        <em>Proceedings of the 2025 3rd International Conference on Disruptive Technologies</em>
+        (ICDT), Greater Noida, India, 2025, pp. 537–542.
+        doi: 10.1109/ICDT63985.2025.10986448.
+      </p>
+
+      <p>
+        <a href="https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10986448&tag=1">
+          View paper
+        </a>
+      </p>
+    </section>
+
+    <section id="courses">
+      <h2>Course Materials</h2>
+
+      <p>
+        This section will contain public course materials such as syllabi,
+        lecture notes, assignments, examples, and supplementary resources.
+      </p>
+
+      <ul>
+        <li><strong>CS 101:</strong> Coming soon</li>
+        <li><strong>CS 202:</strong> Coming soon</li>
+        <li><strong>CS 349:</strong> Coming soon</li>
+        <li><strong>CS 480:</strong> Coming soon</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>© 2026 Kirk Duran</p>
+  </footer>
 </body>
 </html>
