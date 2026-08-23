@@ -1,0 +1,68 @@
+% Shared Beamer setup for Fall 2026 course slides.
+\mode<presentation>{
+  \usetheme{Madrid}
+  \usecolortheme{default}
+}
+
+\definecolor{CalPolyGreen}{HTML}{154734}
+\definecolor{CalPolyGold}{HTML}{BD8B13}
+\definecolor{DeckInk}{HTML}{1F2933}
+\definecolor{DeckMuted}{HTML}{5F6B7A}
+
+\setbeamercolor{structure}{fg=CalPolyGreen}
+\setbeamercolor{palette primary}{bg=CalPolyGreen,fg=white}
+\setbeamercolor{palette secondary}{bg=DeckInk,fg=white}
+\setbeamercolor{palette tertiary}{bg=CalPolyGold,fg=DeckInk}
+\setbeamercolor{frametitle}{bg=CalPolyGreen,fg=white}
+\setbeamercolor{title}{fg=CalPolyGreen}
+\setbeamercolor{normal text}{fg=DeckInk,bg=white}
+\setbeamercolor{block title}{bg=CalPolyGreen,fg=white}
+\setbeamercolor{block body}{bg=black!3,fg=DeckInk}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+\setbeamertemplate{itemize item}{\color{CalPolyGold}$\blacktriangleright$}
+\setbeamertemplate{itemize subitem}{\color{CalPolyGreen}$\bullet$}
+
+\newcommand{\CourseNumber}{Course}
+\newcommand{\CourseTitle}{Course Title}
+\newcommand{\LectureNumber}{0}
+\newcommand{\LectureTitle}{Lecture Title}
+\newcommand{\LectureDate}{Date}
+\newcommand{\CourseUnit}{Unit}
+
+\newcommand{\coursenumber}[1]{\renewcommand{\CourseNumber}{#1}}
+\newcommand{\coursetitle}[1]{\renewcommand{\CourseTitle}{#1}}
+\newcommand{\lecturenumber}[1]{\renewcommand{\LectureNumber}{#1}}
+\newcommand{\lecturetitle}[1]{\renewcommand{\LectureTitle}{#1}}
+\newcommand{\lecturedate}[1]{\renewcommand{\LectureDate}{#1}}
+\newcommand{\courseunit}[1]{\renewcommand{\CourseUnit}{#1}}
+
+\author{Kirk Duran}
+\institute{California Polytechnic State University, San Luis Obispo}
+\date{\LectureDate}
+
+\newcommand{\makedecktitle}{
+  \begin{frame}[plain]
+    \vspace{0.25in}
+    {\usebeamerfont{title}\color{CalPolyGreen}\LectureTitle\par}
+    \vspace{0.18in}
+    {\large \CourseNumber{}: \CourseTitle\par}
+    \vspace{0.08in}
+    {\large Lecture \LectureNumber{} -- \LectureDate\par}
+    \vfill
+    {\small Kirk Duran \textbar{} Cal Poly, San Luis Obispo\par}
+  \end{frame}
+}
+
+\newcommand{\placeholdernote}{
+  \begin{block}{Placeholder}
+    Replace these bullets with the final lecture material, examples, and in-class activities.
+  \end{block}
+}
+
+\AtBeginSection[]{
+  \begin{frame}{Roadmap}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
