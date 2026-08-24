@@ -1,54 +1,629 @@
 \documentclass[aspectratio=169]{beamer}
 \input{../../common/preamble.tex}
+\graphicspath{{../assets/lecture-01/}}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{1}
-\lecturetitle{Introduction to Artificial Intelligence -- history, definitions, capabilities, major paradigms}
+\lecturetitle{What Is Artificial Intelligence?}
 \lecturedate{August 24, 2026}
-\courseunit{Course sequence}
+\courseunit{0. Introduction and Framing}
 
 \begin{document}
 
 \makedecktitle
 
+% ============================================================
+% Opening
+% ============================================================
+
+\begin{frame}{Artificial Intelligence}
+  \begin{keyidea}
+    AI has more public attention than ever. Before we study the techniques, we need to decide what we actually mean by ``artificial intelligence.''
+  \end{keyidea}
+  \vspace{0.06in}
+  \begin{itemize}
+    \item AI is no longer confined to science fiction or research laboratories.
+    \item It increasingly shapes work, education, medicine, media, science, and everyday decisions.
+    \item The term ``AI'' now refers to many different systems with very different capabilities.
+  \end{itemize}
+  \vspace{0.06in}
+  \begin{activity}
+    When you hear ``AI,'' what system or capability comes to mind first?
+  \end{activity}
+\end{frame}
+
+\begin{frame}{How We Will Talk In This Course}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Socratic Method}
+        We will often begin with a question before we introduce the formal answer.
+      \end{block}
+      \begin{itemize}
+        \item I will ask for your intuition.
+        \item I may call on people around the room.
+        \item ``I do not know'' is a valid starting point.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{keyidea}
+        The goal is not to guess what I am thinking. The goal is to expose assumptions, compare explanations, and make our reasoning precise.
+      \end{keyidea}
+    \end{column}
+  \end{columns}
+\end{frame}
+
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Introduction to Artificial Intelligence -- history, definitions, capabilities, major paradigms
-    \item Placeholder for announcements and context.
+    \item What do we mean by artificial intelligence?
+    \item What do we mean by intelligence?
+    \item Where did AI come from?
+    \item What kinds of methods count as AI?
+    \item What questions will this course try to answer?
+    \item What larger technical and social questions surround the field?
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+% ============================================================
+\sectionframe{Part 1: What Is Artificial Intelligence?}
+% ============================================================
+
+\begin{frame}{A Working Definition}
+  \begin{center}
+    {\Huge What should count as AI?}
+  \end{center}
+  \vspace{0.18in}
+  \begin{activity}
+    Propose a one-sentence definition. What must a system be able to do before you would call it intelligent?
+  \end{activity}
+\end{frame}
+
+\begin{frame}[shrink=4]{Definitions Emphasize Different Things}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.31\textwidth}
+      \begin{block}{AIMA}
+        Focuses on \textbf{agents}: systems that perceive an environment and choose actions.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Industry}
+        Often emphasizes machines performing tasks associated with human reasoning, prediction, or decision-making.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Engineering}
+        Often frames AI as building systems that exhibit useful intelligent behavior.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{0.15in}
+  \begin{keyidea}
+    There is no single universally accepted definition. Different definitions emphasize behavior, mechanisms, goals, or comparison with humans.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=3]{More Ways To Define AI}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Human-like Tasks}
+        Systems that perform tasks normally associated with human intelligence: perception, language, reasoning, and decision-making.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Goal-Directed Systems}
+        Machines that make predictions, recommendations, or decisions in pursuit of human-defined objectives.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Learning And Problem Solving}
+        Computational systems that learn, reason, search, plan, or otherwise solve problems.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Our Working Definition}
+  \begin{cpdefinition}
+    Artificial intelligence is the study and engineering of computational systems that perceive, reason, learn, decide, or act in ways that accomplish goals we associate with intelligent behavior.
+  \end{cpdefinition}
+  \vspace{0.14in}
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item The system does not need to think exactly like a human.
+    \item The system does not need to be generally intelligent.
+    \item Intelligence can appear in narrow, well-defined tasks.
+    \item We care about both \textbf{what} the system can do and \textbf{how} it does it.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Why Are You Studying AI?}
+  \begin{center}
+    {\Huge I want to hear from you.}
+  \end{center}
+  \vspace{0.16in}
+  \begin{activity}
+    What made you enroll in this course? Curiosity, career goals, research, fear of missing out, wanting to understand modern systems, something else?
+  \end{activity}
+\end{frame}
+
+\begin{frame}[shrink=4]{Why I Am Interested In AI}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Automation}
+        If a machine can reliably do repetitive work, why should a human have to do it?
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Optimism}
+        AI can amplify human capability and potentially improve health, science, accessibility, education, and productivity.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Philosophy}
+        Building artificial minds forces us to ask what intelligence is, what understanding is, and what is uniquely human.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 2: Where Did AI Come From?}
+% ============================================================
+
+\begin{frame}{A Very Short History}
+  \begin{keyidea}
+    AI has repeatedly moved through cycles of ambitious goals, technical breakthroughs, bottlenecks, disappointment, and renewed progress.
+  \end{keyidea}
+  \vspace{0.08in}
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item \textbf{1950s--1960s:} symbolic reasoning, search, theorem proving.
+    \item \textbf{1970s--1980s:} expert systems and knowledge engineering.
+    \item \textbf{1990s--2000s:} probabilistic reasoning, data-driven learning, stronger computing infrastructure.
+    \item \textbf{2010s--present:} deep learning, large-scale models, reinforcement learning, and generative AI.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{The Recurring Question}
+  \begin{center}
+    {\Huge What parts of intelligent behavior can be represented computationally?}
+  \end{center}
+  \vspace{0.16in}
+  \begin{keyidea}
+    The tools change, but AI keeps returning to this question.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{20th-Century Beginnings}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Bold Ambition}
+        Build machines that could reason and act in ways associated with human intelligence.
+      \end{block}
+      \begin{block}{Scientific Motivation}
+        Formalize reasoning, problem solving, language, learning, and decision-making.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Engineering Motivation}
+        Automate difficult tasks and extend what machines can do.
+      \end{block}
+      \begin{block}{Social Context}
+        War, economic competition, research funding, and technological optimism influenced the field's priorities.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{1950: Turing Changes The Question}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\textwidth}
+      \begin{itemize}
+        \item Alan Turing asked whether machines could exhibit intelligent behavior.
+        \item He proposed an operational test based on text conversation.
+        \item The focus shifts from defining an invisible mental property to examining observable behavior.
+      \end{itemize}
+      \vspace{0.10in}
+      \begin{keyidea}
+        When a concept is hard to define directly, ask what evidence would demonstrate it.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.35\textwidth}
+      \begin{block}{Question}
+        If a machine can convincingly imitate intelligent conversation, is that enough to call it intelligent?
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{1956: Artificial Intelligence Becomes A Field}
+  \begin{itemize}
+    \item John McCarthy helped organize the Dartmouth summer research project where the term \textbf{artificial intelligence} was introduced.
+    \item Researchers proposed that aspects of learning and intelligence might be described precisely enough for machines to simulate them.
+    \item The field began with unusually ambitious expectations about general-purpose machine intelligence.
+  \end{itemize}
+  \vspace{0.14in}
+  \begin{activity}
+    Is it easier to build a machine that is excellent at one task, or a machine that is broadly competent across many tasks? Why?
+  \end{activity}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 3: What Do We Mean By Intelligence?}
+% ============================================================
+
+\begin{frame}{Intelligence}
+  \begin{center}
+    {\Huge What does intelligence mean?}
+  \end{center}
+  \vspace{0.18in}
+  \begin{activity}
+    Name one capability you think is essential to intelligence. Could a system possess that capability without possessing the others?
+  \end{activity}
+\end{frame}
+
+\begin{frame}[shrink=4]{Behavior Is Not The Same As Understanding}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.5\textwidth}
+      \begin{block}{The Chinese Room}
+        John Searle's thought experiment asks us to imagine a person manipulating unfamiliar symbols by following formal rules.
+      \end{block}
+      \begin{itemize}
+        \item Inputs arrive as symbols.
+        \item Rules determine which symbols to return.
+        \item To an outsider, the responses may appear meaningful.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{keyidea}
+        The philosophical challenge: can correct symbol manipulation produce genuine understanding, or only the appearance of understanding?
+      \end{keyidea}
+      \vspace{0.10in}
+      \begin{activity}
+        Does this argument become more or less convincing when applied to modern language models?
+      \end{activity}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{AI Is More Than ChatGPT}
+  \begin{keyidea}
+    Large language models are one part of AI. The field includes systems with very different goals, representations, and mechanisms.
+  \end{keyidea}
+  \vspace{0.12in}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Simple Automation}
+        Sensors, rules, controllers, and reactive systems.
+      \end{block}
+    \end{column}
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Modern AI}
+        Search, planning, probabilistic models, machine learning, neural networks, robotics, and language systems.
+      \end{block}
+    \end{column}
+    \begin{column}{0.30\textwidth}
+      \begin{block}{General Intelligence}
+        Hypothetical systems with broad, flexible competence across many domains.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=5]{AI Is A Toolbox Of Mechanisms}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.18\textwidth}
+      \begin{block}{Search}
+        Explore possible states or actions.
+      \end{block}
+    \end{column}
+    \begin{column}{0.18\textwidth}
+      \begin{block}{Logic}
+        Represent facts and derive conclusions.
+      \end{block}
+    \end{column}
+    \begin{column}{0.18\textwidth}
+      \begin{block}{Probability}
+        Reason under uncertainty.
+      \end{block}
+    \end{column}
+    \begin{column}{0.18\textwidth}
+      \begin{block}{Learning}
+        Improve behavior from data or experience.
+      \end{block}
+    \end{column}
+    \begin{column}{0.18\textwidth}
+      \begin{block}{Hybrid Systems}
+        Combine multiple representations and methods.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{0.16in}
+  \begin{keyidea}
+    AI is not one algorithm. It is a collection of approaches for building systems that behave intelligently.
+  \end{keyidea}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 4: What Will We Study?}
+% ============================================================
+
+\begin{frame}[shrink=4]{AI Course Roadmap}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Unit 1: Intelligent Agents}
+        Perception, actions, environments, rational behavior.
+      \end{block}
+      \begin{block}{Unit 2: Search}
+        State spaces, heuristics, path finding, optimization.
+      \end{block}
+      \begin{block}{Unit 3: Adversarial Games}
+        Minimax, alpha--beta pruning, Monte Carlo search.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Unit 4: Knowledge-Based Systems}
+        Logic, representation, inference, planning.
+      \end{block}
+      \begin{block}{Unit 5: Uncertain Knowledge}
+        Probability, Bayes, graphical models, tracking.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Unit 6: Learning}
+        Machine learning, neural networks, reinforcement learning.
+      \end{block}
+      \begin{block}{Unit 7: Language-Based Systems}
+        Language models and modern generative AI.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=3]{Questions We Hope To Answer}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item How can an agent perceive its surroundings and choose useful actions?
+        \item How can a machine explore alternatives through trial and error?
+        \item How can a program search large spaces efficiently?
+        \item How can computers represent knowledge and draw conclusions?
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item How can AI reason when information is uncertain?
+        \item What allows a system to learn from data or experience?
+        \item How do modern language and generative systems work at a high level?
+        \item Which problems remain fundamentally difficult?
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The Ambitious Goal}
+  \begin{center}
+    {\Huge How general can artificial intelligence become?}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Artificial General Intelligence}
+  \begin{cpdefinition}
+    Artificial General Intelligence (AGI) usually refers to a hypothetical system with broad, flexible competence across many intellectual tasks rather than exceptional performance on only one narrow problem.
+  \end{cpdefinition}
+  \vspace{0.14in}
+  \begin{itemize}
+    \item Modern AI is impressive but uneven: systems can be extraordinary in one setting and brittle in another.
+    \item AGI is a research aspiration and a contested concept, not a capability we should assume has already been achieved.
+    \item Studying narrow AI still teaches us the mechanisms from which more general systems may be built.
+  \end{itemize}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 5: What Should We Want From AI?}
+% ============================================================
+
+\begin{frame}{Is This A Good Thing Or A Bad Thing?}
+  \begin{center}
+    {\Huge I want your opinion.}
+  \end{center}
+  \vspace{0.16in}
+  \begin{activity}
+    If AI becomes dramatically more capable over your lifetime, what is one outcome you hope for and one outcome you worry about?
+  \end{activity}
+\end{frame}
+
+\begin{frame}[shrink=4]{Automation, Power, And Control}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{The Promise}
+        Automation can reduce repetitive labor, improve access to expertise, accelerate discovery, and expand human capability.
+      \end{block}
+      \begin{block}{The Risk}
+        The same systems can concentrate decision-making power, enable surveillance, encode bias, or make institutions harder to challenge.
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{exampleblockcp}
+        A useful political-philosophy lens: systems can trade autonomy for coordination, efficiency, or security.
+      \end{exampleblockcp}
+      \vspace{0.10in}
+      \begin{activity}
+        Who should be allowed to delegate decisions to AI, and which decisions should remain meaningfully contestable by humans?
+      \end{activity}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Case Study Prompt: Replacing Human Work}
+  \begin{keyidea}
+    Automating a task is not the same as automating a job, and replacing a worker is not the same as replacing the judgment surrounding the work.
+  \end{keyidea}
+  \vspace{0.14in}
+  \begin{itemize}
+    \item Which parts of a job are predictable enough to automate?
+    \item Which parts depend on context, accountability, trust, or tacit knowledge?
+    \item What happens when organizations automate faster than they understand the failure modes?
+    \item If automation fails, who absorbs the cost?
+  \end{itemize}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 6: Bigger Questions}
+% ============================================================
+
+\begin{frame}[shrink=4]{The Search For The Simplest Life Form}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Biology's Question}
+        What is the smallest set of mechanisms required for something to remain alive, reproduce, and adapt?
+      \end{block}
+      \begin{itemize}
+        \item Minimal genomes.
+        \item Synthetic cells.
+        \item Core mechanisms versus accumulated complexity.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{AI Analogy}
+        What is the smallest collection of mechanisms required for behavior we would call intelligent?
+      \end{block}
+      \begin{activity}
+        Is there a ``minimum viable mind''? What capabilities would have to be included?
+      \end{activity}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=3]{Mapping The Brain}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Neuroscience}
+        Researchers map biological brains at increasingly fine levels: regions, cell types, neurons, and connections.
+      \end{block}
+      \begin{itemize}
+        \item The brain is extraordinarily complex.
+        \item Even small nervous systems can be difficult to fully characterize.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Question For AI}
+        Does understanding biological intelligence tell us how to engineer artificial intelligence?
+      \end{block}
+      \begin{itemize}
+        \item Copy the mechanism?
+        \item Reproduce the function another way?
+        \item Learn principles without copying biology literally?
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Limits Of Formal Systems}
+  \begin{block}{Gödel's Incompleteness Theorems}
+    Roughly: sufficiently expressive formal systems contain statements whose truth cannot be established using only the system's own proof rules, assuming the system satisfies the required conditions.
   \end{block}
+  \vspace{0.12in}
+  \begin{keyidea}
+    This is a theorem about formal mathematical systems, not a theorem that proves human minds are non-computational or that AI has a particular ceiling.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Limits Of Formal Systems: Discussion}
+  \begin{activity}
+    Why are arguments about the limits of formal reasoning so tempting in discussions of intelligence? What additional assumptions would be needed to connect them to minds?
+  \end{activity}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 7: Course Logistics}
+% ============================================================
+
+\begin{frame}{Course Logistics And Syllabus}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Canvas}
+        Announcements, assignments, grades, due dates, and course documents.
+      \end{block}
+      \begin{block}{Lectures}
+        Slides are a scaffold. Class discussion, worked examples, and questions are part of the course content.
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{activity}
+        Open the syllabus on Canvas. We will walk through grading, late work, collaboration, AI-tool policy, labs, and major deadlines.
+      \end{activity}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=4]{About Me}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Full-Time Lecturer in Computer Science and Software Engineering.
+        \item Education in applied mathematics, computer science, and computer engineering.
+        \item Research interests: deep reinforcement learning, heuristic search, robotics, and computer science education.
+        \item Industry experience in robotics engineering and machine learning engineering.
+        \item Mentoring through Beacons, OUDI, CENG SURP, research projects, and career preparation.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \begin{block}{Outside Class}
+        Basketball, weightlifting, video games, anime, and thinking too much about computers.
+      \end{block}
+      \begin{keyidea}
+        I am here to help you learn the material and navigate the field.
+      \end{keyidea}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Community}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Color Coded by ColorStack}
+        A Cal Poly community centered on computing, belonging, peer support, professional development, and access to opportunities.
+      \end{block}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item Join the Discord.
+        \item Follow \texttt{@colorcodedslo}.
+        \item Watch for events, resources, and opportunities.
+        \item Bring a friend.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Waitlist And Roll Call}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item If you are on the waitlist, keep attending while enrollment settles.
+    \item I will communicate what I can do as seats and department constraints become clear.
+    \item Make sure I know you are here and that your enrollment status is correct.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Before Next Time}
+  \begin{itemize}
+    \item Read the syllabus.
+    \item Confirm you can access Canvas and the course materials.
+    \item Bring one example of a system you think behaves intelligently.
+    \item Be ready to defend why you think it qualifies as AI.
+  \end{itemize}
+  \vspace{0.16in}
+  \begin{keyidea}
+    Next time: intelligent agents, environments, percepts, actions, and rational behavior.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Next Time}
+  \begin{center}
+    {\Huge Intelligent Agents}
+  \end{center}
+  \vspace{0.15in}
+  \begin{activity}
+    Join me in lab.
+  \end{activity}
 \end{frame}
 
 \end{document}

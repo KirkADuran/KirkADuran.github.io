@@ -1,28 +1,49 @@
 % Shared Beamer setup for Fall 2026 course slides.
+% Clean Cal Poly-inspired theme: no custom class files or uncommon packages.
 \mode<presentation>{
-  \usetheme{Madrid}
-  \usecolortheme{default}
+  \usetheme{default}
+  \usefonttheme{professionalfonts}
 }
 
 \definecolor{CalPolyGreen}{HTML}{154734}
 \definecolor{CalPolyGold}{HTML}{BD8B13}
+\definecolor{CalPolySage}{HTML}{7FA28F}
+\definecolor{CalPolyMint}{HTML}{DDF1E7}
+\definecolor{CalPolySand}{HTML}{A29F86}
+\definecolor{CalPolyBeige}{HTML}{EFEEDE}
 \definecolor{DeckInk}{HTML}{1F2933}
 \definecolor{DeckMuted}{HTML}{5F6B7A}
+\definecolor{DeckSoft}{HTML}{F7F7F5}
 
-\setbeamercolor{structure}{fg=CalPolyGreen}
-\setbeamercolor{palette primary}{bg=CalPolyGreen,fg=white}
-\setbeamercolor{palette secondary}{bg=DeckInk,fg=white}
-\setbeamercolor{palette tertiary}{bg=CalPolyGold,fg=DeckInk}
-\setbeamercolor{frametitle}{bg=CalPolyGreen,fg=white}
-\setbeamercolor{title}{fg=CalPolyGreen}
+\setbeamersize{text margin left=0.55in,text margin right=0.55in}
 \setbeamercolor{normal text}{fg=DeckInk,bg=white}
-\setbeamercolor{block title}{bg=CalPolyGreen,fg=white}
-\setbeamercolor{block body}{bg=black!3,fg=DeckInk}
+\setbeamercolor{structure}{fg=CalPolyGreen}
+\setbeamercolor{title}{fg=white}
+\setbeamercolor{frametitle}{fg=CalPolyGreen,bg=white}
+\setbeamercolor{block title}{bg=CalPolySage,fg=white}
+\setbeamercolor{block body}{bg=CalPolyMint,fg=black}
+\setbeamercolor{alerted text}{fg=CalPolyGold}
+
+\setbeamerfont{title}{size=\Huge,series=\bfseries}
+\setbeamerfont{frametitle}{size=\Large,series=\bfseries}
+\setbeamerfont{block title}{size=\normalsize,series=\bfseries}
 
 \setbeamertemplate{navigation symbols}{}
-\setbeamertemplate{footline}[frame number]
 \setbeamertemplate{itemize item}{\color{CalPolyGold}$\blacktriangleright$}
 \setbeamertemplate{itemize subitem}{\color{CalPolyGreen}$\bullet$}
+\setbeamertemplate{footline}{
+  \hfill{\color{DeckMuted}\scriptsize\insertframenumber/\inserttotalframenumber}
+  \hspace{0.18in}\vspace{0.12in}
+}
+\setbeamertemplate{frametitle}{
+  \vspace{0.18in}
+  \hspace{0.02in}\insertframetitle\par
+  \vspace{0.08in}
+  \noindent\makebox[\linewidth][l]{%
+    {\color{CalPolyGold}\rule{0.55in}{2pt}}%
+    {\color{CalPolyGreen}\rule{\dimexpr\linewidth-0.55in\relax}{2pt}}%
+  }
+}
 
 \newcommand{\CourseNumber}{Course}
 \newcommand{\CourseTitle}{Course Title}
@@ -43,26 +64,53 @@
 \date{\LectureDate}
 
 \newcommand{\makedecktitle}{
+  \begingroup
+  \setbeamercolor{background canvas}{bg=CalPolyGreen}
   \begin{frame}[plain]
-    \vspace{0.25in}
-    {\usebeamerfont{title}\color{CalPolyGreen}\LectureTitle\par}
-    \vspace{0.18in}
-    {\large \CourseNumber{}: \CourseTitle\par}
-    \vspace{0.08in}
-    {\large Lecture \LectureNumber{} -- \LectureDate\par}
     \vfill
-    {\small Kirk Duran \textbar{} Cal Poly, San Luis Obispo\par}
+    \begin{center}
+      {\usebeamerfont{title}\color{white}\LectureTitle\par}
+      \vspace{0.18in}
+      {\Large\color{white}Lecture \LectureNumber\par}
+    \end{center}
+    \vfill
+    \noindent{\color{white}\rule{\linewidth}{1.2pt}}\par
+    \vspace{0.08in}
+    \noindent\colorbox{CalPolyGold}{\makebox[0.24\linewidth][c]{\color{white}\Large\CourseNumber}}
+    \hspace{0.12in}{\color{white}\Large Kirk Duran}
   \end{frame}
+  \endgroup
+}
+
+\newenvironment{keyidea}{\begin{block}{Key idea}}{\end{block}}
+\newenvironment{activity}{\begin{block}{In class}}{\end{block}}
+\newenvironment{cpdefinition}{\begin{block}{Definition}}{\end{block}}
+\newenvironment{exampleblockcp}{
+  \begingroup
+  \setbeamercolor{block title}{bg=CalPolySand,fg=white}
+  \setbeamercolor{block body}{bg=CalPolyBeige,fg=black}
+  \begin{block}{Example}
+}{
+  \end{block}
+  \endgroup
+}
+
+\newcommand{\sectionframe}[1]{
+  \begingroup
+  \setbeamercolor{background canvas}{bg=CalPolyGreen}
+  \begin{frame}[plain]
+    \vfill
+    {\color{white}\LARGE\bfseries #1\par}
+    \vspace{0.18in}
+    {\color{CalPolyGold}\rule{0.22\paperwidth}{3pt}}
+    {\color{white}\rule{0.62\paperwidth}{3pt}}
+    \vfill
+  \end{frame}
+  \endgroup
 }
 
 \newcommand{\placeholdernote}{
   \begin{block}{Placeholder}
     Replace these bullets with the final lecture material, examples, and in-class activities.
   \end{block}
-}
-
-\AtBeginSection[]{
-  \begin{frame}{Roadmap}
-    \tableofcontents[currentsection]
-  \end{frame}
 }
