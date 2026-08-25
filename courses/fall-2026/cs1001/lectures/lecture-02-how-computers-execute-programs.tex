@@ -1,5 +1,7 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
+\graphicspath{{../assets/lecture-02/}}
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
@@ -14,41 +16,653 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: How Computers Execute Programs
-    \item Placeholder for announcements and context.
+    \item What a computer is and why computers are useful.
+    \item How computing developed from counting tools to modern electronic systems.
+    \item How a computer stores programs, executes instructions, and represents information.
+    \item How machine language, assembly, and higher-level programming languages connect.
+    \item What computer science studies and where computers appear in society.
+    \item Why computation has a physical cost in hardware, energy, and infrastructure.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: What Is a Computer?}
+
+\begin{frame}{What Are Computers?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{cpdefinition}
+        A computer is a programmable electronic device that processes data to perform tasks.
+      \end{cpdefinition}
+      \vspace{0.08in}
+      \begin{itemize}
+        \item \textbf{Input:} information enters the system.
+        \item \textbf{Processing:} the CPU follows instructions and transforms information.
+        \item \textbf{Memory/storage:} information is kept for immediate or later use.
+        \item \textbf{Output:} the system produces a result or physical action.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \imageplaceholder{computer-components.jpg}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}[shrink=10]{Why Do We Use Computers?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{itemize}
+        \item \textbf{Speed:} computers can perform enormous numbers of simple operations quickly.
+        \item \textbf{Automation:} repetitive procedures can run with little human intervention.
+        \item \textbf{Accuracy and repeatability:} the same instructions can be followed consistently.
+        \item \textbf{Scale:} computers let us analyze, store, and communicate more information than a person could manage manually.
+      \end{itemize}
+      \begin{exampleblockcp}
+        Applications include scientific simulation, genome analysis, CAD, robotics, gaming, communication, and business systems.
+      \end{exampleblockcp}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \imageplaceholder{clerical-computation.jpg}
+      \vspace{0.05in}
+      \begin{keyidea}
+        Computers amplify human procedures; they do not remove the need to decide which procedures make sense.
+      \end{keyidea}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\sectionframe{Part 2: A Brief History of Computing}
+
+\begin{frame}{From Counting Tools to Algorithms}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Antiquity}
+        The abacus supported arithmetic by giving people a physical representation of quantities and operations.
+      \end{block}
+      \imageplaceholder{abacus.jpg}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{9th Century}
+        Persian mathematician Muhammad ibn Musa al-Khwarizmi wrote systematic procedures for calculation. His name is the historical root of the word \emph{algorithm}.
+      \end{block}
+      \imageplaceholder{al-khwarizmi.jpg}
+    \end{column}
+  \end{columns}
+  \vspace{0.08in}
+  \begin{keyidea}
+    Computing has always involved both \textbf{representations} of information and \textbf{procedures} for manipulating it.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}{Mechanical Calculation and Programmable Machines}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{17th Century}
+        Blaise Pascal and Gottfried Wilhelm Leibniz developed mechanical calculators for arithmetic operations.
+      \end{block}
+      \imageplaceholder{mechanical-calculator.jpg}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{1830s}
+        Charles Babbage designed the Analytical Engine as a general-purpose mechanical computer. Ada Lovelace described an algorithm intended for the machine.
+      \end{block}
+      \imageplaceholder{babbage-engine.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=35]{1936: Turing's Abstract Computer}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{itemize}
+        \item Alan Turing introduced a mathematical model now called a \textbf{Turing machine}.
+        \item The model showed how a small set of simple operations could express arbitrary algorithms.
+        \item The important idea is not the physical machine; it is a model of what computation itself can do.
+      \end{itemize}
+      \begin{cpdefinition}
+        Informally, a system is \textbf{Turing complete} when it can simulate any computation that a Turing machine can perform, given enough time and memory.
+      \end{cpdefinition}
+      \begin{exampleblockcp}
+        This is about computational expressiveness, not whether a system is convenient, fast, or intended to be used as a computer.
+      \end{exampleblockcp}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \imageplaceholder{turing-machine.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{1940s--1950s: Electronic Computers and Languages}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \imageplaceholder{eniac.jpg}
+      \begin{block}{1940s}
+        Electronic machines such as ENIAC could perform complex calculations much faster than manual calculation.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \imageplaceholder{punch-card.png}
+      \begin{block}{1950s}
+        Languages such as FORTRAN and Lisp changed how humans expressed programs, moving programmers farther from raw machine instructions.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{1970s--1990s: Computers Become Personal and Connected}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Personal Computing}
+        Microprocessors made smaller, less expensive computers practical. Systems such as the Apple I helped move computing toward individual users.
+      \end{block}
+      \imageplaceholder{early-personal-computer.jpg}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{The Internet and Web}
+        Networked computers transformed communication and data exchange. Tim Berners-Lee's World Wide Web made linked information much easier to publish and access.
+      \end{block}
+      \imageplaceholder{internet-network-map.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=10]{21st Century: Mobile, Cloud, and AI}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{itemize}
+        \item Computing moved from one machine on one desk to networks of devices and data centers.
+        \item Cloud platforms let organizations rent computation and storage at large scale.
+        \item Smartphones put general-purpose computers, cameras, sensors, and networks in billions of pockets.
+        \item AI systems increasingly use large-scale computing for perception, prediction, language, and control.
+      \end{itemize}
+      \begin{keyidea}
+        Modern computing is often a \textbf{system of computers}, not a single computer.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \imageplaceholder{ai-era.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 3: How Computers Execute and Represent Information}
+
+\begin{frame}{The Stored-Program Computer}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{keyidea}
+        A modern general-purpose computer stores both \textbf{data} and \textbf{program instructions} in memory.
+      \end{keyidea}
+      \begin{itemize}
+        \item \textbf{CPU:} executes instructions.
+        \item \textbf{Memory:} holds information being actively used.
+        \item \textbf{Input/output:} connects the machine to users, devices, files, and networks.
+        \item \textbf{Storage:} keeps information when programs are not actively using it.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \imageplaceholder{stored-program-architecture.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Inside the CPU: Control, Arithmetic, and Registers}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item The \textbf{control unit} coordinates instruction execution.
+        \item The \textbf{arithmetic/logic unit (ALU)} performs arithmetic and logical operations.
+        \item \textbf{Registers} are tiny, very fast storage locations inside the processor.
+        \item Main memory is much larger than the registers but typically slower to access.
+      \end{itemize}
+      \begin{exampleblockcp}
+        A useful mental model: the CPU is the worker, registers are the worker's hands, memory is the nearby workbench, and long-term storage is the filing cabinet.
+      \end{exampleblockcp}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \imageplaceholder{computer-components.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=10]{The Instruction Cycle: Fetch, Decode, Execute}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{enumerate}
+        \item \textbf{Fetch:} retrieve the next instruction from memory.
+        \item \textbf{Decode:} determine what the instruction means.
+        \item \textbf{Execute:} perform the requested operation.
+        \item Store intermediate or final results where they are needed.
+        \item Repeat.
+      \end{enumerate}
+      \begin{activity}
+        Imagine the instruction is ``add the values in A and B and save the result in C.'' What must be fetched, processed, and stored?
+      \end{activity}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \imageplaceholder{instruction-cycle.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=10]{Do Computers ``Think''?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{itemize}
+        \item Traditionally, a CPU does not decide what its instructions \emph{should} mean. It executes operations defined by its architecture and program.
+        \item This precision is useful: the same operation can be repeated consistently.
+        \item It is also dangerous: flawed instructions can be followed just as faithfully as correct ones.
+      \end{itemize}
+      \begin{keyidea}
+        Computers are physical systems that implement rules. Human judgment enters through the problems, programs, data, and goals we give them.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \imageplaceholder{lukyanov-water-computer.jpg}
+      \begin{center}
+        \scriptsize Lukyanov's hydraulic integrator reminds us that computation is not inherently electronic.
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}{Computer Memory: Locations and Addresses}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item Think of memory as a large collection of storage locations.
+        \item Each location has an \textbf{address} that identifies where data can be found.
+        \item Addresses are numbers; programmers often see them written in hexadecimal.
+        \item Programs can store a value at an address and later retrieve it.
+      \end{itemize}
+      \begin{exampleblockcp}
+        The address identifies the location. The value is the information stored at that location.
+      \end{exampleblockcp}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \imageplaceholder{memory-addresses.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=10]{Bits and Bytes Are Physical}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.51\textwidth}
+      \begin{cpdefinition}
+        A \textbf{bit} is one binary digit: 0 or 1. A \textbf{byte} is typically 8 bits.
+      \end{cpdefinition}
+      \begin{itemize}
+        \item Modern computers represent bits using physical electronic states, commonly implemented with transistors and related circuitry.
+        \item The exact technology can change; the logical abstraction of 0 and 1 remains useful.
+        \item Bytes can encode numbers, characters, portions of images, instructions, and many other kinds of information.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \imageplaceholder{memory-cells-bits.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=10]{Memory Scale and Memory Technology}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Scale}
+        \begin{itemize}
+          \item 1 byte = 8 bits
+          \item KB: thousands of bytes
+          \item MB: millions of bytes
+          \item GB: billions of bytes
+          \item TB: trillions of bytes
+        \end{itemize}
+      \end{block}
+      \begin{keyidea}
+        Large datasets and models can require enormous memory even though each bit stores almost nothing.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \imageplaceholder{magnetic-core-memory.jpg}\hfill
+      \imageplaceholder{ram-module.jpg}
+      \begin{block}{Technology}
+        Earlier magnetic-core systems were physically large and expensive. Semiconductor memory stores vastly more information in far less space and at much lower cost per byte.
+      \end{block}
+      \imageplaceholder{memory-warehouse.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Why Binary?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item Binary is a base-2 numeral system containing only 0 and 1.
+        \item Digital hardware can reliably distinguish between two ranges of physical states.
+        \item Transistors act like controlled electronic switches and are combined to build logic gates, memory, and processors.
+      \end{itemize}
+      \begin{exampleblockcp}
+        Binary is not ``the language of electricity.'' It is a convenient logical representation implemented by physical devices.
+      \end{exampleblockcp}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \imageplaceholder{transistor-switch.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Reading Binary Numbers}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      \begin{block}{Place values}
+        From right to left, binary places represent 1, 2, 4, 8, 16, 32, and so on.
+      \end{block}
+      \begin{exampleblockcp}
+        \texttt{0101} = 0(8) + 1(4) + 0(2) + 1(1) = 5.
+      \end{exampleblockcp}
+      \begin{activity}
+        What decimal number is \texttt{1010}? What binary representation would you use for decimal 7?
+      \end{activity}
+    \end{column}
+    \begin{column}{0.37\textwidth}
+      \imageplaceholder{machine-code-cpu.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Binary Addition Works Like Familiar Addition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{itemize}
+        \item Add one column at a time.
+        \item \texttt{0 + 0 = 0}
+        \item \texttt{0 + 1 = 1}
+        \item \texttt{1 + 1 = 10}: write 0 and carry 1.
+        \item Carries propagate just as they do in base 10.
+      \end{itemize}
+      \begin{exampleblockcp}
+        \texttt{0101} (5) + \texttt{0011} (3) = \texttt{1000} (8).
+      \end{exampleblockcp}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \imageplaceholder{binary-addition.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 4: From Machine Language to Python}
+
+\begin{frame}{Machine Language: Instructions the Processor Executes}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item A processor understands a particular set of machine instructions.
+        \item Machine code represents those instructions as bit patterns.
+        \item Instructions can move data, perform arithmetic, compare values, jump to other instructions, and interact with hardware.
+        \item Raw machine code is difficult for humans to write and inspect directly.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \imageplaceholder{machine-code-cpu.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Assembly Language Gives Machine Instructions Names}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{cpdefinition}
+        Assembly language is a low-level programming language whose instructions closely correspond to a processor's machine instructions.
+      \end{cpdefinition}
+      \begin{itemize}
+        \item Mnemonics such as \texttt{MOV} and \texttt{ADD} are easier for humans than raw binary.
+        \item An \textbf{assembler} translates assembly instructions into machine code.
+        \item Different processor architectures have different instruction sets.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \imageplaceholder{assembly-to-machine-code.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=25]{Higher-Level Languages Automate the Translation Work}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item Early programmers sometimes translated symbolic instructions into machine code manually.
+        \item Assemblers automated one layer of translation.
+        \item Compilers and interpreters let programmers express algorithms using increasingly human-friendly abstractions.
+        \item Languages such as FORTRAN, C, Java, and Python let us focus more on the problem and less on processor details.
+      \end{itemize}
+      \begin{keyidea}
+        Programming languages are layers of abstraction over the operations the machine ultimately performs.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \imageplaceholder{compiler-automation.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=10]{Why Learn to Code When Tools Can Generate Code?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.51\textwidth}
+      \begin{itemize}
+        \item Automation repeatedly removes some low-level work and creates new higher-level work.
+        \item Today's AI tools can write boilerplate, summarize information, and help debug programs.
+        \item Someone still has to define the problem, judge whether the result is correct, test edge cases, and understand consequences.
+      \end{itemize}
+      \begin{keyidea}
+        The valuable skill is not merely typing syntax. It is being able to describe computation precisely enough to inspect, test, and control it.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \imageplaceholder{high-level-code.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 5: Computer Science and Computer Systems}
+
+\begin{frame}[shrink=20]{What Is Computer Science?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{cpdefinition}
+        Computer science studies computation: algorithms, data, programming languages, systems, and the limits and applications of computation.
+      \end{cpdefinition}
+      \begin{itemize}
+        \item \textbf{Theory:} algorithms and computational complexity.
+        \item \textbf{Systems:} operating systems, databases, networks, architecture.
+        \item \textbf{Software:} programming languages, software engineering, design.
+        \item \textbf{Applied computing:} AI, machine learning, graphics, robotics, security, data science, HCI, and more.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \imageplaceholder{cs-fields-taxonomy.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Computer Science Changes With Society}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \imageplaceholder{cs-degree-history.jpg}
+      \begin{block}{Participation changes}
+        Enrollment and degree patterns have risen and fallen with technology cycles, labor markets, culture, and access to computing education.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \imageplaceholder{tech-jobs-history.jpg}
+      \begin{block}{Jobs change too}
+        Computing occupations evolve as technology changes. Historical charts are snapshots, not guarantees about future demand.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Who Uses Computers?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item \textbf{General users:} communication, entertainment, school, work, finance, navigation.
+        \item \textbf{Scientists:} simulation and data analysis.
+        \item \textbf{Engineers:} embedded systems, CAD, control, testing.
+        \item \textbf{Businesses:} databases, logistics, CRM/ERP, e-commerce.
+        \item \textbf{Accessibility:} screen readers, communication aids, prosthetic control.
+      \end{itemize}
+      \begin{keyidea}
+        Because computing reaches nearly everyone, privacy, security, accessibility, bias, and responsible design are technical concerns too.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \imageplaceholder{smartphone-users-2016-2022.jpg}
+      \begin{center}\scriptsize Historical smartphone-adoption snapshot from the original lecture.\end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=10]{Are All Computers the Same?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{General-purpose}
+        PCs and smartphones are designed to run many different programs.
+      \end{block}
+      \begin{block}{Specialized}
+        GPUs, embedded controllers, and supercomputers may be optimized for particular workloads or environments.
+      \end{block}
+      \begin{block}{Distributed}
+        Clusters and cloud systems divide work across many networked machines for scale and fault tolerance.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \imageplaceholder{personal-computer-timeline.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=35]{Quantum Computers and Emerging Directions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item \textbf{Quantum computing:} qubits and quantum effects enable different algorithms; potential speedups apply to particular problem structures rather than every task.
+        \item \textbf{Specialized hardware:} GPUs and other accelerators trade generality for efficiency on important workloads.
+        \item \textbf{New architectures:} research explores neuromorphic, photonic, and other post-Moore approaches.
+        \item \textbf{Software and systems:} AI frameworks, cloud systems, distributed computing, and edge computing spread computation across many kinds of devices.
+        \item \textbf{Efficiency:} power consumption and cooling increasingly constrain what systems can do.
+      \end{itemize}
+      \begin{exampleblockcp}
+        Shor's algorithm is a famous example where a sufficiently capable quantum computer would change the complexity of integer factoring.
+      \end{exampleblockcp}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \imageplaceholder{quantum-computer.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 6: Computation Has a Physical Cost}
+
+\begin{frame}{Activity: Three Ways to Get a Times Table}
+  \begin{activity}
+    Suppose you want the complete multiplication table from 1 through 12. Which approach do you expect to use the most electricity?
+  \end{activity}
+  \vspace{0.12in}
+  \begin{enumerate}
+    \item Write a small nested loop and compute all 144 products locally.
+    \item Search the web and retrieve a page containing the table.
+    \item Ask a large AI system to generate the program and return the results.
+  \end{enumerate}
+  \vspace{0.12in}
+  \begin{exampleblockcp}
+    Ignore your own time for the moment. Think about the computation, networking, storage, and infrastructure involved behind each option.
+  \end{exampleblockcp}
+\end{frame}
+
+\begin{frame}[shrink=30]{The Energy Comparison Is About Scale, Not Exact Numbers}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item A few arithmetic operations on a local processor require very little energy.
+        \item A network query activates networking equipment, servers, storage, cooling, and other infrastructure.
+        \item A large AI inference may perform far more computation than the tiny arithmetic task itself.
+        \item Exact energy use depends on hardware, software, location, batching, model size, utilization, and many other details.
+      \end{itemize}
+      \begin{keyidea}
+        Use the simplest tool that solves the problem well. Abstraction is valuable, but abstraction is not physically free.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \imageplaceholder{cloud-data-center.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Computing Depends on Physical Infrastructure}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item Data centers require electricity, networking, cooling, land, and hardware.
+        \item Growing computing demand can affect decisions about power generation and transmission.
+        \item This is another reason efficiency matters: faster or smaller algorithms can reduce real resource use at scale.
+      \end{itemize}
+      \begin{keyidea}
+        Software looks abstract, but every program ultimately runs on physical machines somewhere.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \imageplaceholder{data-center-energy-headline.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Energy Production Is Also a Computing Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}
+        \item Electrical demand changes throughout the day.
+        \item Renewable generation also changes with conditions such as sunlight and wind.
+        \item Grid operators use sensing, forecasting, optimization, and control software to balance production and demand.
+        \item The ``duck curve'' illustrates how net demand can fall during solar-heavy hours and rise rapidly later in the day.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \imageplaceholder{duck-curve.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\begin{frame}[shrink=10]{Where Python Fits}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{What you write}
+        \texttt{print("Hello, world!")}\\
+        \texttt{x = 5 + 3}
+      \end{block}
+      \begin{block}{What the computer eventually needs}
+        Operations represented in forms the processor and operating system can execute.
+      \end{block}
+      \begin{keyidea}
+        Python lets us work at a high level while software underneath handles many details of memory, machine instructions, files, and hardware.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Before next time}
+        \begin{itemize}
+          \item Make sure you can open Python or Google Colab.
+          \item Create, save, and find a notebook or source file.
+          \item Remember: Python program $\rightarrow$ translated operations $\rightarrow$ machine execution.
+        \end{itemize}
+      \end{block}
+      \begin{activity}
+        Bring one question about something inside a computer that still feels mysterious.
+      \end{activity}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Next Time}
+  \begin{center}
+    {\Huge Python Introduction}
+  \end{center}
 \end{frame}
 
 \end{document}

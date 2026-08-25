@@ -1,54 +1,838 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
+\graphicspath{{../assets/lecture-03/}}
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{3}
-\lecturetitle{Task Environments and Problem Formulation -- PEAS, environment properties, state-space models}
+\lecturetitle{Intelligent Agents II}
 \lecturedate{August 28, 2026}
-\courseunit{Course sequence}
+\courseunit{1. Intelligent Agents}
 
 \begin{document}
 
 \makedecktitle
 
-\begin{frame}{Today}
+% ============================================================
+% Opening and Review
+% ============================================================
+
+\begin{frame}[shrink=10]{Artificial Intelligence And Human Cognition}
+  \begin{keyidea}
+    AI mirrors human abilities: perception, memory, planning, and learning.
+  \end{keyidea}
+  \vspace{0.12in}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Task Environments and Problem Formulation -- PEAS, environment properties, state-space models
-    \item Placeholder for announcements and context.
+    \item AI aims to reproduce useful forms of intelligence and adaptability in machines.
+    \item Definitions, models, and techniques in AI often reflect how we think humans reason and learn.
+    \item The goal is not necessarily to copy biology exactly; it is to build systems that exhibit useful intelligent behavior.
+    \item You already have an intuitive sense of many concepts that we will now formalize.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\begin{frame}{Review: Intelligent Agents}
+  \begin{cpdefinition}
+    An \textbf{agent} perceives an environment through sensors and acts upon that environment through actuators.
+  \end{cpdefinition}
+  \vspace{0.12in}
+  \begin{center}
+    {\Large Environment $\rightarrow$ Percepts $\rightarrow$ Agent $\rightarrow$ Actions $\rightarrow$ Environment}
+  \end{center}
+  \vspace{0.12in}
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item A percept is what the agent senses at one moment.
+    \item A percept sequence is the complete history of what it has sensed.
+    \item The \textbf{agent function} maps percept histories to actions: $f:P^*\rightarrow A$.
+    \item A rational agent chooses actions expected to maximize its performance measure given the information available.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+% ============================================================
+\sectionframe{Part 1: From Agent Functions To Agent Programs}
+% ============================================================
+
+\begin{frame}[fragile]{The Table-Driven Approach}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{keyidea}
+        Imagine a perfect lookup table containing the correct action for every possible percept sequence.
+      \end{keyidea}
+      \vspace{0.08in}
+      \begin{itemize}
+        \item Append the newest percept to the percept history.
+        \item Use the complete percept sequence as a table key.
+        \item Return the action stored in that entry.
+        \item In principle, the agent needs no run-time reasoning or learning.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+\begin{verbatim}
+function TABLE-DRIVEN-AGENT(percept):
+    persistent percepts = []
+    persistent table
+
+    append percept to percepts
+    action = LOOKUP(percepts, table)
+    return action
+\end{verbatim}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}[shrink=35]{Reality Check: Why A Table Does Not Work}
+  \begin{block}{Storage Explosion}
+    The number of possible percept histories grows combinatorially or exponentially. Rich sensors make a realistic table astronomically large.
+  \end{block}
+  \begin{block}{Impossible To Construct}
+    Someone would need to precompute the correct action for every situation the agent could ever encounter.
+  \end{block}
+  \begin{block}{No Generalization}
+    A static table treats similar situations as unrelated entries instead of exploiting common structure.
+  \end{block}
+  \begin{block}{No Room For Learning}
+    New situations require new table entries; the representation itself provides no mechanism for adaptation.
+  \end{block}
+  \vspace{0.06in}
+  \begin{keyidea}
+    We need compact programs that reason from structure rather than enumerate every possible history.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Kinds Of Agent Programs}
+  \begin{enumerate}
+    \item \textbf{Simple reflex agents}: react to the current percept.
+    \item \textbf{Model-based reflex agents}: maintain internal state.
+    \item \textbf{Goal-based agents}: reason about desired future states.
+    \item \textbf{Utility-based agents}: compare how desirable possible outcomes are.
+    \item \textbf{Learning agents}: improve behavior from experience.
+  \end{enumerate}
+  \vspace{0.14in}
+  \begin{keyidea}
+    These are increasingly expressive design patterns, not mutually exclusive product categories. Real systems often combine them.
+  \end{keyidea}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 2: Simple Reflex Agents}
+% ============================================================
+
+\begin{frame}{Is This Intelligence?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\textwidth}
+      \imageplaceholder{stove-reflex.jpg}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \begin{activity}
+        A sensor detects a condition and immediately triggers a response. Is that intelligent behavior?
+      \end{activity}
+      \vspace{0.1in}
+      \begin{itemize}
+        \item It senses.
+        \item It acts.
+        \item It may satisfy an objective.
+        \item It may not remember, plan, or learn.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Is This Intelligent?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.42\textwidth}
+      \imageplaceholder{water-fountain.jpg}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \begin{activity}
+        An automatic bottle filler detects a bottle and turns on the water. What would make this an agent? What would make it intelligent?
+      \end{activity}
+      \vspace{0.12in}
+      \begin{keyidea}
+        Intelligence is not necessarily all-or-nothing. Useful agent behavior can emerge from extremely simple decision rules.
+      \end{keyidea}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Simple Reflex Agent}
+  \begin{cpdefinition}
+    A \textbf{simple reflex agent} chooses an action using only the current percept.
+  \end{cpdefinition}
+  \vspace{0.08in}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Characteristics}
+        \begin{itemize}
+          \item Ignores percept history.
+          \item Maintains no internal world state.
+          \item Uses \textbf{condition--action rules}.
+        \end{itemize}
+      \end{block}
+      \begin{exampleblockcp}
+        \textbf{IF} obstacle ahead \textbf{THEN} turn right.
+      \end{exampleblockcp}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Flow}
+        \begin{enumerate}
+          \item Perceive the environment.
+          \item Match the percept to a rule condition.
+          \item Execute the associated action.
+          \item Repeat with no memory of the previous decision.
+        \end{enumerate}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Simple Reflex Agents: Strengths And Weaknesses}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Advantages}
+        \begin{itemize}
+          \item Fast and computationally cheap.
+          \item Requires little or no memory.
+          \item Easy to implement and debug.
+          \item Works well when the environment is fully observable and the needed information is available now.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Downside}
+        \begin{itemize}
+          \item Missing information can cause incorrect actions.
+          \item The same percept may require different actions in different hidden states.
+          \item Local rules can create brittle or repetitive behavior.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{0.08in}
+  \begin{center}
+    \imageplaceholder{simple-reflex-diagram.jpg}
+  \end{center}
+\end{frame}
+
+\begin{frame}[shrink=30]{Simple Reflex Example: Thermostat}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Percept}
+        Current room temperature.
+      \end{block}
+      \begin{block}{Condition--Action Rules}
+        \begin{itemize}
+          \item If temperature is below the lower threshold, turn on heat.
+          \item If temperature is within the desired band, maintain the current state.
+          \item If temperature is above the upper threshold, turn off heat.
+        \end{itemize}
+      \end{block}
+      \begin{keyidea}
+        The action depends on the current temperature, not a detailed history of the room.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.4\textwidth}
+      \imageplaceholder{thermostat-visual.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=35]{Historical Reflex Example: Jacquard Loom}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Joseph-Marie Jacquard's early nineteenth-century loom used punched cards to control weaving patterns.
+        \item A hole or no-hole pattern directly determined which threads were lifted.
+        \item The loom did not represent the textile's purpose or ``understand'' the pattern.
+        \item Its behavior was a direct response to the current card pattern.
+      \end{itemize}
+      \vspace{0.1in}
+      \begin{exampleblockcp}
+        Hole present $\rightarrow$ lift thread.\newline
+        No hole $\rightarrow$ do nothing.
+      \end{exampleblockcp}
+      \vspace{0.06in}
+      \begin{keyidea}
+        A useful system can implement precise conditional behavior without a rich internal model.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \imageplaceholder{jacquard-loom.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 3: Model-Based Reflex Agents}
+% ============================================================
+
+\begin{frame}[shrink=25]{Model-Based Reflex Agent}
+  \begin{cpdefinition}
+    A \textbf{model-based reflex agent} maintains an internal state so it can reason about information that is not directly observable now.
+  \end{cpdefinition}
+  \vspace{0.08in}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Transition Model}
+        Describes how the world changes over time and how the agent's actions change it.
+      \end{block}
+      \begin{exampleblockcp}
+        Turning the steering wheel changes a vehicle's heading.
+      \end{exampleblockcp}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Sensor Model}
+        Describes how states of the world produce percepts.
+      \end{block}
+      \begin{exampleblockcp}
+        Rain on a camera lens can distort the observed image.
+      \end{exampleblockcp}
+    \end{column}
+  \end{columns}
+  \vspace{0.08in}
+  \begin{keyidea}
+    Previous state + previous action + current percept $\rightarrow$ inferred current state $\rightarrow$ condition--action rule.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Model-Based Reflex Example: Self-Driving Car}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item Track nearby vehicles even when they are temporarily occluded.
+        \item Predict how those vehicles are likely to move.
+        \item Estimate position, speed, lane, and surrounding road geometry.
+        \item Base decisions on maintained state rather than one sensor frame alone.
+      \end{itemize}
+      \vspace{0.08in}
+      \begin{block}{Downside}
+        More memory and computation are required, and the agent can still make mistakes when its model is inaccurate or incomplete.
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \imageplaceholder{model-based-diagram.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Reflex Or Model-Based Reflex?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\textwidth}
+      \imageplaceholder{vacuum-reflex-or-model.jpg}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \begin{activity}
+        A robot vacuum maps rooms, remembers cleaned areas, and tracks its location. Is it still a simple reflex agent?
+      \end{activity}
+      \vspace{0.1in}
+      Look for:
+      \begin{itemize}
+        \item an internal map,
+        \item memory of earlier percepts,
+        \item prediction of hidden state,
+        \item rules operating on inferred state.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 4: Goal-Based And Utility-Based Agents}
+% ============================================================
+
+\begin{frame}{Goal-Based Agent}
+  \begin{cpdefinition}
+    A \textbf{goal-based agent} evaluates actions by whether their consequences move the world toward a desired goal state.
+  \end{cpdefinition}
+  \vspace{0.08in}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item Uses a model of how actions change the world.
+        \item Adds explicit information about which outcomes are desirable.
+        \item Can reason about the future instead of reacting immediately.
+        \item Often uses search or planning to find a sequence of actions.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{block}{Flow}
+        Perceive $\rightarrow$ update state $\rightarrow$ consult goal $\rightarrow$ search / plan $\rightarrow$ act $\rightarrow$ re-plan as needed.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Goal-Based Architecture}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \imageplaceholder{goal-based-diagram.jpg}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \begin{itemize}
+        \item Goals describe what success looks like.
+        \item The model predicts the consequences of actions.
+        \item Search or planning finds a path from the current state to a goal state.
+      \end{itemize}
+      \vspace{0.1in}
+      \begin{keyidea}
+        A goal-based agent can choose actions that are useful only because of where they lead later.
+      \end{keyidea}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Goal-Based Example: Vacuum Robot}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \imageplaceholder{goal-vacuum.jpg}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item Perceive dirt, obstacles, and current position.
+        \item Update an internal map from previous movements and percepts.
+        \item Check whether the goal is achieved: is the required area clean?
+        \item If not, select an action or path that moves closer to the goal.
+        \item Execute and repeat until the goal is met.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=10]{Is A Goal Enough?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.42\textwidth}
+      \imageplaceholder{chess-goal.jpg}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \begin{activity}
+        A chess agent wants to win. Is ``win the game'' enough information to choose the next move?
+      \end{activity}
+      \vspace{0.08in}
+      \begin{itemize}
+        \item Win quickly or slowly?
+        \item Keep more valuable pieces?
+        \item Avoid risk?
+        \item Prefer one winning line over another?
+      \end{itemize}
+      \vspace{0.08in}
+      \begin{keyidea}
+        Goals often give a binary answer: acceptable or not. They do not necessarily rank alternatives.
+      \end{keyidea}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Utility-Based Example: Chess}
+  \begin{keyidea}
+    Even when the ultimate goal is ``win,'' an agent can evaluate intermediate states by estimating how desirable they are.
+  \end{keyidea}
+  \vspace{0.1in}
+  Possible evaluation features include:
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{itemize}
+        \item preserve valuable pieces,
+        \item control the center,
+        \item protect the king,
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{itemize}
+        \item avoid weak pawn structures,
+        \item maintain mobility,
+        \item increase the probability of eventually winning.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \vspace{0.1in}
+  \begin{exampleblockcp}
+    A utility value compresses several strategic preferences into a quantity the agent can compare.
+  \end{exampleblockcp}
+\end{frame}
+
+\begin{frame}{Utility-Based Agent}
+  \begin{cpdefinition}
+    A \textbf{utility function} assigns a numerical value to states or outcomes representing how desirable they are to the agent.
+  \end{cpdefinition}
+  \vspace{0.08in}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item Ranks alternatives instead of treating success as yes/no.
+        \item Handles conflicting objectives.
+        \item Under uncertainty, compares actions by \textbf{expected utility}.
+      \end{itemize}
+      \vspace{0.08in}
+      \begin{center}
+        $EU(a)=\sum_s P(s\mid a,e)U(s)$
+      \end{center}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \imageplaceholder{utility-based-diagram.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=10]{Utility-Based Example: Self-Driving Taxi}
+  A rational taxi may optimize several objectives simultaneously:
+  \begin{itemize}
+    \item shortest travel time,
+    \item least fuel or energy consumption,
+    \item lowest accident risk,
+    \item passenger comfort,
+    \item compliance with traffic laws.
+  \end{itemize}
+  \vspace{0.1in}
+  \begin{block}{Why Utility Helps}
+    It supports tradeoffs such as speed versus safety and allows the agent to compare several acceptable outcomes.
+  \end{block}
+  \begin{block}{Tradeoff}
+    Utility-based reasoning can be computationally expensive because the agent may need to evaluate many possibilities and uncertain outcomes.
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}[shrink=20]{Goals Or Utility Are Not Enough}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      \imageplaceholder{deepblue-alphago.jpg}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \begin{itemize}
+        \item Deep Blue used massive search plus carefully engineered evaluation methods to defeat Garry Kasparov.
+        \item AlphaGo combined search with learned policy and value models to defeat Lee Sedol in 2016.
+        \item A goal or utility function tells an agent what it wants; it does not automatically tell the agent how to act well.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \vspace{0.08in}
+  \begin{keyidea}
+    Intelligent systems often combine representation, models, search, utility, and learning.
+  \end{keyidea}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 5: Learning Agents}
+% ============================================================
+
+\begin{frame}{Learning Agents}
+  \begin{cpdefinition}
+    A \textbf{learning agent} improves its behavior over time based on experience or feedback.
+  \end{cpdefinition}
+  \vspace{0.08in}
+  \begin{enumerate}
+    \item Perceive the environment.
+    \item Take an action using the current agent program.
+    \item Observe the outcome.
+    \item Use feedback to improve internal models, rules, utilities, or strategies.
+    \item Repeat with better knowledge next time.
+  \end{enumerate}
+  \vspace{0.08in}
+  \begin{keyidea}
+    Learning allows an agent to begin with incomplete knowledge, adapt to an unfamiliar environment, and improve through experience.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Four Components Of A Learning Agent}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.23\textwidth}
+      \begin{block}{Performance Element}
+        Chooses the actions that interact with the external world.
+      \end{block}
+    \end{column}
+    \begin{column}{0.23\textwidth}
+      \begin{block}{Learning Element}
+        Modifies the performance element to improve behavior from experience.
+      \end{block}
+    \end{column}
+    \begin{column}{0.23\textwidth}
+      \begin{block}{Critic}
+        Evaluates how well the agent is performing relative to the performance measure.
+      \end{block}
+    \end{column}
+    \begin{column}{0.23\textwidth}
+      \begin{block}{Problem Generator}
+        Suggests exploratory actions that may produce informative experience.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{0.1in}
+  \begin{keyidea}
+    Learning separates acting, evaluating, improving, and exploring.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Learning Agent Example: Self-Driving Car}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item \textbf{Performance element:} chooses braking, acceleration, and steering actions.
+    \item \textbf{Critic:} evaluates whether braking was too hard, too soft, unsafe, or uncomfortable.
+    \item \textbf{Learning element:} updates a transition model, control policy, or prediction model based on feedback.
+    \item \textbf{Problem generator:} encourages informative experience, such as varied braking maneuvers under safe conditions.
   \end{itemize}
+  \vspace{0.1in}
+  \begin{exampleblockcp}
+    Observed outcome $\rightarrow$ feedback $\rightarrow$ model or policy update $\rightarrow$ improved future action.
+  \end{exampleblockcp}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 6: Problem Formulation And Abstraction}
+% ============================================================
+
+\begin{frame}[shrink=20]{Problem Abstraction}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.51\textwidth}
+      \begin{cpdefinition}
+        \textbf{Abstraction} represents a real problem using only the details needed for reasoning about a solution.
+      \end{cpdefinition}
+      \vspace{0.08in}
+      \begin{itemize}
+        \item Real road travel includes weather, traffic, passengers, music, laws, road paint, and countless other facts.
+        \item A navigation model may keep only locations, roads, travel costs, and constraints.
+        \item Cities or intersections become \textbf{states}.
+        \item Roads become \textbf{actions or transitions}.
+        \item Irrelevant details are filtered out.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \imageplaceholder{problem-abstraction-navigation.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Formal Search Problem Formulation}
+  A search problem is commonly described by:
+  \begin{itemize}
+    \item \textbf{Initial state}: where the agent starts.
+    \item \textbf{Actions}: the choices available in a state.
+    \item \textbf{Transition model}: the state produced by taking an action.
+    \item \textbf{Goal test}: whether a state satisfies the objective.
+    \item \textbf{Path cost}: the accumulated cost of a sequence of actions.
+  \end{itemize}
+  \vspace{0.12in}
+  \begin{keyidea}
+    Search algorithms operate on this abstract state space rather than on every detail of the physical world.
+  \end{keyidea}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 7: Problem Types}
+% ============================================================
+
+\begin{frame}{Single-State Problem}
+  \begin{cpdefinition}
+    A \textbf{single-state problem} assumes the agent knows exactly which state it is in and can predict the result of each action.
+  \end{cpdefinition}
+  \vspace{0.12in}
+  Typical assumptions:
+  \begin{itemize}
+    \item the environment is fully observable,
+    \item the transition model is known,
+    \item action outcomes are deterministic.
+  \end{itemize}
+  \vspace{0.12in}
+  \begin{keyidea}
+    The agent can plan a complete sequence of actions without uncertainty about its current state or the immediate effect of an action.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Chess As A Single-State Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.43\textwidth}
+      \imageplaceholder{chess-board.jpg}
+    \end{column}
+    \begin{column}{0.51\textwidth}
+      \begin{itemize}
+        \item The current board position is fully visible.
+        \item Legal moves are known.
+        \item Executing a legal move has a deterministic result.
+        \item The agent therefore knows exactly what board state each move will produce.
+      \end{itemize}
+      \vspace{0.1in}
+      \begin{keyidea}
+        Chess is still strategically difficult because another agent chooses future moves; ``single-state'' refers to state certainty, not overall simplicity.
+      \end{keyidea}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Multiple-State Problem}
+  \begin{cpdefinition}
+    In a \textbf{multiple-state problem}, the agent cannot identify one exact current world state from its percepts.
+  \end{cpdefinition}
+  \vspace{0.12in}
+  \begin{itemize}
+    \item The world may be partially observable.
+    \item Several physical states may be consistent with the same percept history.
+    \item The agent therefore reasons about a set of possible current states.
+  \end{itemize}
+  \vspace{0.12in}
+  \begin{exampleblockcp}
+    A robot with limited sensors may know that it is in one of several rooms without knowing exactly which room.
+  \end{exampleblockcp}
+\end{frame}
+
+\begin{frame}[shrink=30]{Belief States}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \imageplaceholder{multiple-state-map.jpg}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{cpdefinition}
+        A \textbf{belief state} represents all states the agent currently considers possible.
+      \end{cpdefinition}
+      \vspace{0.08in}
+      \begin{itemize}
+        \item New percepts eliminate inconsistent possibilities.
+        \item Actions transform the set of possible states.
+        \item Planning occurs over belief states when the true state is hidden.
+      \end{itemize}
+      \vspace{0.08in}
+      \begin{keyidea}
+        The agent reasons about what it \emph{believes} the world could be, not only one assumed world state.
+      \end{keyidea}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Contingency Problems}
+  \begin{cpdefinition}
+    A \textbf{contingency problem} requires a plan that can react to different observations or outcomes encountered during execution.
+  \end{cpdefinition}
+  \vspace{0.08in}
+  \begin{itemize}
+    \item The environment may be nondeterministic: the same action can lead to different results.
+    \item External agents or physical uncertainty may interfere with the expected result.
+    \item The agent may not have complete control over the environment.
+    \item New observations can force the plan to branch.
+  \end{itemize}
+  \vspace{0.08in}
+  \begin{exampleblockcp}
+    Drive toward the destination. If the highway is clear, continue. If an accident blocks it, use the alternate route. If both are blocked, stop and re-plan.
+  \end{exampleblockcp}
+\end{frame}
+
+\begin{frame}{Exploration Problems}
+  \begin{cpdefinition}
+    In an \textbf{exploration problem}, the agent does not initially know enough about the environment to plan completely in advance.
+  \end{cpdefinition}
+  \vspace{0.08in}
+  \begin{itemize}
+    \item The agent may not know the full state space, available actions, or transition model.
+    \item It gathers information by interacting with the environment.
+    \item It must build or refine a model while simultaneously attempting to achieve its goal.
+    \item Exploration trades immediate performance for information that may improve future decisions.
+  \end{itemize}
+  \vspace{0.08in}
+  \begin{keyidea}
+    The agent learns how the world works by acting in it.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=10]{Exploration Example: Self-Driving Car}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item The car enters an unmapped city or road network.
+        \item It does not begin with complete knowledge of the roads.
+        \item It explores streets and intersections while localizing itself.
+        \item It incrementally builds a map and improves its routing.
+      \end{itemize}
+      \vspace{0.1in}
+      \begin{exampleblockcp}
+        Simultaneous localization and mapping (SLAM) is a classic example of building a model while navigating.
+      \end{exampleblockcp}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \imageplaceholder{exploration-car.jpg}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Problem Domains}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Puzzles And Mazes}
+        \begin{itemize}
+          \item Sliding-tile puzzle such as the 8-puzzle.
+          \item A maze with full observability.
+          \item A maze where the agent does not know its starting location.
+          \item A partially completed jigsaw puzzle without edge pieces.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Strategy And Simulation}
+        \begin{itemize}
+          \item Minesweeper.
+          \item Battleship.
+          \item StarCraft.
+          \item Escape rooms and other interactive environments.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \vspace{0.08in}
+  \begin{activity}
+    For each problem, identify what the agent knows, what it does not know, and whether outcomes are deterministic.
+  \end{activity}
+\end{frame}
+
+% ============================================================
+\sectionframe{Part 8: Putting The Architectures Together}
+% ============================================================
+
+\begin{frame}{Agent Architectures: What Changes?}
+  \scriptsize
+  \begin{center}
+  \begin{tabular}{@{}p{0.19\linewidth} p{0.2\linewidth} p{0.25\linewidth} p{0.24\linewidth}@{}}
+    \textbf{Architecture} & \textbf{Uses} & \textbf{Main Question} & \textbf{Key Addition} \\
+    \hline
+    Simple reflex & Current percept & What should I do now? & Condition--action rules \\
+    Model-based reflex & Percept + internal state & What is the world like now? & Memory and model \\
+    Goal-based & State + goals & How can I reach success? & Search / planning \\
+    Utility-based & State + utilities & Which outcome is best? & Preferences and tradeoffs \\
+    Learning & Experience + feedback & How can I improve? & Adaptation over time \\
+  \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}[shrink=10]{A Modern Agent Is Usually Hybrid}
+  \begin{keyidea}
+    Real AI systems commonly combine several of today's architectures rather than choosing exactly one.
+  \end{keyidea}
+  \vspace{0.12in}
+  A self-driving car may:
+  \begin{itemize}
+    \item use reflexes for emergency braking,
+    \item maintain a model of surrounding traffic,
+    \item plan toward a destination,
+    \item optimize safety, time, energy, and comfort,
+    \item learn from data and experience.
+  \end{itemize}
+  \vspace{0.12in}
+  \begin{activity}
+    Given an environment and a performance measure, what internal structure does the agent actually need?
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Next Time: Search Algorithms}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \imageplaceholder{search-maze.jpg}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{keyidea}
+        Goal-based agents need a systematic way to find sequences of actions that move from an initial state to a goal state.
+      \end{keyidea}
+      \vspace{0.12in}
+      \begin{itemize}
+        \item State spaces.
+        \item Search trees.
+        \item Breadth-first and depth-first search.
+        \item Cost and optimality.
+        \item Heuristics later.
+      \end{itemize}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \end{document}

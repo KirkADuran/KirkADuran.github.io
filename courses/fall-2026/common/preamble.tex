@@ -95,6 +95,18 @@
   \endgroup
 }
 
+\newcommand{\imageplaceholder}[2][0.3in]{%
+  \noindent\makebox[\linewidth][c]{%
+    \fcolorbox{CalPolySage}{CalPolyBeige}{%
+      \parbox[c][#1][c]{0.86\linewidth}{%
+        \centering
+        {\color{DeckMuted}\scriptsize Image placeholder: }%
+        {\color{DeckInk}\scriptsize\ttfamily\detokenize{#2}}%
+      }%
+    }%
+  }%
+}
+
 \newcommand{\sectionframe}[1]{
   \begingroup
   \setbeamercolor{background canvas}{bg=CalPolyGreen}
