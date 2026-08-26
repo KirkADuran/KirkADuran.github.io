@@ -1,6 +1,7 @@
 \documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
 \graphicspath{{../assets/lecture-03/}}
+\newcommand{\lectureimage}[2][2.05in]{\includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}}
 \setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
@@ -120,7 +121,7 @@ function TABLE-DRIVEN-AGENT(percept):
 \begin{frame}{Is This Intelligence?}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.58\textwidth}
-      \imageplaceholder{stove-reflex.jpg}
+      \lectureimage[2.25in]{slide9.jpg}
     \end{column}
     \begin{column}{0.36\textwidth}
       \begin{activity}
@@ -140,7 +141,7 @@ function TABLE-DRIVEN-AGENT(percept):
 \begin{frame}{Is This Intelligent?}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.42\textwidth}
-      \imageplaceholder{water-fountain.jpg}
+      \lectureimage[2.25in]{slide10.jpeg}
     \end{column}
     \begin{column}{0.52\textwidth}
       \begin{activity}
@@ -185,7 +186,7 @@ function TABLE-DRIVEN-AGENT(percept):
   \end{columns}
 \end{frame}
 
-\begin{frame}{Simple Reflex Agents: Strengths And Weaknesses}
+\begin{frame}[shrink=10]{Simple Reflex Agents: Strengths And Weaknesses}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.48\textwidth}
       \begin{block}{Advantages}
@@ -207,9 +208,9 @@ function TABLE-DRIVEN-AGENT(percept):
       \end{block}
     \end{column}
   \end{columns}
-  \vspace{0.08in}
+  \vspace{0.02in}
   \begin{center}
-    \imageplaceholder{simple-reflex-diagram.jpg}
+    \includegraphics[width=0.52\linewidth,height=1.1in,keepaspectratio]{slide12.png}
   \end{center}
 \end{frame}
 
@@ -231,7 +232,7 @@ function TABLE-DRIVEN-AGENT(percept):
       \end{keyidea}
     \end{column}
     \begin{column}{0.4\textwidth}
-      \imageplaceholder{thermostat-visual.jpg}
+      \lectureimage[2.0in]{slide13.jpg}
     \end{column}
   \end{columns}
 \end{frame}
@@ -256,7 +257,7 @@ function TABLE-DRIVEN-AGENT(percept):
       \end{keyidea}
     \end{column}
     \begin{column}{0.39\textwidth}
-      \imageplaceholder{jacquard-loom.jpg}
+      \lectureimage[2.0in]{slide14.jpg}
     \end{column}
   \end{columns}
 \end{frame}
@@ -309,7 +310,7 @@ function TABLE-DRIVEN-AGENT(percept):
       \end{block}
     \end{column}
     \begin{column}{0.46\textwidth}
-      \imageplaceholder{model-based-diagram.jpg}
+      \lectureimage[2.05in]{slide17.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -317,7 +318,7 @@ function TABLE-DRIVEN-AGENT(percept):
 \begin{frame}{Reflex Or Model-Based Reflex?}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.58\textwidth}
-      \imageplaceholder{vacuum-reflex-or-model.jpg}
+      \lectureimage[2.25in]{slide18.jpeg}
     \end{column}
     \begin{column}{0.36\textwidth}
       \begin{activity}
@@ -364,7 +365,7 @@ function TABLE-DRIVEN-AGENT(percept):
 \begin{frame}{Goal-Based Architecture}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.55\textwidth}
-      \imageplaceholder{goal-based-diagram.jpg}
+      \lectureimage[2.25in]{slide 21.png}
     \end{column}
     \begin{column}{0.39\textwidth}
       \begin{itemize}
@@ -383,7 +384,7 @@ function TABLE-DRIVEN-AGENT(percept):
 \begin{frame}{Goal-Based Example: Vacuum Robot}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.45\textwidth}
-      \imageplaceholder{goal-vacuum.jpg}
+      \lectureimage[2.25in]{slide22.jpg}
     \end{column}
     \begin{column}{0.5\textwidth}
       \begin{itemize}
@@ -400,7 +401,7 @@ function TABLE-DRIVEN-AGENT(percept):
 \begin{frame}[shrink=10]{Is A Goal Enough?}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.42\textwidth}
-      \imageplaceholder{chess-goal.jpg}
+      \lectureimage[2.25in]{slide23.png}
     \end{column}
     \begin{column}{0.52\textwidth}
       \begin{activity}
@@ -467,7 +468,7 @@ function TABLE-DRIVEN-AGENT(percept):
       \end{center}
     \end{column}
     \begin{column}{0.46\textwidth}
-      \imageplaceholder{utility-based-diagram.jpg}
+      \lectureimage[2.05in]{slide25.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -493,7 +494,7 @@ function TABLE-DRIVEN-AGENT(percept):
 \begin{frame}[shrink=20]{Goals Or Utility Are Not Enough}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.56\textwidth}
-      \imageplaceholder{deepblue-alphago.jpg}
+      \lectureimage[2.25in]{slide27.jpeg}
     \end{column}
     \begin{column}{0.38\textwidth}
       \begin{itemize}
@@ -513,22 +514,29 @@ function TABLE-DRIVEN-AGENT(percept):
 \sectionframe{Part 5: Learning Agents}
 % ============================================================
 
-\begin{frame}{Learning Agents}
-  \begin{cpdefinition}
-    A \textbf{learning agent} improves its behavior over time based on experience or feedback.
-  \end{cpdefinition}
-  \vspace{0.08in}
-  \begin{enumerate}
-    \item Perceive the environment.
-    \item Take an action using the current agent program.
-    \item Observe the outcome.
-    \item Use feedback to improve internal models, rules, utilities, or strategies.
-    \item Repeat with better knowledge next time.
-  \end{enumerate}
-  \vspace{0.08in}
-  \begin{keyidea}
-    Learning allows an agent to begin with incomplete knowledge, adapt to an unfamiliar environment, and improve through experience.
-  \end{keyidea}
+\begin{frame}[shrink=10]{Learning Agents}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{cpdefinition}
+        A \textbf{learning agent} improves its behavior over time based on experience or feedback.
+      \end{cpdefinition}
+      \vspace{0.04in}
+      \begin{enumerate}
+        \item Perceive the environment.
+        \item Take an action using the current agent program.
+        \item Observe the outcome.
+        \item Use feedback to improve internal models, rules, utilities, or strategies.
+        \item Repeat with better knowledge next time.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureimage[1.75in]{slide29.jpg}
+      \vspace{0.03in}
+      \begin{keyidea}
+        Learning allows an agent to begin with incomplete knowledge, adapt to an unfamiliar environment, and improve through experience.
+      \end{keyidea}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{Four Components Of A Learning Agent}
@@ -593,7 +601,7 @@ function TABLE-DRIVEN-AGENT(percept):
       \end{itemize}
     \end{column}
     \begin{column}{0.43\textwidth}
-      \imageplaceholder{problem-abstraction-navigation.jpg}
+      \lectureimage[2.05in]{slide33.jpeg}
     \end{column}
   \end{columns}
 \end{frame}
@@ -637,7 +645,7 @@ function TABLE-DRIVEN-AGENT(percept):
 \begin{frame}{Chess As A Single-State Problem}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.43\textwidth}
-      \imageplaceholder{chess-board.jpg}
+      \lectureimage[2.25in]{slide37.png}
     \end{column}
     \begin{column}{0.51\textwidth}
       \begin{itemize}
@@ -673,7 +681,7 @@ function TABLE-DRIVEN-AGENT(percept):
 \begin{frame}[shrink=30]{Belief States}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.48\textwidth}
-      \imageplaceholder{multiple-state-map.jpg}
+      \lectureimage[2.05in]{slide39.jpeg}
     \end{column}
     \begin{column}{0.46\textwidth}
       \begin{cpdefinition}
@@ -742,7 +750,7 @@ function TABLE-DRIVEN-AGENT(percept):
       \end{exampleblockcp}
     \end{column}
     \begin{column}{0.46\textwidth}
-      \imageplaceholder{exploration-car.jpg}
+      \lectureimage[2.05in]{slide42.jpeg}
     \end{column}
   \end{columns}
 \end{frame}
@@ -774,65 +782,6 @@ function TABLE-DRIVEN-AGENT(percept):
   \begin{activity}
     For each problem, identify what the agent knows, what it does not know, and whether outcomes are deterministic.
   \end{activity}
-\end{frame}
-
-% ============================================================
-\sectionframe{Part 8: Putting The Architectures Together}
-% ============================================================
-
-\begin{frame}{Agent Architectures: What Changes?}
-  \scriptsize
-  \begin{center}
-  \begin{tabular}{@{}p{0.19\linewidth} p{0.2\linewidth} p{0.25\linewidth} p{0.24\linewidth}@{}}
-    \textbf{Architecture} & \textbf{Uses} & \textbf{Main Question} & \textbf{Key Addition} \\
-    \hline
-    Simple reflex & Current percept & What should I do now? & Condition--action rules \\
-    Model-based reflex & Percept + internal state & What is the world like now? & Memory and model \\
-    Goal-based & State + goals & How can I reach success? & Search / planning \\
-    Utility-based & State + utilities & Which outcome is best? & Preferences and tradeoffs \\
-    Learning & Experience + feedback & How can I improve? & Adaptation over time \\
-  \end{tabular}
-  \end{center}
-\end{frame}
-
-\begin{frame}[shrink=10]{A Modern Agent Is Usually Hybrid}
-  \begin{keyidea}
-    Real AI systems commonly combine several of today's architectures rather than choosing exactly one.
-  \end{keyidea}
-  \vspace{0.12in}
-  A self-driving car may:
-  \begin{itemize}
-    \item use reflexes for emergency braking,
-    \item maintain a model of surrounding traffic,
-    \item plan toward a destination,
-    \item optimize safety, time, energy, and comfort,
-    \item learn from data and experience.
-  \end{itemize}
-  \vspace{0.12in}
-  \begin{activity}
-    Given an environment and a performance measure, what internal structure does the agent actually need?
-  \end{activity}
-\end{frame}
-
-\begin{frame}{Next Time: Search Algorithms}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.46\textwidth}
-      \imageplaceholder{search-maze.jpg}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \begin{keyidea}
-        Goal-based agents need a systematic way to find sequences of actions that move from an initial state to a goal state.
-      \end{keyidea}
-      \vspace{0.12in}
-      \begin{itemize}
-        \item State spaces.
-        \item Search trees.
-        \item Breadth-first and depth-first search.
-        \item Cost and optimality.
-        \item Heuristics later.
-      \end{itemize}
-    \end{column}
-  \end{columns}
 \end{frame}
 
 \end{document}
