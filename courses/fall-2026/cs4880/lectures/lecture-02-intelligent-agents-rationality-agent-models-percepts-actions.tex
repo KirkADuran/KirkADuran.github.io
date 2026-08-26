@@ -1,6 +1,7 @@
 \documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
 \graphicspath{{../assets/lecture-02/}}
+\newcommand{\lectureimage}[2][1.75in]{\includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}}
 \setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
@@ -36,7 +37,7 @@
       \end{activity}
     \end{column}
     \begin{column}{0.47\textwidth}
-      \imageplaceholder{ai-goals.jpg}
+      \lectureimage[2.0in]{goalsofai.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -55,7 +56,7 @@
       \end{keyidea}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \imageplaceholder{self-driving-car.jpg}
+      \lectureimage[2.0in]{selfdrivingcar.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -75,7 +76,7 @@
       \end{activity}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \imageplaceholder{vacuum-bot.jpg}
+      \lectureimage[2.0in]{vacuumbot.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -95,7 +96,7 @@
       \end{activity}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \imageplaceholder{agent-comparison.jpg}
+      \lectureimage[2.0in]{aibehavior.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -122,7 +123,7 @@
       \end{activity}
     \end{column}
     \begin{column}{0.33\textwidth}
-      \imageplaceholder{ada-lovelace.jpg}
+      \lectureimage[2.0in]{lovelace.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -145,7 +146,7 @@
       \end{activity}
     \end{column}
     \begin{column}{0.39\textwidth}
-      \imageplaceholder{biological-computer.jpg}
+      \lectureimage[2.0in]{biochip.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -168,7 +169,7 @@
       \end{keyidea}
     \end{column}
     \begin{column}{0.38\textwidth}
-      \imageplaceholder{agent-loop.jpg}
+      \lectureimage[2.0in]{ailoop.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -200,7 +201,7 @@
   \end{columns}
   \vspace{0.12in}
   \begin{center}
-    \imageplaceholder{agent-loop.jpg}
+    \includegraphics[width=0.58\linewidth,height=1.35in,keepaspectratio]{ailoop.png}
   \end{center}
 \end{frame}
 
@@ -231,7 +232,7 @@
 \begin{frame}{Vacuum Bot: What Choices Does It Make?}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.48\textwidth}
-      \imageplaceholder{vacuum-bot.jpg}
+      \lectureimage[2.0in]{vacuumbot.png}
     \end{column}
     \begin{column}{0.47\textwidth}
       \begin{itemize}
@@ -267,7 +268,7 @@
       \end{center}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \imageplaceholder{agent-function-diagram.jpg}
+      \lectureimage[2.0in]{intelligentagents.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -290,7 +291,7 @@
       \end{exampleblockcp}
     \end{column}
     \begin{column}{0.43\textwidth}
-      \imageplaceholder{agent-function-table.jpg}
+      \lectureimage[2.0in]{functiontable.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -313,7 +314,7 @@
       \end{exampleblockcp}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \imageplaceholder{agent-program-visual.jpg}
+      \lectureimage[2.0in]{vacuumbotdecision.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -339,16 +340,12 @@
       \end{block}
     \end{column}
   \end{columns}
-  \vspace{0.08in}
-  \begin{center}
-    \imageplaceholder{aristotle-practical.jpg}
-  \end{center}
 \end{frame}
 
 \begin{frame}[shrink=10]{Vacuum Bot: Is It Rational?}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.56\textwidth}
-      \imageplaceholder{vacuum-rationality.jpg}
+      \lectureimage[2.25in]{vacuumrational.png}
     \end{column}
     \begin{column}{0.38\textwidth}
       \begin{activity}
@@ -391,7 +388,7 @@
   \end{columns}
   \vspace{0.08in}
   \begin{center}
-    \imageplaceholder{rationality-omniscience-1.jpg}
+    \includegraphics[width=0.58\linewidth,height=1.25in,keepaspectratio]{omniscient.png}
   \end{center}
 \end{frame}
 
@@ -410,7 +407,7 @@
       \end{keyidea}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \imageplaceholder{rationality-omniscience-2.jpg}
+      \lectureimage[2.0in]{omniscient.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -433,7 +430,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.36\textwidth}
-      \imageplaceholder{rigid-robot.png}
+      \lectureimage[2.1in]{ridgidbehavior.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -452,7 +449,7 @@
       \end{exampleblockcp}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \imageplaceholder{learning-loop.jpg}
+      \lectureimage[2.0in]{learning.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -472,7 +469,7 @@
       \end{keyidea}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \imageplaceholder{learning-exploration.jpg}
+      \lectureimage[2.0in]{exploration.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -491,7 +488,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.35\textwidth}
-      \imageplaceholder{turing-chappie.jpg}
+      \lectureimage[2.0in]{chappie.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -510,7 +507,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.38\textwidth}
-      \imageplaceholder{autonomy-concept.jpg}
+      \lectureimage[2.0in]{autonomy.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -530,7 +527,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.39\textwidth}
-      \imageplaceholder{autonomy-comparison.jpg}
+      \lectureimage[2.0in]{autonomy.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -559,7 +556,7 @@
       \end{block}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \imageplaceholder{peas-taxi.jpg}
+      \lectureimage[2.0in]{taxi.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -615,7 +612,7 @@
   \end{center}
   \vspace{0.08in}
   \begin{center}
-    \imageplaceholder{peas-examples.jpg}
+    \includegraphics[width=0.46\linewidth,height=1.05in,keepaspectratio]{foldingroboto.png}
   \end{center}
 \end{frame}
 
@@ -650,10 +647,6 @@
       \end{exampleblockcp}
     \end{column}
   \end{columns}
-  \vspace{0.08in}
-  \begin{center}
-    \imageplaceholder{observability.jpg}
-  \end{center}
 \end{frame}
 
 \begin{frame}{Single-Agent Versus Multi-Agent}
@@ -709,10 +702,6 @@
       \end{exampleblockcp}
     \end{column}
   \end{columns}
-  \vspace{0.10in}
-  \begin{center}
-    \imageplaceholder{deterministic-stochastic.jpg}
-  \end{center}
 \end{frame}
 
 \begin{frame}{Episodic Versus Sequential}
@@ -734,10 +723,6 @@
       \end{exampleblockcp}
     \end{column}
   \end{columns}
-  \vspace{0.10in}
-  \begin{center}
-    \imageplaceholder{episodic-sequential.jpg}
-  \end{center}
 \end{frame}
 
 \begin{frame}{Static Versus Dynamic}
@@ -759,10 +744,6 @@
       \end{exampleblockcp}
     \end{column}
   \end{columns}
-  \vspace{0.10in}
-  \begin{center}
-    \imageplaceholder{static-dynamic.jpg}
-  \end{center}
 \end{frame}
 
 \begin{frame}{Discrete Versus Continuous}
@@ -784,10 +765,6 @@
       \end{exampleblockcp}
     \end{column}
   \end{columns}
-  \vspace{0.10in}
-  \begin{center}
-    \imageplaceholder{discrete-continuous.jpg}
-  \end{center}
 \end{frame}
 
 \begin{frame}{Known Versus Unknown}
@@ -809,10 +786,6 @@
       \end{exampleblockcp}
     \end{column}
   \end{columns}
-  \vspace{0.10in}
-  \begin{center}
-    \imageplaceholder{known-unknown.jpg}
-  \end{center}
 \end{frame}
 
 \begin{frame}{Environments?}
@@ -844,20 +817,6 @@
   \begin{keyidea}
     These labels are modeling assumptions. A task can move between categories when we change what counts as the state, what sensors are available, or what uncertainty we include.
   \end{keyidea}
-\end{frame}
-
-% ============================================================
-\sectionframe{Part 7: Course Reminder}
-% ============================================================
-
-\begin{frame}{Reminder}
-  \begin{block}{Lab 0}
-    Break yourselves into groups.
-  \end{block}
-  \vspace{0.12in}
-  \begin{block}{Final Project}
-    Milestone 1: Team Formation + Idea
-  \end{block}
 \end{frame}
 
 \end{document}

@@ -1,6 +1,7 @@
 \documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
 \graphicspath{{../assets/lecture-02/}}
+\newcommand{\lectureimage}[2][1.75in]{\includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}}
 \setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
@@ -42,7 +43,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \imageplaceholder{computer-components.jpg}
+      \lectureimage[2.1in]{computer-components.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -61,7 +62,7 @@
       \end{exampleblockcp}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \imageplaceholder{clerical-computation.jpg}
+      \lectureimage[1.55in]{clerical-computation.png}
       \vspace{0.05in}
       \begin{keyidea}
         Computers amplify human procedures; they do not remove the need to decide which procedures make sense.
@@ -78,13 +79,13 @@
       \begin{block}{Antiquity}
         The abacus supported arithmetic by giving people a physical representation of quantities and operations.
       \end{block}
-      \imageplaceholder{abacus.jpg}
+      \lectureimage[1.55in]{abacus.png}
     \end{column}
     \begin{column}{0.48\textwidth}
       \begin{block}{9th Century}
         Persian mathematician Muhammad ibn Musa al-Khwarizmi wrote systematic procedures for calculation. His name is the historical root of the word \emph{algorithm}.
       \end{block}
-      \imageplaceholder{al-khwarizmi.jpg}
+      \lectureimage[1.55in]{al-khwarizmi.png}
     \end{column}
   \end{columns}
   \vspace{0.08in}
@@ -99,13 +100,13 @@
       \begin{block}{17th Century}
         Blaise Pascal and Gottfried Wilhelm Leibniz developed mechanical calculators for arithmetic operations.
       \end{block}
-      \imageplaceholder{mechanical-calculator.jpg}
+      \lectureimage[1.55in]{mechanical-calculator.png}
     \end{column}
     \begin{column}{0.48\textwidth}
       \begin{block}{1830s}
         Charles Babbage designed the Analytical Engine as a general-purpose mechanical computer. Ada Lovelace described an algorithm intended for the machine.
       \end{block}
-      \imageplaceholder{babbage-engine.jpg}
+      \lectureimage[1.55in]{babbage-engine.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -126,7 +127,7 @@
       \end{exampleblockcp}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \imageplaceholder{turing-machine.jpg}
+      \lectureimage[2.1in]{turing-machine.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -134,13 +135,13 @@
 \begin{frame}{1940s--1950s: Electronic Computers and Languages}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.47\textwidth}
-      \imageplaceholder{eniac.jpg}
+      \lectureimage[1.6in]{eniac.png}
       \begin{block}{1940s}
         Electronic machines such as ENIAC could perform complex calculations much faster than manual calculation.
       \end{block}
     \end{column}
     \begin{column}{0.47\textwidth}
-      \imageplaceholder{punch-card.png}
+      \lectureimage[1.6in]{punch-card.png}
       \begin{block}{1950s}
         Languages such as FORTRAN and Lisp changed how humans expressed programs, moving programmers farther from raw machine instructions.
       \end{block}
@@ -154,13 +155,13 @@
       \begin{block}{Personal Computing}
         Microprocessors made smaller, less expensive computers practical. Systems such as the Apple I helped move computing toward individual users.
       \end{block}
-      \imageplaceholder{early-personal-computer.jpg}
+      \lectureimage[1.75in]{early-personal-computer.png}
     \end{column}
     \begin{column}{0.47\textwidth}
       \begin{block}{The Internet and Web}
         Networked computers transformed communication and data exchange. Tim Berners-Lee's World Wide Web made linked information much easier to publish and access.
       \end{block}
-      \imageplaceholder{internet-network-map.jpg}
+      \lectureimage[1.75in]{internet-network-map.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -179,7 +180,7 @@
       \end{keyidea}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \imageplaceholder{ai-era.jpg}
+      \lectureimage[2.1in]{ai-era.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -200,7 +201,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \imageplaceholder{stored-program-architecture.jpg}
+      \lectureimage[2.1in]{stored-program-architecture.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -219,7 +220,7 @@
       \end{exampleblockcp}
     \end{column}
     \begin{column}{0.44\textwidth}
-      \imageplaceholder{computer-components.jpg}
+      \lectureimage[2.0in]{computer-components.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -239,7 +240,7 @@
       \end{activity}
     \end{column}
     \begin{column}{0.49\textwidth}
-      \imageplaceholder{instruction-cycle.jpg}
+      \lectureimage[2.1in]{instruction-cycle.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -257,7 +258,7 @@
       \end{keyidea}
     \end{column}
     \begin{column}{0.40\textwidth}
-      \imageplaceholder{lukyanov-water-computer.jpg}
+      \lectureimage[2.0in]{water-computer.png}
       \begin{center}
         \scriptsize Lukyanov's hydraulic integrator reminds us that computation is not inherently electronic.
       \end{center}
@@ -280,7 +281,7 @@
       \end{exampleblockcp}
     \end{column}
     \begin{column}{0.46\textwidth}
-      \imageplaceholder{memory-addresses.jpg}
+      \lectureimage[2.0in]{memory-address.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -298,7 +299,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.43\textwidth}
-      \imageplaceholder{memory-cells-bits.jpg}
+      \lectureimage[2.0in]{memory-bits.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -320,12 +321,10 @@
       \end{keyidea}
     \end{column}
     \begin{column}{0.47\textwidth}
-      \imageplaceholder{magnetic-core-memory.jpg}\hfill
-      \imageplaceholder{ram-module.jpg}
+      \lectureimage[1.35in]{memory-core.png}
       \begin{block}{Technology}
         Earlier magnetic-core systems were physically large and expensive. Semiconductor memory stores vastly more information in far less space and at much lower cost per byte.
       \end{block}
-      \imageplaceholder{memory-warehouse.jpg}
     \end{column}
   \end{columns}
 \end{frame}
@@ -343,7 +342,7 @@
       \end{exampleblockcp}
     \end{column}
     \begin{column}{0.43\textwidth}
-      \imageplaceholder{transistor-switch.jpg}
+      \lectureimage[2.0in]{transistor.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -362,7 +361,7 @@
       \end{activity}
     \end{column}
     \begin{column}{0.37\textwidth}
-      \imageplaceholder{machine-code-cpu.jpg}
+      \lectureimage[2.0in]{binary-conversion.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -382,7 +381,7 @@
       \end{exampleblockcp}
     \end{column}
     \begin{column}{0.49\textwidth}
-      \imageplaceholder{binary-addition.jpg}
+      \lectureimage[2.0in]{binary-addition.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -400,7 +399,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.41\textwidth}
-      \imageplaceholder{machine-code-cpu.jpg}
+      \lectureimage[2.0in]{machine-code.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -418,7 +417,7 @@
       \end{itemize}
     \end{column}
     \begin{column}{0.44\textwidth}
-      \imageplaceholder{assembly-to-machine-code.jpg}
+      \lectureimage[2.0in]{assembly-code.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -437,7 +436,7 @@
       \end{keyidea}
     \end{column}
     \begin{column}{0.43\textwidth}
-      \imageplaceholder{compiler-automation.jpg}
+      \lectureimage[2.0in]{compiler.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -455,180 +454,10 @@
       \end{keyidea}
     \end{column}
     \begin{column}{0.42\textwidth}
-      \imageplaceholder{high-level-code.jpg}
+      \lectureimage[2.0in]{highlevel-language.png}
     \end{column}
   \end{columns}
 \end{frame}
-
-\sectionframe{Part 5: Computer Science and Computer Systems}
-
-\begin{frame}[shrink=20]{What Is Computer Science?}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.48\textwidth}
-      \begin{cpdefinition}
-        Computer science studies computation: algorithms, data, programming languages, systems, and the limits and applications of computation.
-      \end{cpdefinition}
-      \begin{itemize}
-        \item \textbf{Theory:} algorithms and computational complexity.
-        \item \textbf{Systems:} operating systems, databases, networks, architecture.
-        \item \textbf{Software:} programming languages, software engineering, design.
-        \item \textbf{Applied computing:} AI, machine learning, graphics, robotics, security, data science, HCI, and more.
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.46\textwidth}
-      \imageplaceholder{cs-fields-taxonomy.jpg}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Computer Science Changes With Society}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \imageplaceholder{cs-degree-history.jpg}
-      \begin{block}{Participation changes}
-        Enrollment and degree patterns have risen and fallen with technology cycles, labor markets, culture, and access to computing education.
-      \end{block}
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \imageplaceholder{tech-jobs-history.jpg}
-      \begin{block}{Jobs change too}
-        Computing occupations evolve as technology changes. Historical charts are snapshots, not guarantees about future demand.
-      \end{block}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}[shrink=20]{Who Uses Computers?}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.50\textwidth}
-      \begin{itemize}
-        \item \textbf{General users:} communication, entertainment, school, work, finance, navigation.
-        \item \textbf{Scientists:} simulation and data analysis.
-        \item \textbf{Engineers:} embedded systems, CAD, control, testing.
-        \item \textbf{Businesses:} databases, logistics, CRM/ERP, e-commerce.
-        \item \textbf{Accessibility:} screen readers, communication aids, prosthetic control.
-      \end{itemize}
-      \begin{keyidea}
-        Because computing reaches nearly everyone, privacy, security, accessibility, bias, and responsible design are technical concerns too.
-      \end{keyidea}
-    \end{column}
-    \begin{column}{0.43\textwidth}
-      \imageplaceholder{smartphone-users-2016-2022.jpg}
-      \begin{center}\scriptsize Historical smartphone-adoption snapshot from the original lecture.\end{center}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}[shrink=10]{Are All Computers the Same?}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{General-purpose}
-        PCs and smartphones are designed to run many different programs.
-      \end{block}
-      \begin{block}{Specialized}
-        GPUs, embedded controllers, and supercomputers may be optimized for particular workloads or environments.
-      \end{block}
-      \begin{block}{Distributed}
-        Clusters and cloud systems divide work across many networked machines for scale and fault tolerance.
-      \end{block}
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \imageplaceholder{personal-computer-timeline.jpg}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}[shrink=35]{Quantum Computers and Emerging Directions}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.52\textwidth}
-      \begin{itemize}
-        \item \textbf{Quantum computing:} qubits and quantum effects enable different algorithms; potential speedups apply to particular problem structures rather than every task.
-        \item \textbf{Specialized hardware:} GPUs and other accelerators trade generality for efficiency on important workloads.
-        \item \textbf{New architectures:} research explores neuromorphic, photonic, and other post-Moore approaches.
-        \item \textbf{Software and systems:} AI frameworks, cloud systems, distributed computing, and edge computing spread computation across many kinds of devices.
-        \item \textbf{Efficiency:} power consumption and cooling increasingly constrain what systems can do.
-      \end{itemize}
-      \begin{exampleblockcp}
-        Shor's algorithm is a famous example where a sufficiently capable quantum computer would change the complexity of integer factoring.
-      \end{exampleblockcp}
-    \end{column}
-    \begin{column}{0.42\textwidth}
-      \imageplaceholder{quantum-computer.jpg}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\sectionframe{Part 6: Computation Has a Physical Cost}
-
-\begin{frame}{Activity: Three Ways to Get a Times Table}
-  \begin{activity}
-    Suppose you want the complete multiplication table from 1 through 12. Which approach do you expect to use the most electricity?
-  \end{activity}
-  \vspace{0.12in}
-  \begin{enumerate}
-    \item Write a small nested loop and compute all 144 products locally.
-    \item Search the web and retrieve a page containing the table.
-    \item Ask a large AI system to generate the program and return the results.
-  \end{enumerate}
-  \vspace{0.12in}
-  \begin{exampleblockcp}
-    Ignore your own time for the moment. Think about the computation, networking, storage, and infrastructure involved behind each option.
-  \end{exampleblockcp}
-\end{frame}
-
-\begin{frame}[shrink=30]{The Energy Comparison Is About Scale, Not Exact Numbers}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.50\textwidth}
-      \begin{itemize}
-        \item A few arithmetic operations on a local processor require very little energy.
-        \item A network query activates networking equipment, servers, storage, cooling, and other infrastructure.
-        \item A large AI inference may perform far more computation than the tiny arithmetic task itself.
-        \item Exact energy use depends on hardware, software, location, batching, model size, utilization, and many other details.
-      \end{itemize}
-      \begin{keyidea}
-        Use the simplest tool that solves the problem well. Abstraction is valuable, but abstraction is not physically free.
-      \end{keyidea}
-    \end{column}
-    \begin{column}{0.42\textwidth}
-      \imageplaceholder{cloud-data-center.jpg}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Computing Depends on Physical Infrastructure}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.50\textwidth}
-      \begin{itemize}
-        \item Data centers require electricity, networking, cooling, land, and hardware.
-        \item Growing computing demand can affect decisions about power generation and transmission.
-        \item This is another reason efficiency matters: faster or smaller algorithms can reduce real resource use at scale.
-      \end{itemize}
-      \begin{keyidea}
-        Software looks abstract, but every program ultimately runs on physical machines somewhere.
-      \end{keyidea}
-    \end{column}
-    \begin{column}{0.42\textwidth}
-      \imageplaceholder{data-center-energy-headline.jpg}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Energy Production Is Also a Computing Problem}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.46\textwidth}
-      \begin{itemize}
-        \item Electrical demand changes throughout the day.
-        \item Renewable generation also changes with conditions such as sunlight and wind.
-        \item Grid operators use sensing, forecasting, optimization, and control software to balance production and demand.
-        \item The ``duck curve'' illustrates how net demand can fall during solar-heavy hours and rise rapidly later in the day.
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.49\textwidth}
-      \imageplaceholder{duck-curve.png}
-    \end{column}
-  \end{columns}
-\end{frame}
-
 
 \begin{frame}[shrink=10]{Where Python Fits}
   \begin{columns}[T,onlytextwidth]
