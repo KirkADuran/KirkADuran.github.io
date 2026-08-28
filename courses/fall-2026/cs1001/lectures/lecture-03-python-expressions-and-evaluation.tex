@@ -1,54 +1,1056 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\graphicspath{{../assets/lecture-03/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Replace the placeholder by placing
+% the matching file in ../assets/lecture-03/.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-03/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{3}
 \lecturetitle{Python Expressions and Evaluation}
 \lecturedate{August 28, 2026}
-\courseunit{2. Expressions, Types, and State}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
 \makedecktitle
 
 \begin{frame}{Today}
+
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Python Expressions and Evaluation
-    \item Placeholder for announcements and context.
+
+    \item Why programming languages let us work above machine-level details.
+
+    \item How low-level and high-level languages differ.
+
+    \item How compilation and interpretation connect source code to execution.
+
+    \item Why Python is widely used and appropriate for this course.
+
+    \item How Python evaluates one self-contained expression to produce one value.
+
   \end{itemize}
+
+  \begin{keyidea}
+
+    Today we evaluate expressions without introducing variables or persistent program state.
+
+  \end{keyidea}
+
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: Moving Away from Bare Metal}
+
+\begin{frame}{Programming Languages Bridge Human Ideas and Machine Execution}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.53\textwidth}
+
+      \begin{cpdefinition}
+
+        A programming language is a formal notation for expressing computations that a computer can execute.
+
+      \end{cpdefinition}
+
+      \begin{itemize}
+
+        \item Its \textbf{syntax} specifies which forms are valid.
+
+        \item Its \textbf{semantics} specifies what valid forms mean.
+
+        \item Software translates or processes the notation so hardware can perform the requested computation.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+
+      % Search direction: human-readable code bridging to CPU instructions.
+      \lectureimage[1.95in]{4.png}
+
+    \end{column}
+
+  \end{columns}
+
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{Low-Level Languages Stay Close to Hardware}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{block}{Low-level languages}
+
+        \begin{itemize}
+
+          \item Closely reflect processor operations.
+
+          \item Expose memory and hardware details.
+
+          \item Offer precise control but require more implementation detail.
+
+        \end{itemize}
+
+      \end{block}
+
+      \begin{keyidea}
+
+        Low-level code gives the programmer more direct control over what the machine does, but that control comes with more machine-specific detail.
+
+      \end{keyidea}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      % Search direction: machine code and assembly instructions near CPU hardware.
+      \lectureimage[2.20in]{5.jpg}
+
+    \end{column}
+
+  \end{columns}
+
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\begin{frame}{High-Level Languages Hide Machine Detail}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{block}{High-level languages}
+
+        \begin{itemize}
+
+          \item Express computations using human-oriented abstractions.
+
+          \item Hide many processor-specific details.
+
+          \item Improve readability, portability, and development speed.
+
+        \end{itemize}
+
+      \end{block}
+
+      \begin{keyidea}
+
+        High-level languages let us write closer to the problem we are solving and farther from the processor instructions that eventually run.
+
+      \end{keyidea}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      % Search direction: abstraction ladder from machine code through assembly to Python.
+      \lectureimage[2.20in]{6.jpg}
+
+    \end{column}
+
+  \end{columns}
+
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}{Compiled Languages Translate Before Execution}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{block}{Compilation}
+
+        A compiler translates source code into another executable form before that form runs.
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item The compiler checks and translates source code ahead of execution.
+
+        \item The output may be machine code, bytecode, or another lower-level form.
+
+        \item The translated form can often run many times without recompiling from scratch.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      % Search direction: compiler turning source code into executable instructions.
+      \lectureimage[2.15in]{7.jpg}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}[shrink=10]{Interpreted Languages Process Code During Execution}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{block}{Interpretation}
+
+        An interpreter or runtime processes a program and performs its operations during execution.
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item The runtime reads program forms and carries out their meaning as the program runs.
+
+        \item This can support fast experimentation and interactive use.
+
+        \item Many real systems blend strategies; CPython compiles source to bytecode and then executes that bytecode.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      % Search direction: compiler and interpreter paths converging on machine execution.
+      \lectureimage[1.55in]{8.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    Compiled and interpreted describe implementation strategies, not perfectly separate categories of languages.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Python Keeps Our Attention on the Computation}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.53\textwidth}
+
+      \begin{itemize}
+
+        \item Python is a high-level, general-purpose programming language.
+
+        \item Its syntax emphasizes readability and supports rapid experimentation.
+
+        \item It runs across major operating systems and has a large library ecosystem.
+
+        \item It is used in automation, scientific computing, data analysis, artificial intelligence, web systems, and education.
+
+      \end{itemize}
+
+      \begin{exampleblockcp}
+
+        In CPython, source code is compiled to bytecode, which the Python virtual machine executes.
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+
+      % Search direction: Python applications in science, automation, data, AI, and web development.
+      \lectureimage[2.18in]{9.jpg}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\sectionframe{Part 2: A Brief History of Programming Languages}
+
+\begin{frame}{Early Programming Stayed Close to the Machine}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.54\textwidth}
+
+      \begin{itemize}
+
+        \item Early electronic computers were programmed through switches, wiring, or numerical instruction codes.
+
+        \item Machine language encoded processor instructions directly as numerical patterns.
+
+        \item Assembly language replaced many numerical patterns with symbolic instruction names.
+
+        \item Programs remained closely tied to a particular processor architecture.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+
+      % Search direction: early computer programming, punched cards, and assembly notation.
+      \lectureimage[2.15in]{11.jpg}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Early High-Level Languages Described Problem Domains}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.54\textwidth}
+
+      \begin{itemize}
+
+        \item \textbf{FORTRAN} supported scientific and numerical computing.
+
+        \item \textbf{COBOL} supported business data processing.
+
+        \item \textbf{Lisp} supported symbolic computation and early artificial intelligence research.
+
+        \item Compilers translated these higher-level descriptions into lower-level instructions.
+
+      \end{itemize}
+
+      \begin{keyidea}
+
+        Programmers increasingly described the problem to solve rather than every processor operation.
+
+      \end{keyidea}
+
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+
+      % Search direction: FORTRAN, COBOL, and Lisp historical montage.
+      \lectureimage[2.15in]{12.jpeg}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Languages Added Structure, Portability, and New Models}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.54\textwidth}
+
+      \begin{itemize}
+
+        \item \textbf{BASIC} made interactive programming more accessible.
+
+        \item \textbf{C} combined portable systems programming with low-level control.
+
+        \item \textbf{Pascal} emphasized structured programming and clear program organization.
+
+        \item \textbf{Smalltalk} advanced object-oriented programming and graphical environments.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+
+      % Search direction: BASIC, C, Pascal, and Smalltalk language timeline.
+      \lectureimage[2.15in]{13.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Modern Languages Grow Through Their Ecosystems}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.54\textwidth}
+
+      \begin{itemize}
+
+        \item Languages such as Python, Java, and JavaScript expanded with the internet and personal computing.
+
+        \item Libraries package reusable solutions for common tasks.
+
+        \item Development tools support testing, debugging, collaboration, and deployment.
+
+        \item Communities, documentation, and application domains strongly influence adoption.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+
+      % Search direction: modern programming languages surrounded by tools, libraries, and communities.
+      \lectureimage[2.15in]{14.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\sectionframe{Part 3: Python Expressions Produce Values}
+
+\begin{frame}[shrink=10]{A Literal Writes a Value Directly in Code}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{cpdefinition}
+
+        A \textbf{literal} is a value written directly in source code.
+
+      \end{cpdefinition}
+
+      \begin{itemize}
+
+        \item \texttt{42}
+
+        \item \texttt{3.14}
+
+        \item \texttt{"hello"}
+
+        \item \texttt{True}
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+
+      % Search direction: simple values entering a Python evaluation pipeline.
+      \lectureimage[1.55in]{16.jpeg}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    The written form represents a value; no name or storage location is needed for today's examples.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{An Expression Evaluates to Produce One Value}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.50\textwidth}
+
+      \begin{cpdefinition}
+
+        An \textbf{expression} is code that Python evaluates to produce one value.
+
+      \end{cpdefinition}
+
+      \begin{itemize}
+
+        \item \texttt{4 + 5} $\rightarrow$ \texttt{9}
+
+        \item \texttt{3 * (8 - 2)} $\rightarrow$ \texttt{18}
+
+        \item \texttt{"CS" + "1001"} $\rightarrow$ \texttt{"CS1001"}
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+
+      \begin{block}{Mental model}
+
+        \centering
+        values\\[0.06in]
+        $\downarrow$\\[0.06in]
+        operator\\[0.06in]
+        $\downarrow$\\[0.06in]
+        new value
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Operators Combine or Transform Values}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.50\textwidth}
+
+      \begin{itemize}
+
+        \item \texttt{+} addition
+
+        \item \texttt{-} subtraction
+
+        \item \texttt{*} multiplication
+
+        \item \texttt{/} division
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+
+      \begin{itemize}
+
+        \item \texttt{//} floor division
+
+        \item \texttt{\%} modulus
+
+        \item \texttt{**} exponentiation
+
+        \item \texttt{( )} explicit grouping
+
+      \end{itemize}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{exampleblockcp}
+
+    Each operator receives one or more values and produces a new value for the surrounding expression.
+
+  \end{exampleblockcp}
+
+\end{frame}
+
+\begin{frame}{Python Evaluates Nested Expressions from the Inside Out}
+
+  \begin{center}
+
+    {\Large \texttt{3 * (8 - 2)}}
+
+  \end{center}
+
+  \vspace{0.08in}
+
+  \begin{enumerate}
+
+    \item The parentheses identify the inner expression: \texttt{8 - 2}.
+
+    \item That subexpression produces \texttt{6}.
+
+    \item The surrounding expression becomes \texttt{3 * 6}.
+
+    \item Multiplication produces the final value \texttt{18}.
+
+  \end{enumerate}
+
+  \begin{keyidea}
+
+    A completed subexpression becomes a value used by the surrounding operation.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Division Produces a Quotient}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.50\textwidth}
+
+      \begin{itemize}
+
+        \item \texttt{7 + 2} $\rightarrow$ \texttt{9}
+
+        \item \texttt{7 - 2} $\rightarrow$ \texttt{5}
+
+        \item \texttt{7 * 2} $\rightarrow$ \texttt{14}
+
+        \item \texttt{7 / 2} $\rightarrow$ \texttt{3.5}
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+
+      \begin{exampleblockcp}
+
+        \texttt{8 / 4} produces \texttt{2.0}, not \texttt{2}.
+
+      \end{exampleblockcp}
+
+      \begin{keyidea}
+
+        In Python, the \texttt{/} operator produces a floating-point quotient, even when the division is exact.
+
+      \end{keyidea}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Floor Division Counts Complete Groups}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{center}
+
+        {\LARGE \texttt{17 // 5} $\rightarrow$ \texttt{3}}
+
+      \end{center}
+
+      \begin{itemize}
+
+        \item Seventeen items contain three complete groups of five.
+
+        \item The two remaining items do not form another complete group.
+
+        \item For now, we use nonnegative values; negative operands require a more precise discussion of ``floor.''
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      % Search direction: 17 objects arranged as three complete groups of five plus two extras.
+      \lectureimage[2.20in]{21.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Modulus Produces the Remainder}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{center}
+
+        {\LARGE \texttt{17 \% 5} $\rightarrow$ \texttt{2}}
+
+      \end{center}
+
+      \begin{itemize}
+
+        \item Three complete groups of five use fifteen items.
+
+        \item Two items remain.
+
+        \item Modulus is useful for cycles, divisibility, and extracting final digits.
+
+      \end{itemize}
+
+      \begin{exampleblockcp}
+
+        \texttt{123 \% 10} $\rightarrow$ \texttt{3}
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      % Search direction: 17 objects in groups of five with two remainders highlighted.
+      \lectureimage[2.20in]{22.jpg}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Exponentiation Repeats Multiplication}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.49\textwidth}
+
+      \begin{center}
+
+        {\LARGE \texttt{2 ** 3} $\rightarrow$ \texttt{8}}
+
+      \end{center}
+
+      \begin{block}{Interpretation}
+
+        \texttt{2 ** 3} means three factors of two:
+
+        \begin{center}
+          $2 \times 2 \times 2 = 8$
+        \end{center}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+
+      \begin{itemize}
+
+        \item Python uses \texttt{**} for exponentiation.
+
+        \item The symbol \texttt{\string^} does not mean exponentiation in Python.
+
+        \item Exponentiation has higher precedence than multiplication, division, addition, and subtraction.
+
+      \end{itemize}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\sectionframe{Part 4: Order of Operations}
+
+\begin{frame}{Precedence Determines Which Operation Acts First}
+
+  \begin{center}
+
+    \begin{tabular}{c l l}
+      \textbf{Priority} & \textbf{Operators} & \textbf{Rule} \\
+      \hline
+      1 & \texttt{( )} & Innermost grouping first \\
+      2 & \texttt{**} & Right to left \\
+      3 & \texttt{*}, \texttt{/}, \texttt{//}, \texttt{\%} & Left to right \\
+      4 & \texttt{+}, \texttt{-} & Left to right \\
+    \end{tabular}
+
+  \end{center}
+
+  \vspace{0.12in}
+
+  \begin{keyidea}
+
+    PEMDAS is a mnemonic. The table states the Python rules more precisely: multiplication and division share a level, as do addition and subtraction.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Associativity Resolves Operators at the Same Level}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Usually left to right}
+
+        \texttt{20 / 5 * 2}
+
+        \vspace{0.08in}
+
+        \texttt{4.0 * 2} $\rightarrow$ \texttt{8.0}
+
+      \end{block}
+
+      Multiplication does not automatically occur before division; the two operators have equal precedence.
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Exponentiation: right to left}
+
+        \texttt{2 ** 3 ** 2}
+
+        \vspace{0.08in}
+
+        \texttt{2 ** (3 ** 2)} $\rightarrow$ \texttt{512}
+
+      \end{block}
+
+      Exponentiation is the important exception in today's operator set.
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Parentheses Override the Default Grouping}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Default precedence}
+
+        \begin{center}
+          {\Large \texttt{2 + 3 * 4}}\\[0.10in]
+          \texttt{2 + 12} $\rightarrow$ \texttt{14}
+        \end{center}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Explicit grouping}
+
+        \begin{center}
+          {\Large \texttt{(2 + 3) * 4}}\\[0.10in]
+          \texttt{5 * 4} $\rightarrow$ \texttt{20}
+        \end{center}
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    Parentheses can change a result and can make the intended grouping easier to read.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}[shrink=10]{Reminder: The Processor Executes One Step at a Time}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{block}{Von Neumann architecture}
+
+        A stored-program computer keeps instructions and data in memory. The CPU repeatedly fetches instructions, decodes them, executes them, and stores results.
+
+      \end{block}
+
+      \begin{block}{Processing cycle}
+
+        Fetch an instruction from memory, decode the operation, execute it using CPU hardware, then move to the next instruction.
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      \begin{keyidea}
+
+        Arithmetic operators eventually become processor operations carried out by the arithmetic logic unit (ALU).
+
+      \end{keyidea}
+
+      \begin{exampleblockcp}
+
+        For today, ignore variables and stored program state. We are only tracing how one expression produces one value.
+
+      \end{exampleblockcp}
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\sectionframe{Part 5: Predict, Verify, and Explain}
+
+\begin{frame}{Predict Each Value Before Running Python}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.44\textwidth}
+
+      \begin{enumerate}
+
+        \item \texttt{2 + 3 * 4}
+
+        \item \texttt{(2 + 3) * 4}
+
+        \item \texttt{17 // 5}
+
+        \item \texttt{17 \% 5}
+
+        \item \texttt{2 ** 3 ** 2}
+
+      \end{enumerate}
+
+    \end{column}
+
+    \begin{column}{0.50\textwidth}
+
+      \begin{activity}
+
+        For each expression, record:
+
+        \begin{enumerate}
+
+          \item the final value,
+
+          \item the first operation performed, and
+
+          \item whether parentheses alter the result.
+
+        \end{enumerate}
+
+      \end{activity}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}[shrink=10]{Use Colab to Test a Reasoned Prediction}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{enumerate}
+
+        \item Predict the final value.
+
+        \item Identify the expected evaluation order.
+
+        \item Enter one expression in one Colab cell.
+
+        \item Run the cell and compare the result.
+
+        \item Explain any difference between the prediction and Python's result.
+
+      \end{enumerate}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      % Search direction: Google Colab cell evaluating 2 + 3 * 4 and displaying 14.
+      \lectureimage[1.55in]{31.jpeg}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    Colab verifies a prediction; it does not replace an explanation.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Evaluation and Display Are Different Actions}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Evaluate an expression}
+
+        \begin{center}
+          \texttt{2 + 3}
+        \end{center}
+
+        The expression evaluates to \texttt{5}. Colab automatically displays the value of the final expression in a cell.
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Request display explicitly}
+
+        \begin{center}
+          \texttt{print(2 + 3)}
+        \end{center}
+
+        Python first evaluates \texttt{2 + 3}; then \texttt{print()} displays the resulting value.
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{exampleblockcp}
+
+    In a script, a bare expression usually produces no visible output. Evaluation still occurs.
+
+  \end{exampleblockcp}
+
+\end{frame}
+
+\begin{frame}{One Expression Produces One Explainable Value}
+
+  \begin{activity}
+
+    Evaluate the following expression without running Python first:
+
+    \begin{center}
+
+      {\LARGE \texttt{17 \% 5 + 2 ** 3 * 2}}
+
+    \end{center}
+
+    Report the final value and annotate the order of evaluation.
+
+  \end{activity}
+
+  \begin{keyidea}
+
+    Evaluate exponentiation first, then multiplication and division-level operators, then addition and subtraction. Parentheses override the default order.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Next Time}
+
+  \begin{center}
+
+    {\Huge Naming and Retaining Values}
+
+    \vspace{0.20in}
+
+    {\Large Variables and Assignment}
+
+  \end{center}
+
 \end{frame}
 
 \end{document}

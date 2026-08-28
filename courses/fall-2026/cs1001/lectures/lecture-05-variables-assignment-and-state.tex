@@ -1,54 +1,1353 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\graphicspath{{../assets/lecture-05/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-05/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-05/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{5}
-\lecturetitle{Variables, Assignment, and State}
+\lecturetitle{Variables, Assignment, and Program State}
 \lecturedate{September 2, 2026}
-\courseunit{2. Expressions, Types, and State}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
 \makedecktitle
 
 \begin{frame}{Today}
+
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Variables, Assignment, and State
-    \item Placeholder for announcements and context.
+
+    \item How a program gives a value a name and uses that value later.
+
+    \item Why assignment evaluates the right-hand side before changing program state.
+
+    \item How Python connects names, namespaces, objects, and object identities.
+
+    \item How reassignment, dynamic typing, and immutable strings fit this model.
+
+    \item How comments, annotations, and good variable names make state easier to understand.
+
   \end{itemize}
+
+  \begin{keyidea}
+
+    This is the first lecture in which the order of multiple statements changes what later statements mean.
+
+  \end{keyidea}
+
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: From Expressions to Program State}
+
+\begin{frame}{Expressions Produce Values; Programs Can Retain Them}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{block}{Lecture 3}
+
+        \texttt{10 + 5} evaluates to one value, \texttt{15}. Nothing in the expression gives that result a name for later use.
+
+      \end{block}
+
+      \begin{block}{Lecture 5}
+
+        \texttt{score = 10 + 5} evaluates the same expression and then associates its result with the name \texttt{score}.
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      % Search direction: isolated expression contrasted with a sequence that retains a value.
+      \lectureimage[2.24in]{expression-versus-stateful-program.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    A named result can influence statements that execute later.
+
+  \end{keyidea}
+
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{A Variable Is a Name Associated with a Value}
+
+  \begin{cpdefinition}
+
+    A \textbf{variable} is a name that is currently associated with a value.
+
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Statement}
+
+        \centering
+        \Large\texttt{score = 10}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Association after execution}
+
+        \centering
+        \Large\texttt{score} $\longrightarrow$ \texttt{10}
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+  \vspace{0.10in}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+
+    \item \texttt{score} is the name; \texttt{10} is the value.
+
+    \item Later, evaluating \texttt{score} retrieves its current value.
+
+    \item The name and the value are related, but they are not the same thing.
+
   \end{itemize}
+
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Assignment Evaluates First and Associates Second}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.54\textwidth}
+
+      \begin{block}{Statement}
+
+        \centering
+        \Large\texttt{score = 7 + 3}
+
+      \end{block}
+
+      \begin{enumerate}
+
+        \item Evaluate the right-hand expression: \texttt{7 + 3} $\longrightarrow$ \texttt{10}.
+
+        \item Associate the name \texttt{score} with the resulting value \texttt{10}.
+
+      \end{enumerate}
+
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+
+      % Search direction: two-stage assignment flow, evaluate right side then bind left-side name.
+      \lectureimage[2.30in]{assignment-evaluate-then-bind.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    The value must exist before Python can associate the name with it.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Assignment Is Not Algebraic Equality}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{block}{In algebra}
+
+        $x = x + 1$ would assert that two quantities are equal, which is impossible for ordinary numbers.
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{block}{In Python}
+
+        \texttt{x = x + 1} is an instruction:
+
+        \begin{enumerate}
+          \item retrieve the current value of \texttt{x};
+          \item add \texttt{1};
+          \item associate \texttt{x} with the new result.
+        \end{enumerate}
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    Read \texttt{=} as ``assign'' or ``associate,'' not ``is mathematically equal to.''
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Program State Is a Snapshot of Current Associations}
+
+  \begin{cpdefinition}
+
+    A program's \textbf{state} is the collection of variable--value associations that currently exist.
+
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.44\textwidth}
+
+      \begin{block}{Statements executed}
+
+        \texttt{score = 10}\\
+        \texttt{bonus = 5}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.50\textwidth}
+
+      \begin{center}
+      \begin{tabular}{l|c}
+        \textbf{Name} & \textbf{Current value} \\\hline
+        \texttt{score} & \texttt{10} \\
+        \texttt{bonus} & \texttt{5}
+      \end{tabular}
+      \end{center}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    Executing an assignment can change the program's state; merely evaluating an expression does not create a new name.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Reassignment Replaces a Name's Current Association}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.51\textwidth}
+
+      \begin{block}{Sequence}
+
+        \texttt{score = 10}\\
+        \texttt{score = 25}
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item After line 1: \texttt{score} $\longrightarrow$ \texttt{10}
+
+        \item After line 2: \texttt{score} $\longrightarrow$ \texttt{25}
+
+        \item The name has one current association in this simple model.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.43\textwidth}
+
+      % Search direction: label score moving from object 10 to object 25.
+      \lectureimage[2.23in]{reassignment-moves-binding.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\sectionframe{Part 2: Names, Objects, and Memory}
+
+\begin{frame}{Python Connects Names to Objects}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.54\textwidth}
+
+      \begin{itemize}
+
+        \item An assignment \textbf{binds a name} to an object.
+
+        \item The name is recorded in a \textbf{namespace}.
+
+        \item The object carries a value, a type, and an identity.
+
+        \item Evaluating the name asks its namespace which object is currently associated with that name.
+
+      \end{itemize}
+
+      \begin{cpdefinition}
+
+        A \textbf{namespace} is a mapping from names to objects.
+
+      \end{cpdefinition}
+
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+
+      % Search direction: namespace table mapping labels score and message to distinct Python objects.
+      \lectureimage[2.28in]{namespace-name-object-mapping.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources] Python Language Reference, ``Naming and binding,'' https://docs.python.org/3/reference/executionmodel.html\#naming-and-binding.}
+
+\end{frame}
+
+\begin{frame}{Where Is the Variable Name Stored?}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.53\textwidth}
+
+      \begin{itemize}
+
+        \item At the top level of a Colab cell or Python file, assignment records a name in the module's global namespace.
+
+        \item Python exposes a module namespace as a dictionary-like mapping.
+
+        \item Conceptually, an entry looks like:
+
+      \end{itemize}
+
+      \begin{block}{Namespace entry}
+
+        \centering
+        \texttt{"score"} $\longrightarrow$ object representing \texttt{10}
+
+      \end{block}
+
+      \begin{exampleblockcp}
+
+        The spelling \texttt{score} is stored separately from the numerical information in the integer object.
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+
+      % Search direction: variable name text stored as a namespace key pointing to a separate object.
+      \lectureimage[2.30in]{variable-name-storage-namespace.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources] Python Language Reference, ``Modules,'' https://docs.python.org/3/reference/datamodel.html\#modules.}
+
+\end{frame}
+
+\begin{frame}{Every Python Object Has Identity, Type, and Value}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.55\textwidth}
+
+      \begin{description}
+
+        \item[Identity] Distinguishes this object from every other object during its lifetime.
+
+        \item[Type] Determines which operations the object supports and helps determine how its value is represented.
+
+        \item[Value] The information represented by the object, such as \texttt{10} or \texttt{"hello"}.
+
+      \end{description}
+
+      \begin{keyidea}
+
+        The type belongs to the object. A name can later be associated with an object of another type.
+
+      \end{keyidea}
+
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+
+      % Search direction: one Python object card labeled identity, type, and value.
+      \lectureimage[2.24in]{object-identity-type-value.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources] Python Language Reference, ``Objects, values and types,'' https://docs.python.org/3/reference/datamodel.html\#objects-values-and-types.}
+
+\end{frame}
+
+\begin{frame}{\texttt{id()} Observes the Current Object's Identity}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.55\textwidth}
+
+      \begin{block}{Colab experiment}
+
+        \texttt{score = 10}\\
+        \texttt{id(score)}
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item \texttt{id(score)} first evaluates \texttt{score} to retrieve its object.
+
+        \item It then returns an integer that identifies that object during its lifetime.
+
+        \item The particular integer is not meaningful to us and can differ across runs.
+
+        \item It is the identity of the \textbf{object}, not an ``address of the variable name.''
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+
+      % Search direction: Colab id(score) output pointing to object identity rather than variable label.
+      \lectureimage[2.30in]{id-current-object-cpython-address.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources] Python built-in function id(), https://docs.python.org/3/library/functions.html\#id; Python Data Model, https://docs.python.org/3/reference/datamodel.html\#objects-values-and-types.}
+
+\end{frame}
+
+\begin{frame}{Is an Object's Identity Its Memory Address?}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Python's language-level promise}
+
+        \texttt{id()} returns an integer that is unique and constant for the object during its lifetime.
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{CPython's implementation}
+
+        In CPython, that integer is the object's memory address. Other Python implementations need not use an address.
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{itemize}
+
+    \item Memory management is automatic; programmers ordinarily do not choose these addresses.
+
+    \item After an object no longer exists, a later object may reuse an identity value.
+
+    \item Use \texttt{id()} to test the mental model, not to build arithmetic or program logic around the number.
+
+  \end{itemize}
+
+  \begin{keyidea}
+
+    ``Identity'' is the portable idea; ``memory address'' is a CPython-specific implementation detail.
+
+  \end{keyidea}
+
+  \note{[Sources] Python built-in function id(), https://docs.python.org/3/library/functions.html\#id.}
+
+\end{frame}
+
+\begin{frame}{Assignment Changes the Namespace Entry}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Before reassignment}
+
+        \texttt{score = 10}\\[0.08in]
+        namespace: \texttt{score} $\longrightarrow$ integer object \texttt{10}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{After reassignment}
+
+        \texttt{score = 25}\\[0.08in]
+        namespace: \texttt{score} $\longrightarrow$ integer object \texttt{25}
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+  \vspace{0.10in}
+
+  \begin{keyidea}
+
+    Reassignment does not edit the integer \texttt{10}. It changes which object the name \texttt{score} denotes.
+
+  \end{keyidea}
+
+  \begin{activity}
+
+    Predict whether \texttt{id(score)} must remain the same after \texttt{score = 25}; then test the prediction in Colab.
+
+  \end{activity}
+
+\end{frame}
+
+\begin{frame}{String Reassignment Creates a New Result}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{block}{Sequence}
+
+        \texttt{message = "hello"}\\
+        \texttt{message = message + " world"}
+
+      \end{block}
+
+      \begin{enumerate}
+
+        \item Retrieve the current string \texttt{"hello"}.
+
+        \item Concatenate it with \texttt{" world"}.
+
+        \item Produce a new string \texttt{"hello world"}.
+
+        \item Rebind \texttt{message} to the new result.
+
+      \end{enumerate}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      % Search direction: message label moving from immutable hello string to a new hello world string.
+      \lectureimage[2.38in]{string-reassignment-new-object.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Why Are Strings Immutable?}
+
+  \begin{cpdefinition}
+
+    A string is \textbf{immutable}: after a string object is created, its textual value cannot be altered.
+
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{itemize}
+
+        \item Text often represents identifiers, usernames, passwords, filenames, and dictionary or database keys.
+
+        \item Stable string values are easier to share and reason about safely.
+
+        \item Operations that appear to modify text instead produce another string value.
+
+      \end{itemize}
+
+      \begin{exampleblockcp}
+
+        \texttt{message += " world"} still produces a new string and rebinds \texttt{message} for the simple string case.
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      % Search direction: immutable string used as stable identifier and database key.
+      \lectureimage[2.30in]{string-immutability-stable-identifiers.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources] Python Language Reference, immutable sequence types, https://docs.python.org/3/library/stdtypes.html\#immutable-sequence-types.}
+
+\end{frame}
+
+\sectionframe{Part 3: Special Values and Dynamic Typing}
+
+\begin{frame}{\texttt{None} Represents the Intentional Absence of a Value}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.54\textwidth}
+
+      \begin{block}{Example}
+
+        \texttt{result = None}
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item \texttt{None} is a literal value, not an unassigned name.
+
+        \item Its type is \texttt{NoneType}.
+
+        \item Python provides exactly one \texttt{None} object, so it is a singleton.
+
+        \item A variable associated with \texttt{None} \emph{has} a value: the value representing absence.
+
+      \end{itemize}
+
+      \begin{exampleblockcp}
+
+        \texttt{type(None)} $\longrightarrow$ \texttt{NoneType}
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+
+      % Search direction: many variable labels pointing to the single shared Python None object.
+      \lectureimage[2.30in]{none-singleton-object.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources] Python Language Reference, ``None,'' https://docs.python.org/3/reference/datamodel.html\#none.}
+
+\end{frame}
+
+\begin{frame}{The ``Billion-Dollar Mistake'' Is a Warning About Absence}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.56\textwidth}
+
+      \begin{itemize}
+
+        \item Computer scientist Tony Hoare introduced a null reference into ALGOL W's type system in 1965.
+
+        \item In a 2009 talk, he called that decision his ``billion-dollar mistake,'' citing errors, vulnerabilities, and crashes caused by unchecked null references.
+
+        \item Python's \texttt{None} is not identical to every language's null mechanism, but it carries the same general lesson: absence must be represented deliberately and handled explicitly.
+
+      \end{itemize}
+
+      \begin{keyidea}
+
+        A value meaning ``nothing here'' is still part of program state and must be reasoned about.
+
+      \end{keyidea}
+
+    \end{column}
+
+    \begin{column}{0.38\textwidth}
+
+      % Search direction: portrait of Tony Hoare with ALGOL W and null-reference historical context.
+      \lectureimage[2.35in]{tony-hoare-null-reference.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources] Tony Hoare, ``Null References: The Billion Dollar Mistake,'' QCon London 2009, https://qconlondon.com/london-2009/qconlondon.com/london-2009/presentation/Null\%2BReferences\_\%2BThe\%2BBillion\%2BDollar\%2BMistake.html.}
+
+\end{frame}
+
+\begin{frame}{Python Is Dynamically Typed}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.50\textwidth}
+
+      \begin{block}{The same name can be rebound}
+
+        \texttt{item = 42}\hfill integer object\\
+        \texttt{item = "hello"}\hfill string object\\
+        \texttt{item = 4.0}\hfill floating-point object
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item Each object has a definite type.
+
+        \item The name \texttt{item} does not have one permanent type.
+
+        \item Its current value and type depend on the most recent executed assignment.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+
+      % Search direction: one variable name successively pointing to int, str, and float objects.
+      \lectureimage[2.35in]{dynamic-rebinding-object-types.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Dynamic Typing Has Benefits and Costs}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Benefits}
+
+        \begin{itemize}
+          \item less type declaration syntax;
+          \item rapid experimentation;
+          \item flexible reuse of code.
+        \end{itemize}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Costs}
+
+        \begin{itemize}
+          \item some type mismatches appear only when code runs;
+          \item a name's intended kind of value may be less obvious;
+          \item changes in state require careful reading.
+        \end{itemize}
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{exampleblockcp}
+
+    \texttt{item = 42} followed by \texttt{item = "hello"} is legal, but a reader must understand whether that change is intentional.
+
+  \end{exampleblockcp}
+
+\end{frame}
+
+\begin{frame}{Type Annotations Communicate Intended Types}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.53\textwidth}
+
+      \begin{block}{Annotated assignment}
+
+        \texttt{score: int = 42}
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item \texttt{: int} records that \texttt{score} is intended to refer to an integer.
+
+        \item Editors, documentation tools, and type checkers can use the annotation.
+
+        \item Standard Python execution ordinarily does not enforce the annotation by itself.
+
+      \end{itemize}
+
+      \begin{exampleblockcp}
+
+        An annotation supports communication and analysis; assignment still determines the current runtime association.
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+
+      % Search direction: annotated Python variable with editor or type-checker feedback.
+      \lectureimage[2.25in]{type-annotation-intent-not-enforcement.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources] Python documentation, typing specification and runtime behavior, https://docs.python.org/3/library/typing.html.}
+
+\end{frame}
+
+\sectionframe{Part 4: Updating State}
+
+\begin{frame}{Updating a Variable Uses Its Current Value}
+
+  \begin{block}{Statement}
+
+    \centering
+    \Large\texttt{score = score + 5}
+
   \end{block}
+
+  \begin{enumerate}
+
+    \item Look up the current object associated with \texttt{score}.
+
+    \item Evaluate the right-hand expression \texttt{score + 5}.
+
+    \item Associate \texttt{score} with the resulting object.
+
+  \end{enumerate}
+
+  \begin{keyidea}
+
+    Every use of \texttt{score} on the right occurs before the assignment changes \texttt{score} on the left.
+
+  \end{keyidea}
+
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{A Variable Retains a Result, Not the Formula}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.49\textwidth}
+
+      \begin{block}{Sequence}
+
+        \texttt{x = 4}\\
+        \texttt{y = x + 2}\\
+        \texttt{x = 10}
+
+      \end{block}
+
+      \begin{activity}
+
+        What are the final values of \texttt{x} and \texttt{y}? Does the final assignment to \texttt{x} retroactively change \texttt{y}?
+
+      \end{activity}
+
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+
+      % Search direction: x and y object-binding diagram showing y remains 6 after x changes to 10.
+      \lectureimage[2.38in]{xy-reassignment-no-retroactive-change.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    \texttt{y = x + 2} evaluates once. The name \texttt{y} is associated with the resulting value \texttt{6}, not with a live formula.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Accumulation Repeatedly Updates One Association}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.49\textwidth}
+
+      \begin{block}{Sequence}
+
+        \texttt{total = 0}\\
+        \texttt{total = total + 5}\\
+        \texttt{total = total + 8}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+
+      \begin{center}
+      \renewcommand{\arraystretch}{1.35}
+      \begin{tabular}{l|c}
+        \textbf{After line} & \textbf{\texttt{total}} \\\hline
+        1 & \texttt{0} \\
+        2 & \texttt{5} \\
+        3 & \texttt{13}
+      \end{tabular}
+      \end{center}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    Each update uses the current state to calculate the next state.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{A Name Must Be Assigned Before It Is Evaluated}
+
+  \begin{block}{No current association}
+
+    \texttt{points + 5}
+
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+
+    \item Python must retrieve \texttt{points} before it can perform addition.
+
+    \item If no accessible binding for \texttt{points} exists, evaluation cannot continue.
+
+    \item Python reports a \texttt{NameError}.
+
   \end{itemize}
+
+  \begin{exampleblockcp}
+
+    Correct the state first: execute \texttt{points = 0}, then evaluate or update \texttt{points}.
+
+  \end{exampleblockcp}
+
+  \note{[Sources] Python Language Reference, ``Resolution of names,'' https://docs.python.org/3/reference/executionmodel.html\#resolution-of-names.}
+
+\end{frame}
+
+\begin{frame}{Augmented Assignment Is a Compact Update}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.50\textwidth}
+
+      \begin{block}{Ordinary reassignment}
+
+        \texttt{total = total + 5}
+
+      \end{block}
+
+      \begin{block}{Augmented assignment}
+
+        \texttt{total += 5}
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item Retrieve the current \texttt{total}.
+
+        \item Add \texttt{5}.
+
+        \item Associate \texttt{total} with the result.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+
+      % Search direction: ordinary reassignment and augmented assignment shown as the same numeric update flow.
+      \lectureimage[2.35in]{augmented-assignment-update.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{exampleblockcp}
+
+    For today's integer, float, and string examples, this is the appropriate mental shorthand. Later data structures require additional care.
+
+  \end{exampleblockcp}
+
+\end{frame}
+
+\begin{frame}{Common Augmented Assignment Operators}
+
+  \begin{center}
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabular}{c|l@{\qquad}c|l}
+    \textbf{Operator} & \textbf{Update} & \textbf{Operator} & \textbf{Update} \\\hline
+    \texttt{+=} & add, then reassign & \texttt{-=} & subtract, then reassign \\
+    \texttt{*=} & multiply, then reassign & \texttt{/=} & divide, then reassign \\
+    \texttt{//=} & floor-divide, then reassign & \texttt{\%=} & take modulus, then reassign \\
+    \texttt{**=} & exponentiate, then reassign & &
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.14in}
+
+  \begin{exampleblockcp}
+
+    If \texttt{count} currently refers to \texttt{8}, then \texttt{count *= 3} associates \texttt{count} with \texttt{24}.
+
+  \end{exampleblockcp}
+
+  \begin{keyidea}
+
+    Introduce the compact form only after you can explain the ordinary reassignment it represents.
+
+  \end{keyidea}
+
+\end{frame}
+
+\sectionframe{Part 5: Readable State and Deliberate Practice}
+
+\begin{frame}{Comments Explain Code Without Changing State}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.54\textwidth}
+
+      \begin{block}{End-of-line comments}
+
+        \texttt{score = 10 \# starting score}\\
+        \texttt{score += 5 \# add the bonus}
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item A comment begins with \texttt{\#} and continues to the end of that line.
+
+        \item Python ignores the comment when executing the statement.
+
+        \item A useful comment explains purpose or reasoning, not merely the visible syntax.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+
+      % Search direction: Python code with comment text visually separated from state-changing statements.
+      \lectureimage[2.28in]{comments-versus-state-changes.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{alertblock}{Technical distinction}
+
+    Triple-quoted text creates a string literal. It is sometimes used for documentation, but it is not Python's comment syntax.
+
+  \end{alertblock}
+
+  \note{[Sources] Python Language Reference, ``Comments,'' https://docs.python.org/3/reference/lexical_analysis.html\#comments.}
+
+\end{frame}
+
+\begin{frame}[shrink=8]{Variable Naming: Valid, Descriptive, and Conventional}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{block}{Python's basic identifier rules}
+
+        \begin{itemize}
+          \item use letters, digits, and underscores;
+          \item do not begin with a digit;
+          \item do not include spaces or hyphens;
+          \item capitalization matters;
+          \item do not use a reserved keyword.
+        \end{itemize}
+
+      \end{block}
+
+      \begin{block}{Course convention}
+
+        Use lowercase words separated by underscores: \texttt{course\_units}, \texttt{total\_cost}, \texttt{quiz\_score}.
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      \begin{block}{Reserved keywords}
+
+        Python reserves words such as \texttt{if}, \texttt{else}, \texttt{for}, \texttt{while}, \texttt{class}, \texttt{def}, \texttt{return}, \texttt{import}, \texttt{True}, \texttt{False}, and \texttt{None}. They cannot be variable names.
+
+      \end{block}
+
+      \begin{exampleblockcp}
+
+        Prefer \texttt{exam\_score = 92}, not \texttt{x = 92}, when the value's role matters.
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources] Python Language Reference, ``Identifiers and keywords,'' https://docs.python.org/3/reference/lexical_analysis.html\#identifiers; PEP 8, naming conventions, https://peps.python.org/pep-0008/\#naming-conventions.}
+
+\end{frame}
+
+\begin{frame}{Keywords and Built-in Names Are Different}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Reserved keywords}
+
+        \texttt{if = 3} is invalid syntax because \texttt{if} is part of Python's grammar.
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item Keywords cannot be used as variable names.
+
+        \item Python publishes the current keyword list through the \texttt{keyword} module.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Built-in names}
+
+        \texttt{print = 3} is legal, but it hides the built-in name \texttt{print} in the current namespace.
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item Avoid names such as \texttt{print}, \texttt{type}, \texttt{id}, \texttt{int}, and \texttt{str}.
+
+        \item Legal does not always mean readable or safe.
+
+      \end{itemize}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    A keyword is forbidden by the grammar; a built-in name is merely easy to shadow accidentally.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Colab Lab: Observe Rebinding with \texttt{id()}}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{block}{Run one line at a time}
+
+        \texttt{message = "hello"}\\
+        \texttt{id(message)}\\
+        \texttt{message += " world"}\\
+        \texttt{id(message)}
+
+      \end{block}
+
+      \begin{activity}
+
+        Before running the second \texttt{id()} call, predict whether the object identity will be the same. Explain the observation using ``evaluate,'' ``new string,'' ``namespace,'' and ``rebind.''
+
+      \end{activity}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      % Search direction: Google Colab cells comparing id(message) before and after string augmentation.
+      \lectureimage[2.42in]{colab-id-string-reassignment.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{alertblock}{Interpretation rule}
+
+    Compare whether the identity changed; do not try to interpret the magnitude of the integer.
+
+  \end{alertblock}
+
+\end{frame}
+
+\begin{frame}{Misconceptions to Correct Explicitly}
+
+  \begin{itemize}
+
+    \item \texttt{x = x + 1} is valid because assignment is an action, not an algebraic claim.
+
+    \item The entire right-hand side is evaluated before the left-hand name is updated.
+
+    \item A variable retains the resulting object, not the expression that produced it.
+
+    \item Reassigning \texttt{x} does not retroactively update \texttt{y}.
+
+    \item A name must be assigned before Python can evaluate it.
+
+    \item \texttt{id(x)} identifies the current object, not the storage location of the written name \texttt{x}.
+
+    \item A name can be rebound to an object of another type; the objects themselves still have definite types.
+
+  \end{itemize}
+
+\end{frame}
+
+\begin{frame}{Exit Ticket: Explain the Final State}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.43\textwidth}
+
+      \begin{block}{Statements}
+
+        \texttt{level = 2}\\
+        \texttt{next\_level = level + 1}\\
+        \texttt{level = 10}\\
+        \texttt{level += 2}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.51\textwidth}
+
+      \begin{activity}
+
+        Report the final values of \texttt{level} and \texttt{next\_level}. Then explain:
+
+        \begin{enumerate}
+          \item what each assignment evaluates;
+          \item which namespace association changes;
+          \item why \texttt{next\_level} does not change later.
+        \end{enumerate}
+
+      \end{activity}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    Outcome: you can predict how a sequence of assignments changes program state and explain that state using names, objects, and values.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Image Placeholder Index}
+
+  \scriptsize
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.49\textwidth}
+
+      \begin{itemize}
+        \item \texttt{expression-versus-stateful-program.png}
+        \item \texttt{assignment-evaluate-then-bind.png}
+        \item \texttt{reassignment-moves-binding.png}
+        \item \texttt{namespace-name-object-mapping.png}
+        \item \texttt{variable-name-storage-namespace.png}
+        \item \texttt{object-identity-type-value.png}
+        \item \texttt{id-current-object-cpython-address.png}
+        \item \texttt{string-reassignment-new-object.png}
+        \item \texttt{string-immutability-stable-identifiers.png}
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.49\textwidth}
+
+      \begin{itemize}
+        \item \texttt{none-singleton-object.png}
+        \item \texttt{tony-hoare-null-reference.png}
+        \item \texttt{dynamic-rebinding-object-types.png}
+        \item \texttt{type-annotation-intent-not-enforcement.png}
+        \item \texttt{xy-reassignment-no-retroactive-change.png}
+        \item \texttt{augmented-assignment-update.png}
+        \item \texttt{comments-versus-state-changes.png}
+        \item \texttt{colab-id-string-reassignment.png}
+      \end{itemize}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{exampleblockcp}
+
+    Save each image under \texttt{../assets/lecture-05/}. The labeled placeholder will be replaced automatically when its filename matches.
+
+  \end{exampleblockcp}
+
 \end{frame}
 
 \end{document}

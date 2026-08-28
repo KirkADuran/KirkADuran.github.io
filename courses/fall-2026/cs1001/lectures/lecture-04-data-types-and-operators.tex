@@ -1,54 +1,1097 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\graphicspath{{../assets/lecture-04/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-04/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-04/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{4}
-\lecturetitle{Data Types and Operators}
+\lecturetitle{Data Types, Operators, and Conversion}
 \lecturedate{August 31, 2026}
-\courseunit{2. Expressions, Types, and State}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
 \makedecktitle
 
 \begin{frame}{Today}
+
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Data Types and Operators
-    \item Placeholder for announcements and context.
+
+    \item Why computer systems need data types.
+
+    \item How Python represents integers, floating-point numbers, strings, and Boolean values.
+
+    \item How operand types determine an operator's meaning and result type.
+
+    \item How Python handles compatible and incompatible type combinations.
+
+    \item How explicit conversion produces a value of another type.
+
   \end{itemize}
+
+  \begin{keyidea}
+
+    Every example remains a self-contained expression; naming and retaining values comes later.
+
+  \end{keyidea}
+
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: Why Data Types Exist}
+
+\begin{frame}{A Group of Bits Does Not Explain Its Own Meaning}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.54\textwidth}
+
+      \begin{block}{One possible representation of ``Kirk''}
+
+        \centering
+        \texttt{01001011 01101001}\\
+        \texttt{01110010 01101011}
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item At the hardware level, text and numbers are represented using bits.
+
+        \item The bit pattern alone does not say whether it represents text, a number, an image, or instructions.
+
+        \item Adding the number \texttt{5} to encoded text has no useful textual meaning.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+
+      % Search direction: binary bits interpreted as text versus a numerical value.
+      \lectureimage[2.22in]{bits-require-interpretation.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    A representation becomes a meaningful value only when a system knows how to interpret it.
+
+  \end{keyidea}
+
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{Different Kinds of Values Need Different Interpretations}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.50\textwidth}
+
+      \begin{itemize}
+
+        \item \textbf{Whole numbers:} \texttt{42}, \texttt{-8}
+
+        \item \textbf{Fractional values:} \texttt{3.14}, \texttt{-0.25}
+
+        \item \textbf{Text:} \texttt{"Cal Poly"}
+
+        \item \textbf{Two logical states:} \texttt{True}, \texttt{False}
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+
+      % Search direction: four distinct representations for integer, decimal, text, and two-state data.
+      \lectureimage[2.18in]{fundamental-value-categories.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{exampleblockcp}
+
+    Python names these types \texttt{int}, \texttt{float}, \texttt{str}, and \texttt{bool}.
+
+  \end{exampleblockcp}
+
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\begin{frame}{Every Python Value Has a Type}
+
+  \begin{cpdefinition}
+
+    A \textbf{data type} is a classification that determines how a value is represented, interpreted, and used.
+
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.30\textwidth}
+
+      \begin{block}{Representation}
+
+        How Python organizes the information that constitutes the value.
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.30\textwidth}
+
+      \begin{block}{Operations}
+
+        Which operators and functions are defined for the value.
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.30\textwidth}
+
+      \begin{block}{Results}
+
+        What value and type an operation produces.
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}{Representations Introduce Costs and Limits}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.53\textwidth}
+
+      \begin{itemize}
+
+        \item A \textbf{fixed-size representation} uses a predetermined amount of storage.
+
+        \item A \textbf{variable-size representation} can grow with the represented value.
+
+        \item Numerical representations may trade exactness for range and efficiency.
+
+        \item A value that does not fit must be shortened, rejected, approximated, or represented differently.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+
+      % Search direction: fixed-size container contrasted with a growing data container.
+      \lectureimage[2.18in]{fixed-versus-variable-size-data.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{A Ten-Character Limit Shaped Feraligatr's Name}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.49\textwidth}
+
+      \begin{block}{Ten characters fit}
+
+        \centering
+        \texttt{F E R A L I G A T R}\\[0.06in]
+        \scriptsize\texttt{1\quad2\quad3\quad4\quad5\quad6\quad7\quad8\quad9\quad10}
+
+      \end{block}
+
+      \begin{block}{Eleven characters do not}
+
+        \centering
+        \texttt{F E R A L I G A T O R}
+
+      \end{block}
+
+      \begin{itemize}
+
+        \item Generation II limited English Pok\'emon names to ten characters.
+
+        \item The shortened \emph{Feraligatr} spelling fits that representation.
+
+      \end{itemize}
+
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+
+      % Search direction: Generation II Feraligatr sprite beside ten character boxes, with O outside the limit.
+      \lectureimage[2.22in]{feraligatr-ten-character-limit.png}
+
+      \begin{keyidea}
+
+        A storage decision can become a visible design constraint.
+
+      \end{keyidea}
+
+    \end{column}
+
+  \end{columns}
+
+  \vspace{0.05in}
+
+  {\scriptsize Python's \texttt{str} type does not impose this ten-character limit; this is a general systems example.}
+
+  \note{[Sources]\par
+  Bulbapedia, ``Feraligatr (Pok\'emon),'' name origin and Generation II ten-character limit:\par
+  \url{https://bulbapedia.bulbagarden.net/wiki/Feraligatr_(Pok\%C3\%A9mon)}.}
+
+\end{frame}
+
+\sectionframe{Part 2: Fundamental Python Types}
+
+\begin{frame}{Integers Represent Whole Numbers Exactly}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{center}
+
+        {\Large \texttt{12}}\\[0.12in]
+        {\Large \texttt{-4}}\\[0.12in]
+        {\Large \texttt{0}}\\[0.12in]
+        {\Large \texttt{1\_000\_000}}
+
+      \end{center}
+
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+
+      \begin{itemize}
+
+        \item Python names this type \texttt{int}.
+
+        \item Integer literals contain no decimal point.
+
+        \item Integers represent positive whole numbers, negative whole numbers, and zero.
+
+        \item Integer arithmetic can produce another integer.
+
+      \end{itemize}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources]\par
+  Python documentation, Numeric Types:\par
+  \url{https://docs.python.org/3/library/stdtypes.html\#numeric-types-int-float-complex}.}
+
+\end{frame}
+
+\begin{frame}{Python Integers Grow as More Digits Are Required}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{itemize}
+
+        \item Many systems use fixed-width integers such as 8, 32, or 64 bits.
+
+        \item Python integers use an arbitrary-precision representation.
+
+        \item The representation grows to accommodate additional digits.
+
+        \item The practical limit is available memory rather than a fixed 32-bit boundary.
+
+      \end{itemize}
+
+      \begin{exampleblockcp}
+
+        CPython implements integers using an internal structure named \texttt{PyLongObject}.
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      % Search direction: Python integer representation expanding as the number gains digits.
+      \lectureimage[2.22in]{python-integer-growing-representation.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources]\par
+  Python/C API documentation, Integer Objects:\par
+  \url{https://docs.python.org/3/c-api/long.html}.}
+
+\end{frame}
+
+\begin{frame}{Floats Represent Numerical Values with Finite Precision}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{center}
+
+        {\Large \texttt{3.5}}\\[0.13in]
+        {\Large \texttt{-0.25}}\\[0.13in]
+        {\Large \texttt{7.0}}
+
+      \end{center}
+
+      \begin{exampleblockcp}
+
+        \texttt{7} and \texttt{7.0} describe the same numerical quantity but have different types.
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+
+      \begin{itemize}
+
+        \item Python names this type \texttt{float}.
+
+        \item CPython commonly uses 64-bit IEEE 754 binary floating point.
+
+        \item A float provides roughly 15--17 significant decimal digits.
+
+        \item Its numerical range is large but finite.
+
+      \end{itemize}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources]\par
+  Python documentation, Floating-Point Arithmetic:\par
+  \url{https://docs.python.org/3/tutorial/floatingpoint.html}.}
+
+\end{frame}
+
+\begin{frame}{The Point ``Floats'' by Changing the Scale}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{itemize}
+
+        \item The \textbf{sign} distinguishes positive and negative values.
+
+        \item The \textbf{significand} contains the meaningful digits.
+
+        \item The \textbf{exponent} determines the scale of the value.
+
+        \item Changing the exponent effectively moves the binary point.
+
+      \end{itemize}
+
+      \begin{keyidea}
+
+        Floating point supports both very small and very large magnitudes using a fixed amount of storage.
+
+      \end{keyidea}
+
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+
+      % Search direction: high-level floating-point diagram labeled sign, significand, and exponent.
+      \lectureimage[2.25in]{floating-point-sign-significand-exponent.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{A Large Range Does Not Guarantee Exact Representation}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.52\textwidth}
+
+      \begin{itemize}
+
+        \item A finite number of bits can represent only finitely many values.
+
+        \item Many decimal fractions do not have an exact finite binary representation.
+
+        \item Python therefore stores the nearest representable floating-point value.
+
+      \end{itemize}
+
+      \begin{exampleblockcp}
+
+        \texttt{0.1 + 0.2} may display\\
+        \texttt{0.30000000000000004}.
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+
+      % Search direction: decimal 0.1 approximated between nearby binary floating-point values.
+      \lectureimage[2.18in]{floating-point-decimal-approximation.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources]\par
+  Python documentation, Representation Error:\par
+  \url{https://docs.python.org/3/tutorial/floatingpoint.html\#representation-error}.}
+
+\end{frame}
+
+\begin{frame}{Strings Represent Unicode Text}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{center}
+
+        {\Large \texttt{"hello"}}\\[0.12in]
+        {\Large \texttt{"42"}}\\[0.12in]
+        {\Large \texttt{"Cal Poly"}}\\[0.12in]
+        {\Large \texttt{""}}
+
+      \end{center}
+
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+
+      \begin{itemize}
+
+        \item Python names this type \texttt{str}.
+
+        \item A string is an immutable sequence of Unicode characters.
+
+        \item Its representation grows with the amount and kind of text.
+
+        \item Quotes delimit a string literal; digits inside quotes remain text.
+
+      \end{itemize}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources]\par
+  Python documentation, Text Sequence Type --- \texttt{str}:\par
+  \url{https://docs.python.org/3/library/stdtypes.html\#text-sequence-type-str}.}
+
+\end{frame}
+
+\begin{frame}{Boolean Values Represent Two Possibilities}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.46\textwidth}
+
+      \begin{center}
+
+        {\Huge \texttt{True}}\\[0.28in]
+        {\Huge \texttt{False}}
+
+      \end{center}
+
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{itemize}
+
+        \item Python names this type \texttt{bool}.
+
+        \item The type contains exactly two literal values.
+
+        \item Capitalization matters: \texttt{True} and \texttt{False}.
+
+        \item Comparisons and Boolean operators will be introduced later.
+
+      \end{itemize}
+
+      % Search direction: restrained two-state True and False visual without logic operators.
+      \lectureimage[1.05in]{boolean-two-literal-values.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \note{[Sources]\par
+  Python documentation, Boolean Type:\par
+  \url{https://docs.python.org/3/library/stdtypes.html\#boolean-type-bool}.}
+
+\end{frame}
+
+\begin{frame}{\texttt{type()} Reports How Python Classifies a Value}
+
+  \begin{center}
+
+    \begin{tabular}{l l}
+      \textbf{Expression} & \textbf{Result} \\
+      \hline
+      \texttt{type(7)} & \texttt{<class 'int'>} \\
+      \texttt{type(7.0)} & \texttt{<class 'float'>} \\
+      \texttt{type("7")} & \texttt{<class 'str'>} \\
+      \texttt{type(True)} & \texttt{<class 'bool'>} \\
+    \end{tabular}
+
+  \end{center}
+
+  \begin{keyidea}
+
+    Python evaluates the argument first; \texttt{type()} then reports the resulting value's type.
+
+  \end{keyidea}
+
+\end{frame}
+
+\sectionframe{Part 3: Operators Depend on Types}
+
+\begin{frame}{Operand Types Select the Applicable Operator Rule}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.49\textwidth}
+
+      \begin{block}{Evaluation model}
+
+        \centering
+        operand values and types\\[0.06in]
+        $\downarrow$\\[0.06in]
+        operator compatibility rule\\[0.06in]
+        $\downarrow$\\[0.06in]
+        result value and type
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+
+      % Search direction: operator receiving typed operands and producing either a typed result or an error.
+      \lectureimage[2.12in]{operator-type-dispatch.png}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    An operator does not have one universal behavior independent of its operands.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Numeric Types Support Arithmetic Operations}
+
+  \begin{center}
+
+    \begin{tabular}{l l l}
+      \textbf{Expression} & \textbf{Value} & \textbf{Type} \\
+      \hline
+      \texttt{4 + 3} & \texttt{7} & \texttt{int} \\
+      \texttt{4.0 + 3.0} & \texttt{7.0} & \texttt{float} \\
+      \texttt{4 * 3} & \texttt{12} & \texttt{int} \\
+      \texttt{4 * 3.0} & \texttt{12.0} & \texttt{float} \\
+      \texttt{2 ** 3} & \texttt{8} & \texttt{int} \\
+    \end{tabular}
+
+  \end{center}
+
+  \begin{exampleblockcp}
+
+    The operator and operand types jointly determine the resulting value and type.
+
+  \end{exampleblockcp}
+
+\end{frame}
+
+\begin{frame}{The Same \texttt{+} Symbol Can Mean Different Operations}
+
+  \begin{center}
+
+    \begin{tabular}{l l l}
+      \textbf{Expression} & \textbf{Selected operation} & \textbf{Result} \\
+      \hline
+      \texttt{4 + 3} & integer addition & \texttt{7} \\
+      \texttt{4.0 + 3.0} & floating-point addition & \texttt{7.0} \\
+      \texttt{"4" + "3"} & string concatenation & \texttt{"43"} \\
+    \end{tabular}
+
+  \end{center}
+
+  \vspace{0.10in}
+
+  % Search direction: plus operator branching to numeric addition and string concatenation.
+  \lectureimage[1.30in]{plus-number-versus-string.png}
+
+\end{frame}
+
+\begin{frame}{Strings Support Concatenation and Repetition}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{block}{Concatenation}
+
+        \centering
+        \texttt{"Cal" + " Poly"}\\[0.08in]
+        $\rightarrow$\\[0.08in]
+        \texttt{"Cal Poly"}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{block}{Repetition}
+
+        \centering
+        \texttt{"ha" * 3}\\[0.08in]
+        $\rightarrow$\\[0.08in]
+        \texttt{"hahaha"}
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+  \vspace{0.08in}
+
+  % Search direction: text fragments joining and a text fragment repeating three times.
+  \lectureimage[1.25in]{string-concatenation-and-repetition.png}
+
+\end{frame}
+
+\begin{frame}{Division Operators Can Produce Different Values and Types}
+
+  \begin{center}
+
+    \begin{tabular}{l l l}
+      \textbf{Expression} & \textbf{Value} & \textbf{Type} \\
+      \hline
+      \texttt{4 / 2} & \texttt{2.0} & \texttt{float} \\
+      \texttt{4 // 2} & \texttt{2} & \texttt{int} \\
+      \texttt{5 / 2} & \texttt{2.5} & \texttt{float} \\
+      \texttt{5 // 2} & \texttt{2} & \texttt{int} \\
+      \texttt{5 // 2.0} & \texttt{2.0} & \texttt{float} \\
+    \end{tabular}
+
+  \end{center}
+
+  \begin{keyidea}
+
+    \texttt{/} always produces a \texttt{float}; floor division produces a \texttt{float} when a floating-point operand participates.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Compatible Mixed Numeric Types Produce a Numeric Result}
+
+  \begin{center}
+
+    \begin{tabular}{l l l}
+      \textbf{Expression} & \textbf{Value} & \textbf{Type} \\
+      \hline
+      \texttt{5 + 3.5} & \texttt{8.5} & \texttt{float} \\
+      \texttt{4 * 2.0} & \texttt{8.0} & \texttt{float} \\
+      \texttt{7 - 2.5} & \texttt{4.5} & \texttt{float} \\
+      \texttt{7 // 2.0} & \texttt{3.0} & \texttt{float} \\
+    \end{tabular}
+
+  \end{center}
+
+  \begin{exampleblockcp}
+
+    When an arithmetic expression combines an \texttt{int} and a \texttt{float}, Python generally produces a \texttt{float}.
+
+  \end{exampleblockcp}
+
+\end{frame}
+
+\begin{frame}{Unsupported Type Combinations Produce a \texttt{TypeError}}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{itemize}
+
+        \item \texttt{4 + "3"}
+
+        \item \texttt{"hello" - "h"}
+
+        \item \texttt{"ha" * 2.5}
+
+        \item \texttt{"4" / "2"}
+
+      \end{itemize}
+
+      \begin{cpdefinition}
+
+        A \texttt{TypeError} indicates that an operation received a kind of value it does not support.
+
+      \end{cpdefinition}
+
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+
+      % Search direction: incompatible number and text operands blocked before an operator.
+      \lectureimage[2.12in]{incompatible-operands-type-error.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\sectionframe{Part 4: Conversion, Prediction, and Explanation}
+
+\begin{frame}{Explicit Conversion Requests a New Type}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.48\textwidth}
+
+      \begin{itemize}
+
+        \item \texttt{int("12")} $\rightarrow$ \texttt{12}
+
+        \item \texttt{float(8)} $\rightarrow$ \texttt{8.0}
+
+        \item \texttt{str(3.5)} $\rightarrow$ \texttt{"3.5"}
+
+      \end{itemize}
+
+      \begin{keyidea}
+
+        The conversion expression produces a new value of the requested type.
+
+      \end{keyidea}
+
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+
+      % Search direction: one value passing through int, float, and str conversion paths to new values.
+      \lectureimage[2.18in]{explicit-conversion-new-value.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{\texttt{int()} Produces an Integer Value}
+
+  \begin{center}
+
+    \begin{tabular}{l l l}
+      \textbf{Expression} & \textbf{Value} & \textbf{Type} \\
+      \hline
+      \texttt{int("12")} & \texttt{12} & \texttt{int} \\
+      \texttt{int(3.9)} & \texttt{3} & \texttt{int} \\
+      \texttt{int(8.0)} & \texttt{8} & \texttt{int} \\
+    \end{tabular}
+
+  \end{center}
+
+  \begin{exampleblockcp}
+
+    Converting \texttt{3.9} does not round to the nearest integer; \texttt{int()} removes the fractional portion toward zero.
+
+  \end{exampleblockcp}
+
+\end{frame}
+
+\begin{frame}{\texttt{float()} and \texttt{str()} Produce Different Representations}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Floating-point conversion}
+
+        \texttt{float(8)} $\rightarrow$ \texttt{8.0}\\[0.09in]
+
+        \texttt{float("3.5")} $\rightarrow$ \texttt{3.5}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{String conversion}
+
+        \texttt{str(3)} $\rightarrow$ \texttt{"3"}\\[0.09in]
+
+        \texttt{str(3.5)} $\rightarrow$ \texttt{"3.5"}
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{keyidea}
+
+    Conversion changes how Python interprets the resulting value; it does not merely change how the value is displayed.
+
+  \end{keyidea}
+
+\end{frame}
+
+\begin{frame}{Conversion Changes Which Operator Rule Applies}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Text remains text}
+
+        \centering
+        \texttt{"4" + "3"}\\[0.10in]
+        $\rightarrow$\\[0.10in]
+        \texttt{"43"}
+
+      \end{block}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{block}{Convert before addition}
+
+        \centering
+        \texttt{int("4") + int("3")}\\[0.10in]
+        $\rightarrow$\\[0.10in]
+        \texttt{7}
+
+      \end{block}
+
+    \end{column}
+
+  \end{columns}
+
+  \begin{exampleblockcp}
+
+    The conversions change the operand types, so Python selects numerical addition instead of string concatenation.
+
+  \end{exampleblockcp}
+
+\end{frame}
+
+\begin{frame}{Explicit and Implicit Numeric Conversion Are Different}
+
+  \begin{center}
+
+    \begin{tabular}{p{1.45in} p{2.50in} p{1.90in}}
+      \textbf{Conversion} & \textbf{What happens} & \textbf{Example} \\
+      \hline
+      Explicit & The expression directly requests a target type. & \texttt{float(5)} \\
+      Implicit numeric & Python applies a compatible mixed-numeric rule. & \texttt{5 + 3.5} \\
+    \end{tabular}
+
+  \end{center}
+
+  \vspace{0.12in}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{exampleblockcp}
+
+        \texttt{5 + 3.5} $\rightarrow$ \texttt{8.5}
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{alertblock}{No guessing from text}
+
+        \texttt{5 + "3.5"} $\rightarrow$ \texttt{TypeError}
+
+      \end{alertblock}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Predict the Value and Type Before Running Python}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.44\textwidth}
+
+      \begin{enumerate}
+
+        \item \texttt{7 + 2}
+
+        \item \texttt{7 + 2.0}
+
+        \item \texttt{7 / 2}
+
+        \item \texttt{7 // 2}
+
+        \item \texttt{"7" + "2"}
+
+        \item \texttt{"ha" * 3}
+
+        \item \texttt{int("7") + 2}
+
+        \item \texttt{str(7) + "2"}
+
+      \end{enumerate}
+
+    \end{column}
+
+    \begin{column}{0.50\textwidth}
+
+      \begin{activity}
+
+        For each expression, identify:
+
+        \begin{enumerate}
+
+          \item the operand types,
+
+          \item the selected operation,
+
+          \item the final value, and
+
+          \item the final type.
+
+        \end{enumerate}
+
+      \end{activity}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Use Colab to Inspect Both the Value and Its Type}
+
+  \begin{columns}[T,onlytextwidth]
+
+    \begin{column}{0.47\textwidth}
+
+      \begin{enumerate}
+
+        \item Predict the value and type.
+
+        \item Run the expression in one cell.
+
+        \item Inspect the same expression using \texttt{type()}.
+
+        \item Compare the observations with the prediction.
+
+        \item Explain which type rule produced the result.
+
+      \end{enumerate}
+
+      \begin{exampleblockcp}
+
+        \texttt{7 + 2.0}\\
+        \texttt{type(7 + 2.0)}
+
+      \end{exampleblockcp}
+
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+
+      % Search direction: paired Colab cells evaluating 7 + 2.0 and type(7 + 2.0).
+      \lectureimage[2.23in]{colab-value-and-type-inspection.png}
+
+    \end{column}
+
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Trace Types Through One Complete Expression}
+
+  \begin{activity}
+
+    Evaluate the expression without running Python first:
+
+    \begin{center}
+
+      {\LARGE \texttt{str(4 + 3.0) + " points"}}
+
+    \end{center}
+
+  \end{activity}
+
+  \begin{enumerate}
+
+    \item \texttt{4 + 3.0} produces \texttt{7.0}, a \texttt{float}.
+
+    \item \texttt{str(7.0)} produces \texttt{"7.0"}, a \texttt{str}.
+
+    \item String concatenation produces \texttt{"7.0 points"}.
+
+  \end{enumerate}
+
+  \begin{keyidea}
+
+    To explain an expression, track both the value and the type produced by each subexpression.
+
+  \end{keyidea}
+
 \end{frame}
 
 \end{document}

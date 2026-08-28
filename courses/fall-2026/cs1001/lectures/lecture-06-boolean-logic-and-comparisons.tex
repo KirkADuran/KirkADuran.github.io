@@ -1,12 +1,34 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\graphicspath{{../assets/lecture-06/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-06/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-06/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{6}
 \lecturetitle{Boolean Logic and Comparisons}
-\lecturedate{September 4, 2026}
-\courseunit{3. Boolean Logic and Tracing}
+\lecturedate{Fall 2026}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
@@ -14,41 +36,1166 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Boolean Logic and Comparisons
-    \item Placeholder for announcements and context.
+    \item How Python represents logical truth using the \texttt{bool} type.
+    \item How comparison expressions inspect values and produce \texttt{True} or \texttt{False}.
+    \item Why assignment with \texttt{=} and equality comparison with \texttt{==} have different semantics.
+    \item How \texttt{and}, \texttt{or}, and \texttt{not} combine or negate Boolean claims.
+    \item How truth tables, precedence, and parentheses help analyze compound Boolean expressions.
   \end{itemize}
+
+  \begin{keyidea}
+    This lecture ends with one capability: Python can compute whether a claim is true or false.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: Boolean Values}
+
+\begin{frame}{Boolean Logic Begins with Claims}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Previous lectures established that expressions evaluate to values.
+        \item Programs also need to represent claims about those values.
+        \item A logical claim has one of two outcomes: \texttt{True} or \texttt{False}.
+      \end{itemize}
+
+      \begin{block}{Opening expression}
+        \centering
+        \Large\texttt{8 > 3}
+      \end{block}
+
+      \begin{exampleblockcp}
+        The expression evaluates to the Boolean value \texttt{True}.
+      \end{exampleblockcp}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: numeric comparison flowing to a True result.
+      \lectureimage[2.25in]{comparison-produces-boolean.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The \texttt{bool} Type Represents Two Logical Values}
+  \begin{cpdefinition}
+    A \textbf{Boolean value} represents one of two logical states: \texttt{True} or \texttt{False}.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Boolean literals}
+        \centering
+        \Large\texttt{True}\qquad\Large\texttt{False}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Boolean variables}
+        \texttt{is\_raining = True}\\
+        \texttt{is\_sunny = False}\\
+        \texttt{has\_passed = True}
+      \end{block}
+    \end{column}
+  \end{columns}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item Boolean literals are capitalized in Python.
+    \item Their Python type is \texttt{bool}.
+    \item Boolean values can be stored, printed, assigned, and combined like other values.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{Boolean Values Can Be Stored in Variables}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Example state}
+        \texttt{has\_id = True}\\
+        \texttt{has\_ticket = False}\\
+        \texttt{is\_late = True}
+      \end{block}
+
+      \begin{itemize}
+        \item The variable name refers to a Boolean value.
+        \item Evaluating the name retrieves its current Boolean value.
+        \item This is the same variable model introduced in Lecture 5.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Search direction: variable label has_id pointing to True object.
+      \lectureimage[2.25in]{boolean-variable-binding.png}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Booleans and Integers in Python}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item In Python, \texttt{bool} is a subtype of \texttt{int}.
+        \item Numerically, \texttt{True} behaves like \texttt{1} and \texttt{False} behaves like \texttt{0}.
+        \item This implementation relationship is useful context, but the primary abstraction is logical truth.
+      \end{itemize}
+
+      \begin{block}{Conceptual binary representation}
+        \texttt{True} $\longrightarrow$ \texttt{1}\\
+        \texttt{False} $\longrightarrow$ \texttt{0}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Low-level representation idea}
+        \texttt{True} $\longrightarrow$ \texttt{00000001}\\
+        \texttt{False} $\longrightarrow$ \texttt{00000000}
+      \end{block}
+
+      \begin{alertblock}{Abstraction boundary}
+        Python objects have implementation details beyond a single raw bit. Use \texttt{True}/\texttt{False} as the programming model.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 2: Comparison Expressions}
+
+\begin{frame}{From Values to Claims About Values}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{A stored value}
+        \centering
+        \Large\texttt{temperature = 72}
+      \end{block}
+
+      \begin{itemize}
+        \item The variable \texttt{temperature} refers to the value \texttt{72}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{A claim about the value}
+        \centering
+        \Large\texttt{temperature > 70}
+      \end{block}
+
+      \begin{itemize}
+        \item The expression asks whether the current value is greater than \texttt{70}.
+        \item The result is \texttt{True}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{cpdefinition}
+    A \textbf{comparison expression} compares values and evaluates to a Boolean value.
+  \end{cpdefinition}
+\end{frame}
+
+\begin{frame}{Comparison Expressions Produce Boolean Values}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Examples}
+        \texttt{8 > 3}\hfill$\longrightarrow$\hfill\texttt{True}\\[0.08in]
+        \texttt{8 == 3}\hfill$\longrightarrow$\hfill\texttt{False}\\[0.08in]
+        \texttt{8 != 3}\hfill$\longrightarrow$\hfill\texttt{True}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \begin{block}{Expression model}
+        \centering
+        \texttt{8 > 3}\\[0.08in]
+        $\downarrow$ evaluate\\[0.08in]
+        \texttt{True}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A comparison is an expression: it computes a value rather than performing a control-flow action.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Python Provides Six Fundamental Comparison Operators}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|l@{\qquad}c|l}
+      \textbf{Operator} & \textbf{Meaning} & \textbf{Operator} & \textbf{Meaning} \\\hline
+      \texttt{<} & less than & \texttt{<=} & less than or equal to \\
+      \texttt{>} & greater than & \texttt{>=} & greater than or equal to \\
+      \texttt{==} & equal to & \texttt{!=} & not equal to
+    \end{tabular}
+  \end{center}
+
+  \vspace{0.16in}
+
+  \begin{block}{Examples}
+    \texttt{5 > 3} $\rightarrow$ \texttt{True}\qquad
+    \texttt{5 < 3} $\rightarrow$ \texttt{False}\qquad
+    \texttt{5 == 5} $\rightarrow$ \texttt{True}\\[0.08in]
+    \texttt{5 != 3} $\rightarrow$ \texttt{True}\qquad
+    \texttt{5 >= 5} $\rightarrow$ \texttt{True}\qquad
+    \texttt{5 <= 3} $\rightarrow$ \texttt{False}
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Comparisons Can Inspect Values Stored in Variables}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Example}
+        \texttt{temperature = 72}\\[0.08in]
+        \texttt{temperature > 70}
+      \end{block}
+
+      \begin{enumerate}
+        \item Retrieve the current value of \texttt{temperature}: \texttt{72}.
+        \item Compare \texttt{72 > 70}.
+        \item Produce the Boolean value \texttt{True}.
+      \end{enumerate}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Search direction: substitution/evaluation steps for temperature > 70.
+      \lectureimage[2.35in]{comparison-variable-evaluation.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Comparison Expressions Do Not Change the Compared Values}
+  \begin{block}{Sequence}
+    \texttt{temperature = 72}\\
+    \texttt{temperature > 70}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Comparison result}
+        \centering
+        \Large\texttt{True}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Current program state}
+        \centering
+        \Large\texttt{temperature} $\longrightarrow$ \texttt{72}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Comparison expressions inspect values and produce Boolean results; they do not themselves reassign variables.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Equality Versus Assignment}
+
+\begin{frame}{Assignment and Equality Comparison Have Different Semantics}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Assignment}
+        \centering
+        \Large\texttt{x = 5}
+      \end{block}
+
+      \begin{itemize}
+        \item Evaluates the right-hand side.
+        \item Associates \texttt{x} with the resulting value.
+        \item Changes program state.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Equality comparison}
+        \centering
+        \Large\texttt{x == 5}
+      \end{block}
+
+      \begin{itemize}
+        \item Compares two values.
+        \item Produces \texttt{True} or \texttt{False}.
+        \item Does not reassign \texttt{x}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{\texttt{=} Changes Program State}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Assignment}
+        \centering
+        \Large\texttt{x = 5}
+      \end{block}
+
+      \begin{enumerate}
+        \item Evaluate the right-hand expression \texttt{5}.
+        \item Associate the name \texttt{x} with that value.
+      \end{enumerate}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Search direction: assignment changes binding to x -> 5.
+      \lectureimage[2.20in]{assignment-x-to-five.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Read \texttt{=} as an assignment operation, not as a Boolean test of equality.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{\texttt{==} Produces a Boolean Value}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Sequence}
+        \texttt{x = 5}\\
+        \texttt{x == 5}
+      \end{block}
+
+      \begin{enumerate}
+        \item Evaluate \texttt{x} to retrieve \texttt{5}.
+        \item Compare \texttt{5 == 5}.
+        \item Produce \texttt{True}.
+      \end{enumerate}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Evaluation}
+        \centering
+        \texttt{x == 5}\\[0.08in]
+        $\downarrow$\\[0.08in]
+        \texttt{5 == 5}\\[0.08in]
+        $\downarrow$\\[0.08in]
+        \texttt{True}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Misconception Check: \texttt{=} Versus \texttt{==}}
+  \begin{block}{Code}
+    \texttt{x = 10}\\
+    \texttt{x == 5}
+  \end{block}
+
+  \begin{activity}
+    What value does the comparison produce? What value is associated with \texttt{x} afterward?
+  \end{activity}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Comparison result}
+        \centering
+        \Large\texttt{False}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Final value of \texttt{x}}
+        \centering
+        \Large\texttt{10}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Assignment changes state; comparison produces a value.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Boolean Values from Expressions}
+
+\begin{frame}{Boolean Values Can Be Assigned Directly or Computed}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Direct Boolean assignment}
+        \centering
+        \texttt{enrolled = True}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Computed Boolean assignment}
+        \texttt{units = 12}\\
+        \texttt{enrolled = units >= 1}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.12in}
+
+  \begin{block}{Evaluation}
+    \centering
+    \texttt{units >= 1} $\longrightarrow$ \texttt{12 >= 1} $\longrightarrow$ \texttt{True}
+  \end{block}
+
+  \begin{keyidea}
+    A comparison expression can produce the Boolean value that assignment then stores.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Boolean Expressions Use the Same Expression Model}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Arithmetic expression}
+        \texttt{x = 5 + 3}\\[0.08in]
+        \texttt{5 + 3} $\longrightarrow$ \texttt{8}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Boolean expression}
+        \texttt{enrolled = units >= 1}\\[0.08in]
+        \texttt{units >= 1} $\longrightarrow$ \texttt{True}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{enumerate}
+    \item Evaluate the expression on the right.
+    \item Obtain one resulting value.
+    \item Associate the name on the left with that value.
+  \end{enumerate}
+\end{frame}
+
+\sectionframe{Part 5: Boolean Operators}
+
+\begin{frame}{Boolean Operators Combine or Modify Claims}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Individual claims}
+        \texttt{age >= 18}\\
+        \texttt{has\_ticket}
+      \end{block}
+
+      \begin{block}{Combined claim}
+        \centering
+        \Large\texttt{age >= 18 and has\_ticket}
+      \end{block}
+
+      \begin{cpdefinition}
+        A \textbf{Boolean operator} combines or modifies Boolean values and produces another Boolean result.
+      \end{cpdefinition}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \begin{block}{Python Boolean operators}
+        \centering
+        \Large\texttt{and}\\[0.16in]
+        \Large\texttt{or}\\[0.16in]
+        \Large\texttt{not}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Boolean AND Requires Both Claims to Be True}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{center}
+        \renewcommand{\arraystretch}{1.25}
+        \begin{tabular}{c|c|c}
+          \textbf{A} & \textbf{B} & \textbf{A and B} \\\hline
+          False & False & False \\
+          False & True & False \\
+          True & False & False \\
+          True & True & True
+        \end{tabular}
+      \end{center}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Example}
+        \texttt{has\_id = True}\\
+        \texttt{has\_ticket = True}\\[0.08in]
+        \texttt{has\_id and has\_ticket}\\[0.08in]
+        $\longrightarrow$ \texttt{True}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    \texttt{and} is true only when both component claims are true.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Boolean OR Requires At Least One True Claim}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{center}
+        \renewcommand{\arraystretch}{1.25}
+        \begin{tabular}{c|c|c}
+          \textbf{A} & \textbf{B} & \textbf{A or B} \\\hline
+          False & False & False \\
+          False & True & True \\
+          True & False & True \\
+          True & True & True
+        \end{tabular}
+      \end{center}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Example}
+        \texttt{is\_weekend = False}\\
+        \texttt{is\_holiday = True}\\[0.08in]
+        \texttt{is\_weekend or is\_holiday}\\[0.08in]
+        $\longrightarrow$ \texttt{True}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Python's logical \texttt{or} is inclusive: it is also true when both component claims are true.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Boolean NOT Reverses a Truth Value}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.40\textwidth}
+      \begin{center}
+        \renewcommand{\arraystretch}{1.35}
+        \begin{tabular}{c|c}
+          \textbf{A} & \textbf{not A} \\\hline
+          False & True \\
+          True & False
+        \end{tabular}
+      \end{center}
+    \end{column}
+
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Example}
+        \texttt{is\_late = True}\\[0.08in]
+        \texttt{not is\_late}\\[0.08in]
+        $\longrightarrow$ \texttt{False}
+      \end{block}
+
+      \begin{itemize}
+        \item \texttt{not} is a unary Boolean operator.
+        \item It negates the truth value of one Boolean operand.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Read Boolean Expressions as Logical Claims}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l}
+      \textbf{Python} & \textbf{Plain-language claim} \\\hline
+      \texttt{has\_id and has\_ticket} & has identification and has a ticket \\
+      \texttt{is\_weekend or is\_holiday} & it is the weekend or a holiday \\
+      \texttt{not is\_late} & it is not late \\
+      \texttt{temperature >= 70 and is\_sunny} & at least 70 degrees and sunny
+    \end{tabular}
+  \end{center}
+
+  \begin{activity}
+    Translate: ``The student has completed the prerequisite and is enrolled.''
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 6: Truth Tables}
+
+\begin{frame}{Truth Tables Enumerate Every Boolean Input Combination}
+  \begin{cpdefinition}
+    A \textbf{truth table} lists every possible combination of Boolean inputs and the result of a logical expression for each combination.
+  \end{cpdefinition}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Truth tables provide a systematic method for analyzing Boolean expressions.
+    \item They clarify the exact semantics of \texttt{and}, \texttt{or}, and \texttt{not}.
+    \item They are useful for reasoning about and debugging compound logical statements.
   \end{itemize}
+
+  \begin{keyidea}
+    For two Boolean inputs, there are four possible input combinations.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Combined Truth Table for \texttt{and} and \texttt{or}}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.45}
+    \begin{tabular}{c|c|c|c}
+      \textbf{A} & \textbf{B} & \textbf{A and B} & \textbf{A or B} \\\hline
+      True & True & True & True \\
+      True & False & False & True \\
+      False & True & False & True \\
+      False & False & False & False
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The table encodes the complete behavior of each binary Boolean operator for Boolean operands.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Truth Tables Can Analyze Compound Expressions}
+  \begin{block}{Expression}
+    \centering
+    \Large\texttt{A and not B}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|c|c|c}
+      \textbf{A} & \textbf{B} & \textbf{not B} & \textbf{A and not B} \\\hline
+      True & True & False & False \\
+      True & False & True & True \\
+      False & True & False & False \\
+      False & False & True & False
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Use Truth Tables to Reason Systematically}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \begin{block}{\texttt{A and B}}
+        Ask whether both claims are true.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.30\textwidth}
+      \begin{block}{\texttt{A or B}}
+        Ask whether at least one claim is true.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.30\textwidth}
+      \begin{block}{\texttt{not A}}
+        Reverse the truth value of \texttt{A}.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{activity}
+    Without running Python, determine the result of \texttt{True and not False} and justify each step.
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 7: Compound Boolean Expressions}
+
+\begin{frame}{Compound Boolean Expressions Combine Multiple Claims}
+  \begin{cpdefinition}
+    A \textbf{compound Boolean expression} combines two or more Boolean expressions using Boolean operators and evaluates to one Boolean value.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{age = 19}\\
+    \texttt{has\_ticket = True}\\[0.08in]
+    \texttt{age >= 18 and has\_ticket}
+  \end{block}
+
+  \begin{block}{Evaluation}
+    \centering
+    \texttt{19 >= 18 and True} $\longrightarrow$ \texttt{True and True} $\longrightarrow$ \texttt{True}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Evaluate Compound Expressions in Stages}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Example}
+        \texttt{temperature = 72}\\
+        \texttt{is\_sunny = True}\\[0.08in]
+        \texttt{temperature >= 70 and is\_sunny}
+      \end{block}
+
+      \begin{enumerate}
+        \item Substitute current variable values.
+        \item Evaluate comparisons.
+        \item Evaluate Boolean operators.
+      \end{enumerate}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Stages}
+        \texttt{72 >= 70 and True}\\
+        $\downarrow$\\
+        \texttt{True and True}\\
+        $\downarrow$\\
+        \texttt{True}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Example: Assigning the Result of a Compound Expression}
+  \begin{block}{Statement}
+    \centering
+    \Large\texttt{x = 3 > 4 and 5 < 6}
+  \end{block}
+
+  \begin{enumerate}
+    \item \texttt{3 > 4} $\longrightarrow$ \texttt{False}
+    \item \texttt{5 < 6} $\longrightarrow$ \texttt{True}
+    \item \texttt{False and True} $\longrightarrow$ \texttt{False}
+    \item Assignment associates \texttt{x} with \texttt{False}.
+  \end{enumerate}
+
+  \begin{keyidea}
+    The right-hand side is fully evaluated before its Boolean result is assigned.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=6]{Practice: Evaluate Compound Logical Statements}
+  \begin{block}{Expressions from the prior lecture deck}
+    \texttt{x = 3 > 4 and 5 < 6}\\
+    \texttt{y = 4 == 4 or 7 != 7}\\
+    \texttt{z = not (10 <= 15)}\\
+    \texttt{a = (8 > 2 and 3 < 5) or (6 == 6)}\\
+    \texttt{b = not (5 > 2) and (3 >= 3)}\\
+    \texttt{c = 7 != 7 or (2 + 2 == 4 and 9 < 10)}\\
+    \texttt{d = (3 < 1) and not (5 == 5)}
+  \end{block}
+
+  \begin{activity}
+    Evaluate each expression hierarchically: arithmetic $\rightarrow$ comparisons $\rightarrow$ Boolean operations $\rightarrow$ final Boolean value.
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 8: Operator Precedence and Parentheses}
+
+\begin{frame}{Operator Precedence Determines Evaluation Order}
+  \begin{block}{Practical precedence for today's operators}
+    \begin{enumerate}
+      \item Arithmetic
+      \item Comparisons
+      \item \texttt{not}
+      \item \texttt{and}
+      \item \texttt{or}
+    \end{enumerate}
+  \end{block}
+
+  \begin{block}{Example}
+    \texttt{age + 1 >= 18 and has\_ticket}
+  \end{block}
+
+  \begin{exampleblockcp}
+    Conceptually: \texttt{((age + 1) >= 18) and has\_ticket}
+  \end{exampleblockcp}
+\end{frame}
+
+\begin{frame}{Parentheses Make Logical Structure Explicit}
+  \begin{block}{Expression}
+    \centering
+    \Large\texttt{(age >= 18 and has\_ticket) or has\_parent\_permission}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Parentheses can override normal precedence.
+        \item Even when they do not change the result, they can make intended grouping easier to read.
+        \item Use parentheses when they clarify the logical structure of a compound claim.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      % Search direction: expression tree with grouped conjunction feeding an OR node.
+      \lectureimage[2.25in]{boolean-parentheses-expression-tree.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 9: Translating and Evaluating Claims}
+
+\begin{frame}{Translate Plain-Language Claims into Python}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.45}
+    \begin{tabular}{p{0.49\textwidth}|p{0.43\textwidth}}
+      \textbf{Claim} & \textbf{Python expression} \\\hline
+      The person is at least 18 and has a ticket. & \texttt{age >= 18 and has\_ticket} \\
+      Today is a weekend or a holiday. & \texttt{is\_weekend or is\_holiday} \\
+      The student is not late. & \texttt{not is\_late} \\
+      The temperature is at least 70 and it is sunny. & \texttt{temperature >= 70 and is\_sunny}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Arithmetic Expressions Can Appear Inside Comparisons}
+  \begin{block}{Example}
+    \texttt{score = 84}\\
+    \texttt{bonus = 7}\\[0.08in]
+    \texttt{score + bonus >= 90}
+  \end{block}
+
+  \begin{block}{Evaluation}
+    \centering
+    \texttt{84 + 7 >= 90} $\longrightarrow$ \texttt{91 >= 90} $\longrightarrow$ \texttt{True}
+  \end{block}
+
+  \begin{keyidea}
+    Larger expressions are built from smaller expressions; arithmetic may produce values that comparisons then inspect.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Complex Boolean Expression Still Produces One Value}
+  \begin{block}{State}
+    \texttt{age = 19}\\
+    \texttt{has\_ticket = False}\\
+    \texttt{has\_parent\_permission = True}
+  \end{block}
+
+  \begin{block}{Expression}
+    \texttt{(age >= 18 and has\_ticket) or has\_parent\_permission}
+  \end{block}
+
+  \begin{block}{Evaluation}
+    \centering
+    \texttt{(True and False) or True} $\longrightarrow$ \texttt{False or True} $\longrightarrow$ \texttt{True}
+  \end{block}
+\end{frame}
+
+\sectionframe{Part 10: Misconceptions to Correct Explicitly}
+
+\begin{frame}{Misconception: \texttt{=} and \texttt{==} Both Mean ``Equals''}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{\texttt{x = 5}}
+        Assignment associates \texttt{x} with \texttt{5}; it changes program state.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{\texttt{x == 5}}
+        Equality comparison asks whether two values are equal; it produces a Boolean value.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Similar symbols do not imply similar semantics.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Misconception: A Comparison Changes the Variable}
+  \begin{block}{Code}
+    \texttt{x = 5}\\
+    \texttt{x > 3}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Expression result}
+        \centering
+        \Large\texttt{True}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Value still associated with \texttt{x}}
+        \centering
+        \Large\texttt{5}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Misconception: \texttt{and} Means Either Claim May Be True}
+  \begin{block}{Correct rule}
+    \centering
+    \Large\texttt{A and B} is \texttt{True} only when \texttt{A} and \texttt{B} are both \texttt{True}.
+  \end{block}
+
+  \begin{center}
+    \texttt{True and True} $\longrightarrow$ \texttt{True}
+  \end{center}
+
+  \begin{keyidea}
+    Every other Boolean input combination for \texttt{and} produces \texttt{False}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Misconception: \texttt{or} Requires Exactly One True Claim}
+  \begin{block}{Correct rule}
+    \centering
+    \Large\texttt{A or B} is \texttt{True} when at least one operand is \texttt{True}.
+  \end{block}
+
+  \begin{center}
+    \texttt{True or True} $\longrightarrow$ \texttt{True}
+  \end{center}
+
+  \begin{keyidea}
+    Logical \texttt{or} is inclusive, not exclusive.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Misconception: Boolean Variables Must Be Assigned Literals}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Literal value}
+        \centering
+        \texttt{enrolled = True}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Computed value}
+        \texttt{units = 12}\\
+        \texttt{enrolled = units >= 1}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Variables can store Boolean values whether those values are written directly or computed by expressions.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 11: Extensions from the Prior Deck}
+
+\begin{frame}{Exclusive OR Distinguishes ``At Least One'' from ``Exactly One''}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{center}
+        \renewcommand{\arraystretch}{1.25}
+        \begin{tabular}{c|c|c}
+          \textbf{A} & \textbf{B} & \textbf{A XOR B} \\\hline
+          False & False & False \\
+          False & True & True \\
+          True & False & True \\
+          True & True & False
+        \end{tabular}
+      \end{center}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Conceptual distinction}
+        \textbf{OR}: at least one claim is true.\\[0.12in]
+        \textbf{XOR}: exactly one claim is true.
+      \end{block}
+
+      \begin{exampleblockcp}
+        In Python, \texttt{\textasciicircum} is the bitwise XOR operator and also operates on Boolean operands, but \texttt{and}, \texttt{or}, and \texttt{not} are the primary logical operators for this lecture.
+      \end{exampleblockcp}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{George Boole and the Origins of Boolean Algebra}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item George Boole (1815--1864) was an English mathematician and logician.
+        \item He developed an algebraic system for reasoning about logical propositions.
+        \item Boolean algebra became foundational to formal logic, digital circuits, and computing.
+        \item Claude Shannon later connected Boolean algebra to electrical switching circuits.
+        \item The Python type name \texttt{bool} reflects this logical tradition.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.38\textwidth}
+      % Search direction: public-domain portrait of George Boole.
+      \lectureimage[2.75in]{george-boole-portrait.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 12: Lecture Boundary and Synthesis}
+
+\begin{frame}{What Boolean Logic Can Compute}
+  \begin{block}{Examples}
+    \texttt{temperature > 70}\\[0.06in]
+    \texttt{age >= 18 and has\_ticket}\\[0.06in]
+    \texttt{is\_weekend or is\_holiday}\\[0.06in]
+    \texttt{not is\_late}
+  \end{block}
+
+  \begin{keyidea}
+    Every expression above evaluates to one Boolean value: \texttt{True} or \texttt{False}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Boundary: Do Not Introduce Control Flow Yet}
+  \begin{itemize}
+    \item Do not introduce \texttt{if} in the core lecture.
+    \item Do not describe Boolean expressions as choosing which code runs.
+    \item Do not require short-circuit evaluation yet.
+    \item Do not introduce chained comparisons.
+    \item Do not introduce membership operators.
+  \end{itemize}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Lecture 6 ends here}
+        Python can compute whether a claim is true.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Next conceptual step}
+        Python can use that Boolean result to choose an action.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Boolean Logic: Complete Mental Model}
+  \begin{center}
+    \Large
+    Values
+    $\longrightarrow$
+    Variables
+    $\longrightarrow$
+    Expressions
+    $\longrightarrow$
+    Comparisons
+    $\longrightarrow$
+    Boolean values
+  \end{center}
+
+  \vspace{0.18in}
+
+  \begin{center}
+    \Large
+    Boolean values
+    $\longrightarrow$
+    Boolean operators
+    $\longrightarrow$
+    Compound Boolean expressions
+  \end{center}
+
+  \vspace{0.18in}
+
+  \begin{block}{Representative examples}
+    \texttt{temperature = 72}\qquad\texttt{temperature > 70}\\[0.08in]
+    \texttt{age = 19}\qquad\texttt{age >= 18 and has\_ticket}\\[0.08in]
+    \texttt{units = 12}\qquad\texttt{enrolled = units >= 1}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Lecture 6 Learning Outcome}
+  \begin{itemize}
+    \item Identify and store Boolean values.
+    \item Use the six comparison operators correctly.
+    \item Distinguish assignment from equality comparison.
+    \item Evaluate comparison expressions involving literal values and variables.
+    \item Use \texttt{and}, \texttt{or}, and \texttt{not} to form compound Boolean expressions.
+    \item Interpret truth tables and evaluate compound expressions systematically.
+    \item Apply practical operator precedence and use parentheses to communicate structure.
+    \item Explain that Boolean expressions compute values without yet invoking control flow.
+  \end{itemize}
+
+  \begin{keyidea}
+    Outcome: students can evaluate simple and compound Boolean expressions involving literal values and variables.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Exit Ticket: Evaluate and Explain}
+  \begin{block}{State}
+    \texttt{age = 17}\\
+    \texttt{has\_ticket = True}\\
+    \texttt{has\_parent\_permission = True}
+  \end{block}
+
+  \begin{activity}
+    Evaluate \texttt{(age >= 18 and has\_ticket) or has\_parent\_permission}. Show each intermediate Boolean value and explain why evaluating the expression does not change \texttt{age} or \texttt{has\_ticket}.
+  \end{activity}
+\end{frame}
+
+\appendix
+\sectionframe{Appendix: Deferred Material from the Prior Lecture 6 Deck}
+
+\begin{frame}{Boolean Logic in the CPU}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Digital processors implement logical operations using electronic circuits corresponding to operations such as AND, OR, and NOT.
+        \item Intermediate computational results may be stored temporarily in CPU registers.
+        \item At the hardware level, logical states are represented using binary electrical states.
+      \end{itemize}
+
+      \begin{block}{Conceptual connection}
+        Boolean expression $\longrightarrow$ logical operations $\longrightarrow$ binary result $\longrightarrow$ true/false interpretation
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: simple AND/OR/NOT logic-gate diagram.
+      \lectureimage[2.55in]{cpu-boolean-logic-gates.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Branching Instructions Use Boolean-Like Results}
+  \begin{itemize}
+    \item Machine instructions can alter execution order based on condition results.
+    \item At a high level, a true condition may select one execution path and a false condition another.
+    \item This is the conceptual bridge from Boolean evaluation to control flow.
+  \end{itemize}
+
+  \begin{alertblock}{Placement}
+    This mechanism belongs with the next control-flow unit. The core Lecture 6 stops before introducing \texttt{if} or program branching.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Short-Circuit Evaluation}
+  \begin{itemize}
+    \item Python's \texttt{and} and \texttt{or} operators use short-circuit evaluation.
+    \item For \texttt{and}, evaluation can stop once an operand determines that the complete expression cannot be true.
+    \item For \texttt{or}, evaluation can stop once an operand determines that the complete expression is already true.
+  \end{itemize}
+
+  \begin{block}{Examples from the prior deck}
+    \texttt{3 < 2 and 5 < 6 and 7 == 7 and 10 >= 10 and 12 != 13}\\[0.10in]
+    \texttt{3 > 5 or 6 < 4 or 7 == 7 or 10 < 9 or 12 != 12}
+  \end{block}
+
+  \begin{alertblock}{Placement}
+    Defer this behavior until students need to reason about evaluation side effects, function calls, or control-flow conditions.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{De Morgan's Laws}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{First law}
+        \texttt{not (A and B)}\\[0.08in]
+        is logically equivalent to\\[0.08in]
+        \texttt{not A or not B}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Second law}
+        \texttt{not (A or B)}\\[0.08in]
+        is logically equivalent to\\[0.08in]
+        \texttt{not A and not B}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{itemize}
+    \item De Morgan's Laws transform negated compound Boolean expressions into logically equivalent forms.
+    \item They are useful for simplifying and reasoning about more complex logical conditions.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Image Placeholder Index}
+  \scriptsize
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \begin{itemize}
+        \item \texttt{comparison-produces-boolean.png}
+        \item \texttt{boolean-variable-binding.png}
+        \item \texttt{comparison-variable-evaluation.png}
+        \item \texttt{assignment-x-to-five.png}
+        \item \texttt{boolean-parentheses-expression-tree.png}
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.49\textwidth}
+      \begin{itemize}
+        \item \texttt{george-boole-portrait.png}
+        \item \texttt{cpu-boolean-logic-gates.png}
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{exampleblockcp}
+    Save each image under \texttt{../assets/lecture-06/}. The labeled placeholder will be replaced automatically when its filename matches.
+  \end{exampleblockcp}
 \end{frame}
 
 \end{document}
