@@ -1,54 +1,1009 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\graphicspath{{../assets/lecture-05/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-05/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-05/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \tiny\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
-\lecturenumber{4}
-\lecturetitle{Uninformed Search I -- state spaces, tree search, BFS, DFS}
-\lecturedate{August 31, 2026}
-\courseunit{Course sequence}
+\lecturenumber{5}
+\lecturetitle{Uninformed Search}
+\lecturedate{}
+\courseunit{Search and Problem Solving}
 
 \begin{document}
 
 \makedecktitle
 
-\begin{frame}{Today}
+\begin{frame}[shrink=20]{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Uninformed Search I -- state spaces, tree search, BFS, DFS
-    \item Placeholder for announcements and context.
+    \item Why search is a legitimate computational model of intelligent problem solving.
+    \item How to formulate a problem using states, actions, transitions, and goals.
+    \item How search trees, frontiers, explored sets, and parent pointers organize exploration.
+    \item How Breadth-First Search, Depth-First Search, and Iterative Deepening differ.
+    \item How autonomous Micromouse robots turn an unknown maze into a search problem.
   \end{itemize}
+
+  \begin{keyidea}
+    Uninformed search asks how an agent can reason systematically about possible futures without any estimate of which unexplored state is most promising.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: Search as Intelligent Problem Solving}
+
+\begin{frame}[shrink=20]{When Reflex Behavior Is Not Enough}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Reflex agent}
+        percept $\longrightarrow$ immediate action
+      \end{block}
+      \begin{itemize}
+        \item Many tasks require a sequence of actions whose consequences extend beyond the current percept.
+        \item The correct first action may only become apparent after considering what can happen later.
+      \end{itemize}
+
+      \begin{block}{Problem-solving agent}
+        current state $\longrightarrow$ possible futures $\longrightarrow$ plan
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: branching future-state diagram from one current state to several successors and a goal.
+      \lectureimage[2.38in]{search-reasons-about-futures.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Search allows an agent to reason about states it has not yet physically encountered.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}[shrink=20]{Problem Abstraction Removes Irrelevant Detail}
+  \begin{cpdefinition}
+    A \textbf{problem formulation} is an abstract mathematical model of a task that retains the information needed to find a solution.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Physical navigation problem}
+        Traffic, weather, buildings, passengers, road geometry, fuel, and many other details may exist in the real environment.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Search abstraction}
+        \begin{itemize}
+          \item State $\rightarrow$ current location
+          \item Action $\rightarrow$ move to an adjacent location
+          \item Goal $\rightarrow$ destination
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The search algorithm operates on the abstraction, not on every physical detail of the world.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}[shrink=20]{Problem-Solving Agents Treat States as Atomic}
+  \begin{itemize}
+    \item For uninformed search, a state can be treated as a black box with a unique identity.
+    \item The algorithm needs to know which actions are available, which successor states result, and whether a goal has been reached.
+    \item It does not require semantic understanding of the internal meaning of a state.
+  \end{itemize}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Domain} & \textbf{Possible meaning of a state} \\\hline
+      Navigation & current location \\
+      Sliding puzzle & tile configuration \\
+      Theorem proving & partially constructed proof \\
+      Robotics & current discrete configuration
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The same search algorithm can operate across domains because the representation supplies the meaning.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Newell and Simon: Reasoning as Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Newell and Simon's early AI work treated problem solving as search through a symbolic \textbf{problem space}.
+        \item Their Logic Theorist represented theorem proving using states, operators, and goals.
+      \end{itemize}
+
+      \begin{block}{Logic Theorist, 1956}
+        \begin{itemize}
+          \item States: partially constructed proofs
+          \item Actions: legal inference rules
+          \item Goal: derive the target theorem
+        \end{itemize}
+      \end{block}
+
+      \begin{keyidea}
+        The claim was substantive: important forms of reasoning might be implemented as systematic search.
+      \end{keyidea}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      % Search direction: Newell and Simon / Logic Theorist historical image or theorem-proof search tree.
+      \lectureimage[2.50in]{logic-theorist-problem-space.png}
+    \end{column}
+  \end{columns}
+
+  \note{[Sources] Allen Newell and Herbert A. Simon, early work on Logic Theorist and symbolic problem solving; see also Russell and Norvig, Artificial Intelligence: A Modern Approach, search chapter.}
+\end{frame}
+
+\sectionframe{Part 2: Formalizing an Uninformed Search Problem}
+
+\begin{frame}[shrink=20]{Our Search Model Today}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{description}
+        \item[State space] The states relevant to the problem.
+        \item[Initial state] Where the agent begins.
+        \item[Goal test] Determines whether a state satisfies the objective.
+        \item[Actions] $\mathrm{ACTIONS}(s)$ returns legal actions in state $s$.
+        \item[Transition model] $\mathrm{RESULT}(s,a)$ returns the state produced by action $a$.
+      \end{description}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      \begin{block}{Uniform-step assumption}
+        \begin{itemize}
+          \item Every legal action counts as one step.
+          \item We ignore variable action costs.
+          \item A shortest solution has the fewest actions.
+        \end{itemize}
+      \end{block}
+
+      \begin{alertblock}{Not today}
+        Uniform-Cost Search, Dijkstra's algorithm, and weighted path costs.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{A Solution Is a Sequence of Actions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{cpdefinition}
+        A \textbf{solution} is an action sequence that transforms the initial state into a goal state.
+      \end{cpdefinition}
+
+      \begin{block}{Example}
+        \centering
+        $s_0 \xrightarrow{a_1} s_1 \xrightarrow{a_2} s_2 \xrightarrow{a_3} s_g$
+      \end{block}
+
+      \begin{itemize}
+        \item Solution: $[a_1,a_2,a_3]$
+        \item Solution depth: $3$
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: sequence of states and actions from initial state to goal.
+      \lectureimage[2.20in]{solution-action-sequence.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    In today's model, a shortest solution is a goal path of minimum depth.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{State-Space Graph vs. Search Tree}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{State-space graph}
+        Represents the underlying problem domain.
+        \begin{itemize}
+          \item vertices $=$ states;
+          \item edges $=$ legal transitions.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Search tree}
+        Generated dynamically by the algorithm.
+        \begin{itemize}
+          \item root $=$ initial state;
+          \item children $=$ generated successors.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{itemize}
+    \item Multiple search-tree nodes can correspond to the same state-space vertex.
+    \item The tree records paths being considered, not a second physical world.
+  \end{itemize}
+
+  \begin{keyidea}
+    The problem defines the graph; the algorithm generates only the portion of the search tree it needs.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Why Generate States On Demand?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Many search spaces are too large to enumerate in advance.
+        \item 8-puzzle permutations: $9! = 362{,}880$.
+        \item 15-puzzle permutations: $16! \approx 2.09 \times 10^{13}$.
+        \item More realistic AI problems can have vastly larger or effectively unbounded spaces.
+      \end{itemize}
+
+      \begin{keyidea}
+        Generate successors only when a node is expanded.
+      \end{keyidea}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Search direction: small generated search tree beside a huge faded implicit state space.
+      \lectureimage[2.40in]{generate-search-space-on-demand.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Frontier and Explored Set}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Frontier}
+        Nodes discovered but not yet expanded.
+      \end{block}
+      \begin{itemize}
+        \item boundary between explored and unexplored possibilities;
+        \item strategy determines which frontier node is expanded next.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Explored set}
+        States that have already been expanded.
+      \end{block}
+      \begin{itemize}
+        \item avoids unnecessary repeated exploration;
+        \item especially important when the graph contains cycles.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    BFS and DFS use the same basic search machinery; they differ primarily in how the frontier is organized.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Parent Pointers Turn a Goal into a Plan}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Each newly generated search node can store the node that generated it.
+        \item When a goal is found, follow parent pointers backward to the initial node.
+        \item Reverse the sequence to recover the forward solution path.
+      \end{itemize}
+
+      \begin{block}{Search-node information}
+        \texttt{state} \qquad \texttt{parent} \qquad \texttt{action}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: goal node with arrows following parent pointers back to start.
+      \lectureimage[2.35in]{parent-pointers-reconstruct-path.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Search discovers a goal; parent information reconstructs the action sequence that reaches it.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{How Should We Evaluate a Search Strategy?}
+  \begin{description}
+    \item[Completeness] Is a solution guaranteed to be found when one exists?
+    \item[Shortest-solution guarantee] Is the returned solution guaranteed to have minimum depth?
+    \item[Time complexity] How many search nodes may be generated or expanded?
+    \item[Space complexity] How many search nodes must be retained simultaneously?
+  \end{description}
+
+  \begin{block}{Notation}
+    $b$ = branching factor, \qquad $d$ = depth of the shallowest goal, \qquad $m$ = maximum search depth.
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\sectionframe{Part 3: Breadth-First Search}
+
+\begin{frame}[shrink=20]{Breadth-First Search Expands by Depth}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{cpdefinition}
+        \textbf{Breadth-First Search (BFS)} expands the shallowest unexpanded node first.
+      \end{cpdefinition}
+
+      \begin{itemize}
+        \item Explore depth $0$, then depth $1$, then depth $2$, and so on.
+        \item The frontier is maintained as a FIFO queue.
+        \item First discovered $\rightarrow$ first expanded.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Search direction: BFS tree colored by depth layers, with queue ordering.
+      \lectureimage[2.45in]{bfs-level-order.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Breadth-First Search: General Structure}
+  \begin{block}{Pseudocode}
+    \ttfamily\small
+    BFS(initial\_state, goal\_test):\\
+    \quad frontier $\leftarrow$ FIFO queue containing initial\_state\\
+    \quad explored $\leftarrow \emptyset$\\[0.04in]
+    \quad while frontier is not empty:\\
+    \qquad node $\leftarrow$ frontier.dequeue()\\
+    \qquad if goal\_test(node.state): return solution(node)\\
+    \qquad add node.state to explored\\
+    \qquad for each action in ACTIONS(node.state):\\
+    \qquad\quad child $\leftarrow$ RESULT(node.state, action)\\
+    \qquad\quad if child is new: frontier.enqueue(child)\\
+    \quad return failure
+  \end{block}
+
+  \begin{keyidea}
+    FIFO ordering is what turns the generic search procedure into breadth-first exploration.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{BFS: Guarantees and Cost}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Why minimum depth?}
+        If the shallowest goal is at depth $d$, BFS finishes depths $0,1,\ldots,d-1$ before exploring anything deeper than $d$.
+      \end{block}
+
+      \begin{itemize}
+        \item Complete: \textbf{Yes}, for finite branching factor.
+        \item Minimum-depth solution: \textbf{Yes}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Complexity}
+        \begin{itemize}
+          \item Time: $O(b^d)$
+          \item Space: $O(b^d)$
+        \end{itemize}
+      \end{block}
+
+      \begin{itemize}
+        \item The frontier retains a broad layer of alternatives.
+        \item Memory often becomes BFS's practical limiting resource.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    BFS buys systematic minimum-depth exploration with exponential frontier growth.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Depth-First and Iterative Deepening Search}
+
+\begin{frame}[shrink=20]{Depth-First Search Commits to One Branch}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{cpdefinition}
+        \textbf{Depth-First Search (DFS)} expands the deepest unexpanded node first.
+      \end{cpdefinition}
+
+      \begin{itemize}
+        \item Follow one branch as deeply as possible.
+        \item Backtrack when the branch cannot continue productively.
+        \item The frontier is maintained as a LIFO stack or through recursion.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Search direction: DFS tree with one highlighted deep branch and a backtracking arrow.
+      \lectureimage[2.45in]{dfs-deep-branch-backtrack.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Depth-First Search: General Structure}
+  \begin{block}{Pseudocode}
+    \ttfamily\small
+    DFS(initial\_state, goal\_test):\\
+    \quad frontier $\leftarrow$ LIFO stack containing initial\_state\\
+    \quad explored $\leftarrow \emptyset$\\[0.04in]
+    \quad while frontier is not empty:\\
+    \qquad node $\leftarrow$ frontier.pop()\\
+    \qquad if goal\_test(node.state): return solution(node)\\
+    \qquad add node.state to explored\\
+    \qquad for each action in ACTIONS(node.state):\\
+    \qquad\quad child $\leftarrow$ RESULT(node.state, action)\\
+    \qquad\quad if child is new: frontier.push(child)\\
+    \quad return failure
+  \end{block}
+
+  \begin{keyidea}
+    The generic structure is nearly identical to BFS; frontier discipline changes the behavior dramatically.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{DFS Trades Guarantees for Memory}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Properties}
+        \begin{itemize}
+          \item Complete: \textbf{No}, in general.
+          \item Minimum-depth solution: \textbf{No}.
+          \item Time: $O(b^m)$.
+          \item Space: approximately $O(m)$ in the simplified tree-search model.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Failure modes}
+        \begin{itemize}
+          \item infinite or very deep branch;
+          \item deep goal found before shallow goal;
+          \item strong sensitivity to successor ordering.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    DFS keeps little active search state, but it can spend substantial effort in an unproductive region.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Depth Limits Lead to Iterative Deepening}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Depth-Limited Search}
+        DFS with a maximum depth $\ell$.
+        \begin{itemize}
+          \item prevents uncontrolled descent;
+          \item fails if every solution lies deeper than $\ell$.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{IDDFS}
+        Repeat depth-limited DFS with:
+        \[
+          \ell = 0,1,2,3,\ldots
+        \]
+        until a goal is found.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Iterative deepening searches increasingly deep prefixes without committing BFS-level memory.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{IDDFS Combines Useful Properties of BFS and DFS}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Properties}
+        \begin{itemize}
+          \item Complete: \textbf{Yes}.
+          \item Minimum-depth solution: \textbf{Yes}.
+          \item Time: $O(b^d)$.
+          \item Space: $O(d)$ in the simplified presentation.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Why repeated work is acceptable}
+        Nodes near the root are expanded several times, but exponentially growing trees contain most nodes near the deepest explored level.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    IDDFS accepts modest repeated computation to obtain BFS-like depth guarantees with DFS-like memory usage.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Three Frontier Policies}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|c|c|l}
+      \textbf{Strategy} & \textbf{Expand next} & \textbf{Complete?} & \textbf{Min depth?} & \textbf{Tradeoff} \\\hline
+      BFS & shallowest & Yes & Yes & high memory \\
+      DFS & deepest & No$^*$ & No & low memory \\
+      IDDFS & deepest within limit & Yes & Yes & repeated work
+    \end{tabular}
+  \end{center}
+
+  \vspace{0.08in}
+  \scriptsize $^*$DFS can be complete on appropriately finite graph-search formulations, but not in the general unbounded case used for comparison here.
+
+  \begin{keyidea}
+    Uninformed strategies differ not in what the goal means, but in how they organize systematic exploration.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Is Uninformed Search Really Artificial Intelligence?}
+
+\begin{frame}[shrink=20]{``But Isn't This Just an Algorithm?''}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Why it feels ordinary}
+        \begin{itemize}
+          \item BFS and DFS use queues and stacks.
+          \item They are deterministic procedures.
+          \item They do not learn from data.
+          \item They are standard graph algorithms.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+      \begin{block}{The better question}
+        What capability does the algorithm provide to an agent?
+        \begin{itemize}
+          \item represent alternatives;
+          \item predict consequences;
+          \item construct a goal-directed plan.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Algorithms and artificial intelligence are not opposites; AI systems are implemented through algorithms.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Search Is a Form of Internal Simulation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{A search-based agent can ask}
+        \begin{itemize}
+          \item What happens if I take action $A$?
+          \item What becomes possible afterward?
+          \item What if I instead take action $B$?
+          \item Does any sequence eventually reach the goal?
+        \end{itemize}
+      \end{block}
+
+      \begin{itemize}
+        \item The agent need not physically execute every alternative.
+        \item The transition model predicts consequences inside the representation.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      % Search direction: agent internally branching through hypothetical futures before choosing one action.
+      \lectureimage[2.42in]{search-inside-intelligent-agent.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Deliberation separates considering an action from executing it.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Why This Was Legitimately AI}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Newell and Simon proposed that human problem solving could be modeled as symbolic manipulation in a problem space.
+    \item Logic Theorist demonstrated that theorem proving could be implemented as search over partial proofs.
+    \item The scientific hypothesis was not that ``graphs are intelligent.''
+    \item It was that important forms of reasoning could emerge from representation, operators, goals, and systematic exploration.
   \end{itemize}
+
+  \begin{block}{Agent-level interpretation}
+    environment $\rightarrow$ representation $\rightarrow$ possible futures $\rightarrow$ search $\rightarrow$ plan $\rightarrow$ action
+  \end{block}
+
+  \begin{keyidea}
+    Search belongs in AI because it operationalizes a theory of goal-directed reasoning.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Why Search Feels Less Like AI Today}
+  \begin{itemize}
+    \item Techniques often stop feeling like AI once they become well understood and widely standardized.
+    \item Search is now taught in algorithms courses because its behavior can be characterized precisely.
+    \item Familiarity does not erase the role it plays inside autonomous reasoning systems.
+  \end{itemize}
+
+  \begin{alertblock}{Important distinction}
+    BFS by itself is not an intelligent agent. An autonomous agent that uses a state-space model and BFS to construct a goal-directed plan is performing a foundational form of AI problem solving.
+  \end{alertblock}
+
+  \begin{keyidea}
+    The algorithm may be ordinary; the capability it enables---reasoning about alternatives before acting---is fundamental.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: Application --- Autonomous Micromouse}
+
+\begin{frame}[shrink=20]{Application: The Micromouse Competition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Micromouse is an autonomous robotics competition centered on maze discovery and navigation.
+        \item The robot carries its own computation, sensing, actuation, and power.
+        \item It does not begin with a complete map of the competition maze.
+        \item It must discover enough structure to reach the goal and exploit what it learns.
+      \end{itemize}
+
+      \begin{block}{AI question}
+        How can an autonomous agent construct a useful route when its model of the environment is initially incomplete?
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: top-down Micromouse competition photograph showing autonomous robot inside a maze.
+      \lectureimage[2.48in]{micromouse-competition-overview.png}
+    \end{column}
+  \end{columns}
+
+  \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth,'' May 24, 2023, https\://www.youtube.com/watch?v=ZMQbHMgK2rw. The video describes autonomous maze-solving robots, local sensing, search algorithms, and later high-speed runs.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Abstract the Robot into a Search Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{description}
+        \item[State] Current maze cell.
+        \item[Initial state] Starting cell near a corner.
+        \item[Goal] Reach a designated center goal cell.
+        \item[Actions] Move north, south, east, or west when a passage is open.
+        \item[Transition] Move to the adjacent cell in the selected direction.
+      \end{description}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      % Search direction: grid maze labeled S and G with N/S/E/W discrete actions.
+      \lectureimage[2.42in]{micromouse-discrete-search-abstraction.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    For this lecture, the physical robot becomes an agent moving among discrete states in a graph.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{The Maze Is a Graph the Robot Must Discover}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Maze $\rightarrow$ graph}
+        \begin{itemize}
+          \item cell $\rightarrow$ state;
+          \item open passage $\rightarrow$ transition;
+          \item wall $\rightarrow$ unavailable action;
+          \item center $\rightarrow$ goal.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+      \begin{block}{But the graph is initially incomplete}
+        \begin{itemize}
+          \item onboard sensors reveal nearby walls;
+          \item the internal map is updated incrementally;
+          \item newly discovered walls remove assumed transitions.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{center}
+    \large sense $\rightarrow$ update map $\rightarrow$ search $\rightarrow$ move $\rightarrow$ sense again
+  \end{center}
+
+  \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth.'' The video emphasizes local sensing and incremental discovery of maze walls.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Wall Following Is Primarily Reactive}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item A simple strategy is to keep one side of the robot adjacent to a wall.
+        \item The next action depends mainly on immediately perceived wall geometry.
+        \item This requires little explicit reasoning over alternative future routes.
+        \item Certain maze structures can defeat wall-following as a general strategy for reaching the intended goal.
+      \end{itemize}
+
+      \begin{block}{Agent interpretation}
+        percept $\rightarrow$ local rule $\rightarrow$ action
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Search direction: wall-following robot tracing a perimeter or loop around the maze.
+      \lectureimage[2.40in]{micromouse-wall-following-reactive.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Micromouse gives us a physical contrast between reflex behavior and model-based deliberation.
+  \end{keyidea}
+
+  \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth,'' discussion of early wall-following strategies and later maze designs.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Micromouse as Depth-First Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{enumerate}
+        \item At a junction, choose an unexplored branch.
+        \item Follow it as deeply as possible.
+        \item At a dead end, backtrack to the most recent junction with another option.
+        \item Continue until a goal is found.
+      \end{enumerate}
+
+      \begin{alertblock}{Limitation}
+        The first discovered goal may use many more moves than another route that DFS has not explored yet.
+      \end{alertblock}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      % Search direction: maze/tree showing a deep DFS route and an unvisited shorter alternative.
+      \lectureimage[2.42in]{micromouse-dfs-misses-shortcut.png}
+    \end{column}
+  \end{columns}
+
+  \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth,'' comparison of depth-first and breadth-first maze exploration.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Micromouse as Breadth-First Search}
+  \begin{itemize}
+    \item BFS explores reachable cells in order of increasing number of moves from the start.
+    \item In our uniform-step abstraction, the first goal found is a minimum-move route.
+    \item Once a maze graph is known, BFS is therefore a natural shortest-depth planner.
+  \end{itemize}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Search computation}
+        Expand states in memory and organize the frontier by depth.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Physical exploration}
+        Driving down a corridor, returning, and exploring another branch requires real motion.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The order in which a search algorithm expands states does not have to equal the physical trajectory of the robot.
+  \end{keyidea}
+
+  \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth,'' comparison of BFS with DFS and discussion of physical backtracking.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Flood Fill: A Practical Micromouse Strategy}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item A common classical Micromouse strategy is flood fill.
+        \item Goal cells receive distance value $0$.
+        \item Increasing values are propagated outward through traversable neighbors.
+        \item The mouse moves toward a neighboring cell with a smaller value.
+      \end{itemize}
+
+      \begin{block}{Interpretation}
+        The labels encode graph distance to the goal under the robot's current map.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Search direction: grid with center goal value 0 and increasing flood-fill distance labels outward.
+      \lectureimage[2.45in]{micromouse-flood-fill-distance-map.png}
+    \end{column}
+  \end{columns}
+
+  \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth,'' flood-fill explanation; University at Buffalo IEEE Micromouse documentation and CSULB Micromouse flood-fill documentation describe queue-based distance propagation over the maze grid.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Flood Fill Revises the Plan as Walls Are Discovered}
+  \begin{center}
+    \Large
+    optimistic map $\rightarrow$ encounter wall $\rightarrow$ record wall $\rightarrow$ recompute $\rightarrow$ continue
+  \end{center}
+
+  \begin{itemize}
+    \item Unknown passages can initially be treated optimistically as traversable.
+    \item A sensed wall invalidates an assumed transition in the internal graph.
+    \item Distance labels are updated using the revised connectivity.
+    \item The mouse continues following decreasing values toward the goal.
+  \end{itemize}
+
+  \begin{keyidea}
+    The agent repeatedly combines perception, representation, and search rather than solving the problem only once.
+  \end{keyidea}
+
+  \note{[Sources] Veritasium video transcript summary: the mouse begins with an optimistic map, marks newly discovered walls, and updates its route; see also CSULB-EATS Micromouse flood-fill documentation.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Micromouse Is More Than ``Run BFS on a Graph''}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item \textbf{Perception:} detect local walls.
+        \item \textbf{Representation:} maintain an internal map.
+        \item \textbf{Memory:} retain discovered structure.
+        \item \textbf{Search:} reason over routes in the current map.
+        \item \textbf{Planning:} select an intended movement sequence.
+        \item \textbf{Action:} execute movement through the physical maze.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: closed-loop diagram sensors -> map -> search -> plan -> actuators -> maze.
+      \lectureimage[2.32in]{micromouse-agent-loop.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The search algorithm is one component; the intelligent system is the autonomous agent that uses representation and search to act.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{What We Deliberately Ignore Today}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item velocity and acceleration;
+        \item braking distance;
+        \item wheel dynamics and slip;
+        \item turning radius.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item localization and sensor error;
+        \item different execution times for turns and straight segments;
+        \item continuous or diagonal motion.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{block}{Today's abstraction}
+    One legal move between adjacent cells $=$ one action.
+  \end{block}
+
+  \begin{keyidea}
+    Today we ask which sequence of discrete states reaches the goal. The physical question of how quickly the robot can execute that route comes next.
+  \end{keyidea}
+
+  \note{[Sources] Veritasium's Micromouse video later discusses diagonals, high-speed turns, control systems, and routes whose physical execution time differs from their geometric length; those issues are intentionally deferred here.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Uninformed Search: Complete Mental Model}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{The agent knows}
+        \begin{itemize}
+          \item initial/current state;
+          \item available actions;
+          \item transition model;
+          \item goal test.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.50\textwidth}
+      \begin{block}{The agent does not know}
+        \begin{itemize}
+          \item which unexplored state is promising;
+          \item which branch appears closer to the goal;
+          \item which successor deserves domain-specific preference.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{center}
+    \large environment $\rightarrow$ abstraction $\rightarrow$ state space $\rightarrow$ search $\rightarrow$ plan $\rightarrow$ action
+  \end{center}
+
+  \begin{keyidea}
+    Search is not AI because it is complicated; it is AI because it provides a computational mechanism for goal-directed deliberation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Exit Ticket: Choose the Search Strategy}
+  \begin{activity}
+    For each situation, choose BFS, DFS, or IDDFS and justify your choice using completeness, minimum solution depth, and memory requirements.
+    \begin{enumerate}
+      \item The goal is known to be shallow and memory is plentiful.
+      \item The state space may be extremely deep and memory is severely constrained.
+      \item The shallowest goal is important, but its depth is unknown and BFS memory is unacceptable.
+    \end{enumerate}
+  \end{activity}
+
+  \begin{keyidea}
+    Outcome: you can formulate an uninformed search problem, explain how frontier policy changes exploration, and defend search as a foundational AI mechanism.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Next Time}
+  \begin{itemize}
+    \item The discrete search model tells us \emph{where} the agent should go.
+    \item A physical robot must also determine \emph{how} to execute that route.
+    \item Orientation, turning, motion constraints, sensing, and execution time can change which route is practically best.
+  \end{itemize}
+
+  \begin{keyidea}
+    Next: move from abstract state transitions to physical motion and richer planning constraints.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Image Placeholder Index}
+  \scriptsize
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \begin{itemize}
+        \item \texttt{search-reasons-about-futures.png}
+        \item \texttt{logic-theorist-problem-space.png}
+        \item \texttt{solution-action-sequence.png}
+        \item \texttt{generate-search-space-on-demand.png}
+        \item \texttt{parent-pointers-reconstruct-path.png}
+        \item \texttt{bfs-level-order.png}
+        \item \texttt{dfs-deep-branch-backtrack.png}
+        \item \texttt{search-inside-intelligent-agent.png}
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.49\textwidth}
+      \begin{itemize}
+        \item \texttt{micromouse-competition-overview.png}
+        \item \texttt{micromouse-discrete-search-abstraction.png}
+        \item \texttt{micromouse-wall-following-reactive.png}
+        \item \texttt{micromouse-dfs-misses-shortcut.png}
+        \item \texttt{micromouse-flood-fill-distance-map.png}
+        \item \texttt{micromouse-agent-loop.png}
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{exampleblockcp}
+    Save each image under \texttt{../assets/lecture-05/}. The labeled placeholder will be replaced automatically when its filename matches.
+  \end{exampleblockcp}
 \end{frame}
 
 \end{document}

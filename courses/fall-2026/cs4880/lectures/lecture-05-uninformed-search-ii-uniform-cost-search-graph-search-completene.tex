@@ -1,54 +1,1347 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\graphicspath{{../assets/lecture-06/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-06/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-06/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \tiny\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
-\lecturenumber{5}
-\lecturetitle{Uninformed Search II -- uniform-cost search, graph search, completeness and optimality}
-\lecturedate{September 2, 2026}
-\courseunit{Course sequence}
+\lecturenumber{6}
+\lecturetitle{Uninformed Search II: Action Costs and Uniform-Cost Search}
+\lecturedate{}
+\courseunit{Search and Problem Solving}
 
 \begin{document}
 
 \makedecktitle
 
-\begin{frame}{Today}
+\begin{frame}[shrink=20]{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Uninformed Search II -- uniform-cost search, graph search, completeness and optimality
-    \item Placeholder for announcements and context.
+    \item How Micromouse exposed limitations in a seemingly solved search formulation.
+    \item Why richer action sets and physical motion constraints change the state space.
+    \item How kinematics, velocity, and environmental dynamics affect feasible actions.
+    \item Why unequal actions require an explicit action-cost model.
+    \item How Dijkstra's algorithm / Uniform-Cost Search finds minimum-cost solutions.
+    \item Where minimum-cost graph search appears as a baseline or subroutine in modern AI systems.
   \end{itemize}
+
+  \begin{keyidea}
+    Search quality depends not only on the search algorithm, but also on how we define the states, actions, transitions, and objective.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: Micromouse Revisited --- When the Model Is Too Simple}
+
+\begin{frame}[shrink=20]{Last Time: A Deliberately Simple Micromouse Model}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Discrete search abstraction}
+        \begin{itemize}
+          \item State: current maze cell
+          \item Actions: move to an adjacent open cell
+          \item Goal: reach a center cell
+          \item Objective: minimize the number of actions
+        \end{itemize}
+      \end{block}
+
+      \begin{itemize}
+        \item BFS could find a minimum-depth route once the maze was known.
+        \item Flood-fill style methods exploited the same grid structure efficiently.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: top-down Micromouse maze rendered as an orthogonal grid with a highlighted center goal.
+      \lectureimage[2.45in]{micromouse-simple-grid-model.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The abstraction was useful because it removed physical details. Today we ask what happens when some of those details become important.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}[shrink=20]{A Search Algorithm Can Only Use the Actions We Define}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Early orthogonal action model}
+        \centering
+        \texttt{FORWARD}\\
+        \texttt{TURN LEFT 90$^\circ$}\\
+        \texttt{TURN RIGHT 90$^\circ$}
+      \end{block}
+
+      \begin{itemize}
+        \item Paths are constructed from horizontal and vertical segments.
+        \item A change in direction is represented as a 90-degree turn.
+        \item Diagonal trajectories are not expressible in the model.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      % Search direction: side-by-side maze routes, one orthogonal stair-step route and one unavailable diagonal shortcut.
+      \lectureimage[2.55in]{orthogonal-action-set-limits.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A solution cannot be discovered if the action representation makes that solution impossible to express.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}[shrink=20]{Micromouse Risked Becoming a ``Solved'' Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      \begin{itemize}
+        \item By the late 1980s, reliable maze discovery and shortest-path methods were well understood.
+        \item The research community began to question whether the competition still presented substantial new technical challenges.
+        \item The apparent problem had become: discover the maze, compute a shortest orthogonal route, then execute it faster.
+      \end{itemize}
+
+      \begin{block}{But this conclusion depended on the formulation}
+        If states and actions remain fixed, performance eventually becomes dominated by incremental implementation improvements.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.38\textwidth}
+      % Search direction: historical Micromouse competition timeline showing apparent stagnation in the late 1980s.
+      \lectureimage[2.48in]{micromouse-apparent-stagnation.png}
+    \end{column}
+  \end{columns}
+
+  \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth,'' https://www.youtube.com/watch?v=ZMQbHMgK2rw; Peter Harrison, Micromouse Online history, https://micromouseonline.com/micromouse-book/history/.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Mitee Mouse III Changed the Action Space}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Mitee Mouse III demonstrated diagonal running rather than restricting every route to orthogonal grid segments.
+        \item A 45-degree transition could enter or leave a diagonal corridor through the maze.
+        \item The maze did not change; the \textbf{agent's action set} changed.
+      \end{itemize}
+
+      \begin{block}{New possibilities}
+        \centering
+        orthogonal: $\rightarrow\;\downarrow\;\rightarrow$\\[0.10in]
+        diagonal: $\rightarrow\;\searrow\;\searrow\;\rightarrow$
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: Mitee Mouse III or a Micromouse route illustrating 45-degree diagonal movement through square maze cells.
+      \lectureimage[2.48in]{mitee3-diagonal-running.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Expanding \texttt{ACTIONS(s)} can reveal qualitatively new solutions, not merely faster implementations of old ones.
+  \end{keyidea}
+
+  \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth,'' https://www.youtube.com/watch?v=ZMQbHMgK2rw; Micromouse Online, diagonal path conventions and turn primitives, https://micromouseonline.com/2014/05/05/diagonal-paths-micromouse-using-state-machine/.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Richer Actions Create a Richer Search Space}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Orthogonal model}
+        \begin{itemize}
+          \item forward
+          \item 90-degree left
+          \item 90-degree right
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Richer motion primitives}
+        \begin{itemize}
+          \item straight motion
+          \item 90-degree smooth turns
+          \item enter diagonal at 45 degrees
+          \item diagonal travel
+          \item leave diagonal at 45 degrees
+          \item larger composite turns
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{itemize}
+    \item More actions increase the branching factor.
+    \item More actions may also reduce solution length or execution time dramatically.
+    \item Search complexity and representational power grow together.
+  \end{itemize}
+
+  \begin{keyidea}
+    The action model is part of the intelligence: it determines what futures the agent is capable of considering.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Orientation Now Becomes Part of the State}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      Two mice can occupy the same maze cell but face different directions.
+
+      \begin{block}{Too little information}
+        \centering
+        $s=(r,c)$
+      \end{block}
+
+      \begin{block}{Better state representation}
+        \centering
+        $s=(r,c,\theta)$
+      \end{block}
+
+      \begin{itemize}
+        \item $r,c$ describe location.
+        \item $\theta$ describes orientation or heading.
+        \item Available next actions depend on all three.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      % Search direction: same maze cell shown with two robot orientations producing different legal next movements.
+      \lectureimage[2.55in]{orientation-changes-actions.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A state must contain enough information for the transition model to predict the consequences of future actions.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 2: Motion Constraints --- From Grid Search to Physical Planning}
+
+\begin{frame}[shrink=20]{A Car Cannot Simply ``Move Left''}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      A grid model might allow an action such as:
+
+      \begin{block}{Abstract action}
+        \centering
+        \texttt{LEFT}
+      \end{block}
+
+      A real car cannot translate sideways. Steering changes the vehicle's heading while it moves forward, producing an arc.
+
+      \begin{itemize}
+        \item Position changes continuously.
+        \item Heading changes continuously.
+        \item The vehicle has a nonzero turning radius.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: top-down car turning left along a curved arc compared with an impossible sideways grid translation.
+      \lectureimage[2.55in]{car-left-action-is-arc.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Path planning must respect the motions the agent can physically execute, not merely geometric adjacency.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Kinematic Constraints Restrict Reachable States}
+  \begin{cpdefinition}
+    \textbf{Kinematics} describes the geometry of motion---how position and orientation evolve---without modeling the forces that cause the motion.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      A simple vehicle state may include:
+      \[
+        s=(x,y,\theta)
+      \]
+
+      where:
+      \begin{itemize}
+        \item $x,y$ are position;
+        \item $\theta$ is heading.
+      \end{itemize}
+
+      Steering limits may impose a minimum turning radius.
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      % Search direction: kinematic bicycle-model diagram with x, y, heading theta, wheelbase, and steering angle.
+      \lectureimage[2.42in]{kinematic-bicycle-model.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{A Minimal Kinematic Bicycle Model}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      A common simplified model is:
+      \[
+        \dot{x}=v\cos\theta
+      \]
+      \[
+        \dot{y}=v\sin\theta
+      \]
+      \[
+        \dot{\theta}=\frac{v}{L}\tan\delta
+      \]
+
+      where:
+      \begin{itemize}
+        \item $v$ is forward velocity,
+        \item $L$ is wheelbase,
+        \item $\delta$ is steering angle.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \begin{block}{Interpretation}
+        \begin{itemize}
+          \item Steering does not instantaneously rotate the car.
+          \item Turning rate depends on both speed and steering angle.
+          \item Some geometrically short paths are not kinematically feasible.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The transition model must encode the system's motion constraints; otherwise search can return physically impossible plans.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Velocity Can Change Which Actions Are Feasible}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Consider two cars at the same position and heading:
+
+      \begin{center}
+      \renewcommand{\arraystretch}{1.25}
+      \begin{tabular}{c|c}
+        \textbf{Vehicle} & \textbf{Velocity} \\\hline
+        A & 5 mph \\
+        B & 60 mph
+      \end{tabular}
+      \end{center}
+
+      A maneuver that is feasible for A may be impossible or unsafe for B.
+
+      \begin{block}{Richer state}
+        \centering
+        $s=(x,y,\theta,v)$
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: two identical cars at different speeds approaching a stopping point, with dramatically different stopping distances.
+      \lectureimage[2.50in]{velocity-dependent-stopping.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    If future actions depend on velocity, velocity belongs in the state representation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Stopping Distance Grows Rapidly with Speed}
+  Under an idealized constant-deceleration model:
+  \[
+    d_{\text{stop}} \approx \frac{v^2}{2a}
+  \]
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Low speed}
+        At 5 mph, the kinetic energy and required braking distance are comparatively small.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{High speed}
+        At 60 mph, the same braking capability cannot stop the vehicle within the same short distance.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Search over physical systems may require state-dependent actions: \texttt{ACTIONS(s)} changes as speed and configuration change.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Beyond Kinematics: Dynamics and External Conditions}
+  \begin{cpdefinition}
+    \textbf{Dynamics} concerns how forces, mass, inertia, friction, and actuation determine motion.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      The same steering command can produce different outcomes under different conditions:
+      \begin{itemize}
+        \item dry pavement,
+        \item wet pavement,
+        \item ice,
+        \item loose gravel.
+      \end{itemize}
+
+      A simple friction-limited model gives roughly:
+      \[
+        a_{\max}\approx \mu g
+      \]
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      % Search direction: same car cornering on dry, wet, and icy pavement with increasing slip trajectories.
+      \lectureimage[2.42in]{road-friction-changes-trajectory.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{The Transition Model Depends on the Physical World}
+  Previously:
+  \[
+    \mathrm{RESULT}(s,a)=s'
+  \]
+
+  looked almost like a table lookup.
+
+  For a physical agent, the result may depend on:
+  \begin{itemize}
+    \item current position and orientation;
+    \item current velocity;
+    \item steering and acceleration limits;
+    \item friction and traction;
+    \item environmental conditions.
+  \end{itemize}
+
+  \begin{keyidea}
+    Problem formulation is a modeling decision: include enough physical detail to predict useful consequences without making planning computationally intractable.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Micromouse Faced the Same Physical Limits}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      As Micromouse speeds increased:
+      \begin{itemize}
+        \item turning required greater lateral acceleration;
+        \item tire traction became a limiting factor;
+        \item wheel cleanliness and surface friction mattered;
+        \item later designs introduced suction fans to increase normal force and cornering capability.
+      \end{itemize}
+
+      \begin{block}{The software and hardware co-evolved}
+        Better planning was useful only when the robot could physically execute the resulting trajectory.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      % Search direction: high-speed Micromouse cornering with suction fan / traction concept, not a generic mouse photo.
+      \lectureimage[2.45in]{micromouse-traction-and-fan.png}
+    \end{column}
+  \end{columns}
+
+  \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth,'' https://www.youtube.com/watch?v=ZMQbHMgK2rw; Micromouse competition discussions summarized at https://hackaday.com/2023/05/28/the-fascinating-evolution-of-micromouse/.}
+\end{frame}
+
+\sectionframe{Part 3: From Feasibility to Preference --- Action Costs}
+
+\begin{frame}[shrink=20]{Feasible Does Not Mean Equally Desirable}
+  Suppose two routes both reach the goal.
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Route A}
+        \begin{itemize}
+          \item 5 actions
+          \item many sharp turns
+          \item repeated deceleration
+          \item execution time: 8.2 s
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Route B}
+        \begin{itemize}
+          \item 7 actions
+          \item mostly straight motion
+          \item higher sustained speed
+          \item execution time: 6.4 s
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Minimizing the number of actions is only appropriate when all actions are effectively equivalent.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Shortest Path Is Not Necessarily Fastest Path}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      The Micromouse competition provides a concrete example:
+      \begin{itemize}
+        \item a geometrically longer route can contain fewer or gentler turns;
+        \item fewer costly turns can permit a higher sustained velocity;
+        \item therefore a longer route can have lower execution time.
+      \end{itemize}
+
+      \begin{block}{Objective matters}
+        \centering
+        minimum distance $\neq$ minimum time
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: two Micromouse routes through the same maze, shorter route with many turns versus longer route with fewer turns and lower time.
+      \lectureimage[2.50in]{micromouse-shortest-vs-fastest.png}
+    \end{column}
+  \end{columns}
+
+  \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth,'' https://www.youtube.com/watch?v=ZMQbHMgK2rw.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Action Cost}
+  \begin{cpdefinition}
+    The \textbf{action cost} (or \textbf{step cost}) assigns a numerical cost to performing action $a$ in state $s$ and reaching state $s'$.
+  \end{cpdefinition}
+
+  \[
+    c(s,a,s')
+  \]
+
+  Action cost can represent different objectives:
+  \begin{itemize}
+    \item execution time;
+    \item physical distance;
+    \item energy consumption;
+    \item monetary cost;
+    \item risk or exposure;
+    \item a designed combination of several factors.
+  \end{itemize}
+
+  \begin{keyidea}
+    The cost function defines what the search algorithm means by a ``better'' solution.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Path Cost Accumulates Action Costs}
+  For a path
+  \[
+    s_0 \xrightarrow{a_1} s_1 \xrightarrow{a_2} s_2 \cdots \xrightarrow{a_n} s_n,
+  \]
+
+  define cumulative path cost:
+  \[
+    g(n)=\sum_{i=1}^{n} c(s_{i-1},a_i,s_i).
+  \]
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Lecture 5 objective}
+        Minimize solution depth:
+        \[
+          d(n)
+        \]
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Lecture 6 objective}
+        Minimize cumulative path cost:
+        \[
+          g(n)
+        \]
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Depth and Cost Can Disagree}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Consider two solutions:
+
+      \begin{block}{Shallow solution}
+        \centering
+        $S\rightarrow A\rightarrow G$\\
+        depth $=2$, cost $=16$
+      \end{block}
+
+      \begin{block}{Deeper solution}
+        \centering
+        $S\rightarrow B\rightarrow C\rightarrow G$\\
+        depth $=3$, cost $=6$
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: small weighted graph contrasting a two-edge expensive path and a three-edge cheap path.
+      \lectureimage[2.48in]{depth-versus-path-cost.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Once edge costs differ, the shallowest goal may not be the best goal.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Why Breadth-First Search Is No Longer Enough}
+  BFS prioritizes:
+  \[
+    \text{smallest depth}
+  \]
+
+  but weighted search requires:
+  \[
+    \text{smallest accumulated cost}
+  \]
+
+  \begin{center}
+  \renewcommand{\arraystretch}{1.30}
+  \begin{tabular}{c|c|c}
+    \textbf{Frontier node} & \textbf{Depth} & \textbf{Path cost $g$} \\\hline
+    A & 2 & 3 \\
+    B & 2 & 50 \\
+    C & 3 & 4
+  \end{tabular}
+  \end{center}
+
+  BFS sees A and B as equally shallow. A cost-aware search should prefer A, then possibly C, before B.
+
+  \begin{keyidea}
+    We need a frontier policy ordered by cumulative path cost rather than depth.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Dijkstra's Algorithm and Uniform-Cost Search}
+
+\begin{frame}[shrink=20]{Edsger W. Dijkstra}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Dijkstra approached computing as a mathematical discipline centered on precise algorithms and proofs.
+        \item In 1959, he published \emph{A Note on Two Problems in Connexion with Graphs}.
+        \item One of the algorithms in that paper computes shortest paths in a graph with non-negative edge weights.
+      \end{itemize}
+
+      \begin{block}{Central idea}
+        Repeatedly select the reachable unsettled vertex with the smallest known cumulative distance.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      % Search direction: portrait of Edsger Dijkstra paired with the 1959 paper title or weighted graph sketch.
+      \lectureimage[2.50in]{dijkstra-1959-paper.png}
+    \end{column}
+  \end{columns}
+
+  \note{[Sources] E. W. Dijkstra, ``A Note on Two Problems in Connexion with Graphs,'' Numerische Mathematik 1, 1959, pp. 269--271.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Dijkstra vs. Uniform-Cost Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Dijkstra's algorithm}
+        Typically presented as a single-source shortest-path algorithm that computes minimum costs from the source to reachable vertices.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Uniform-Cost Search (UCS)}
+        The AI search formulation: repeatedly expand the frontier node with minimum path cost and stop when a goal is removed for expansion.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  Both use the same ordering principle:
+  \[
+    \text{priority}(n)=g(n).
+  \]
+
+  \begin{keyidea}
+    UCS is the goal-directed search form of Dijkstra's minimum-cost principle.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Frontier Policy: Always Expand the Cheapest Path So Far}
+  \begin{block}{Uniform-Cost rule}
+    \centering
+    remove the frontier node with minimum $g(n)$
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \begin{block}{BFS}
+        FIFO queue\\[0.06in]
+        priority $=$ depth
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.30\textwidth}
+      \begin{block}{DFS}
+        LIFO stack\\[0.06in]
+        priority $=$ depth-first order
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.34\textwidth}
+      \begin{block}{UCS / Dijkstra}
+        min-priority queue\\[0.06in]
+        priority $=g(n)$
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The algorithm remains uninformed: $g(n)$ measures only the cost already incurred, not how close $n$ appears to the goal.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Worked Example: Weighted Search Graph}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      We will use the same graph for the next several slides.
+
+      \begin{block}{Relevant edge costs}
+        \begin{itemize}
+          \item $S\!\rightarrow\!A:2$
+          \item $S\!\rightarrow\!B:5$
+          \item $A\!\rightarrow\!C:2$
+          \item $A\!\rightarrow\!D:5$
+          \item $B\!\rightarrow\!D:1$
+          \item $C\!\rightarrow\!D:1$
+          \item $C\!\rightarrow\!G:7$
+          \item $D\!\rightarrow\!G:2$
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+      % Search direction: clean weighted directed graph with nodes S,A,B,C,D,G and the listed edge costs.
+      \lectureimage[2.75in]{dijkstra-example-graph.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Dijkstra Step 0: Initialize the Frontier}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      Initial values:
+      \[
+        g(S)=0
+      \]
+      \[
+        g(v)=\infty \quad \text{for all other vertices}
+      \]
+
+      Frontier:
+      \begin{block}{Priority queue}
+        \centering
+        $(S,0)$
+      \end{block}
+
+      Parent:
+      \[
+        \mathrm{parent}[S]=\mathrm{None}
+      \]
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      % Search direction: Dijkstra example graph with S highlighted and all other nodes labeled infinity.
+      \lectureimage[2.55in]{dijkstra-step0-initialize.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Dijkstra Step 1: Expand \texttt{S}}
+  Remove the minimum-cost frontier node:
+  \[
+    S:0
+  \]
+
+  Relax its outgoing edges:
+  \[
+    g(A)=0+2=2
+  \]
+  \[
+    g(B)=0+5=5
+  \]
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Frontier}
+        \centering
+        $A:2$\\
+        $B:5$
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      % Search direction: weighted graph after expanding S, with A=2 and B=5 highlighted as frontier values.
+      \lectureimage[1.65in]{dijkstra-step1-expand-s.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Dijkstra Step 2: Expand \texttt{A}}
+  The cheapest frontier node is:
+  \[
+    A:2
+  \]
+
+  Relax successors:
+  \[
+    g(C)=2+2=4
+  \]
+  \[
+    g(D)=2+5=7
+  \]
+
+  New frontier:
+  \begin{block}{Priority queue ordered by $g$}
+    \centering
+    $C:4,\quad B:5,\quad D:7$
+  \end{block}
+
+  \begin{keyidea}
+    Search order is determined by cumulative cost, not by how visually close a node is to the goal.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Dijkstra Step 3: Relaxation Improves a Known Path}
+  Expand:
+  \[
+    C:4
+  \]
+
+  From $C$:
+  \[
+    \text{candidate}(D)=4+1=5
+  \]
+
+  but our current best value is:
+  \[
+    g(D)=7.
+  \]
+
+  Since $5<7$:
+  \[
+    g(D)\leftarrow 5,
+    \qquad
+    \mathrm{parent}[D]\leftarrow C.
+  \]
+
+  \begin{keyidea}
+    \textbf{Relaxation} replaces a known route when a newly discovered route reaches the same state more cheaply.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Dijkstra Step 4: Reach the Goal at Minimum Cost}
+  After the remaining relaxations:
+  \begin{itemize}
+    \item $B$ has cost $5$;
+    \item $D$ has cost $5$;
+    \item expanding $D$ produces $G$ with cost $5+2=7$;
+    \item the earlier route $C\rightarrow G$ would cost $4+7=11$.
+  \end{itemize}
+
+  When $G:7$ becomes the minimum item removed from the priority queue, the solution is final.
+
+  \begin{block}{Minimum-cost path}
+    \centering
+    $S\rightarrow A\rightarrow C\rightarrow D\rightarrow G$\\[0.08in]
+    total cost $=2+2+1+2=7$
+  \end{block}
+
+  \begin{keyidea}
+    For non-negative edge costs, the goal is safe to return when it is removed as the minimum-cost frontier node---not merely when it is first generated.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Uniform-Cost Search Pseudocode}
+  \begin{block}{Algorithm}
+  \ttfamily\small
+  frontier $\leftarrow$ PriorityQueue()\\
+  frontier.insert(initial\_state, priority=0)\\
+  cost\_so\_far[initial\_state] $\leftarrow$ 0\\
+  came\_from[initial\_state] $\leftarrow$ None\\[0.06in]
+
+  while frontier is not empty:\\
+  \quad state $\leftarrow$ frontier.remove\_min()\\[0.03in]
+  \quad if goal\_test(state):\\
+  \qquad return reconstruct\_path(came\_from, state)\\[0.03in]
+  \quad for action in ACTIONS(state):\\
+  \qquad child $\leftarrow$ RESULT(state, action)\\
+  \qquad new\_cost $\leftarrow$ cost\_so\_far[state] + ACTION\_COST(state, action, child)\\
+  \qquad if child is new or new\_cost $<$ cost\_so\_far[child]:\\
+  \qquad\quad cost\_so\_far[child] $\leftarrow$ new\_cost\\
+  \qquad\quad came\_from[child] $\leftarrow$ state\\
+  \qquad\quad frontier.insert(child, priority=new\_cost)\\[0.03in]
+  return failure
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}[shrink=20]{Why Is the Cheapest Frontier Node Safe to Finalize?}
+  Suppose $n$ is the frontier node with minimum cost $g(n)$.
+
+  Could an undiscovered path later reach $n$ for less?
+
+  \begin{enumerate}
+    \item Any alternate path must first pass through some not-yet-expanded frontier state $m$.
+    \item By construction, $g(m)\ge g(n)$.
+    \item All remaining edge costs are non-negative.
+    \item Continuing from $m$ cannot reduce the accumulated cost below $g(m)$.
+  \end{enumerate}
+
+  Therefore no later path can improve $n$ once it is removed as the cheapest frontier state.
+
+  \begin{keyidea}
+    Non-negative edge costs are what make Dijkstra's greedy finalization step correct.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Properties of Dijkstra / Uniform-Cost Search}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.32}
+  \begin{tabular}{l|l}
+    \textbf{Property} & \textbf{Result} \\\hline
+    Complete & Yes on a finite graph with non-negative edge costs \\
+    Optimal & Yes; returns a minimum-cost path \\
+    Frontier & Min-priority queue ordered by $g(n)$ \\
+    Time & $O((|V|+|E|)\log |V|)$ with adjacency list + binary heap \\
+    Auxiliary search space & $O(|V|)$ for distances, parents, and frontier metadata
+  \end{tabular}
+  \end{center}
+
+  \begin{alertblock}{Restriction}
+    Dijkstra's finalization rule is not valid in the presence of negative-cost edges.
+  \end{alertblock}
+
+  \note{[Sources] E. W. Dijkstra, 1959; standard binary-heap implementation analysis as presented in algorithms texts such as Cormen et al., Introduction to Algorithms.}
+\end{frame}
+
+\begin{frame}[shrink=20]{What Dijkstra Pays for Its Guarantee}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Strengths}
+        \begin{itemize}
+          \item complete under standard assumptions;
+          \item minimum-cost guarantee;
+          \item domain-independent;
+          \item handles arbitrary non-negative edge costs.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Costs}
+        \begin{itemize}
+          \item potentially large frontier;
+          \item stores best known costs and parents;
+          \item can expand many states irrelevant to the goal;
+          \item uses no estimate of remaining distance.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Dijkstra is cost-aware, but it is still uninformed about where the goal lies.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Changing the Cost Function Changes the Solution}
+
+\begin{frame}[shrink=20]{Same Puzzle, Different Objective}
+  Consider the sliding-tile puzzle from Lecture 5.
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Uniform action model}
+        Every legal tile move costs 1.
+
+        \vspace{0.08in}
+        Objective: minimize number of moves.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Weighted action model}
+        Moving tile $k$ costs $k$.
+
+        \vspace{0.08in}
+        Objective: minimize sum of moved tile values.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{center}
+    % Search direction: 8-puzzle showing two candidate solution sequences, one fewer moves but expensive tiles and one more moves but cheaper tiles.
+    \lectureimage[1.70in]{weighted-sliding-tile-puzzle.png}
+  \end{center}
+
+  \begin{keyidea}
+    States and legal transitions can remain identical while the preferred solution changes because the objective changed.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Micromouse: Cost Can Approximate Execution Time}
+  A time-oriented action model might assign different costs to different motion primitives.
+
+  \begin{center}
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabular}{l|c}
+    \textbf{Motion primitive} & \textbf{Example modeled cost} \\\hline
+    long straight segment & low cost per unit distance \\
+    gentle curve & moderate cost \\
+    sharp 90-degree turn & higher cost \\
+    enter / exit diagonal & transition cost \\
+    braking and re-acceleration & additional time cost
+  \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The search objective should reflect the performance metric we actually care about---for racing, that may be time rather than geometric distance.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{State, Actions, Transitions, and Costs Work Together}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Simple maze model}
+        \begin{itemize}
+          \item State: cell
+          \item Actions: orthogonal moves
+          \item Transition: adjacent cell
+          \item Cost: 1 per move
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Richer physical model}
+        \begin{itemize}
+          \item State: position, heading, velocity
+          \item Actions: motion primitives
+          \item Transition: kinematic/dynamic model
+          \item Cost: predicted execution time
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Better planning often comes from improving the problem formulation, not merely replacing the search algorithm.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: Where Minimum-Cost Search Appears in AI}
+
+\begin{frame}[shrink=20]{Robotics and Autonomous Navigation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Weighted graph search is a natural baseline when a robot must trade among:
+      \begin{itemize}
+        \item travel distance;
+        \item estimated execution time;
+        \item energy use;
+        \item terrain difficulty;
+        \item clearance or collision risk.
+      \end{itemize}
+
+      \begin{block}{Typical abstraction}
+        roadmap / occupancy grid $\rightarrow$ weighted graph $\rightarrow$ minimum-cost route
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: warehouse or mobile robot occupancy grid with weighted terrain cells and a minimum-cost route.
+      \lectureimage[2.45in]{robot-weighted-navigation.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Autonomous Driving: Global Route Cost}
+  A driving route may be evaluated using quantities such as:
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item travel time;
+    \item road length;
+    \item speed limits;
+    \item turn penalties;
+    \item road class;
+    \item predicted congestion or risk.
   \end{itemize}
+
+  \begin{block}{Important distinction}
+    Real autonomous-driving stacks use much richer models than plain Dijkstra. Dijkstra provides the foundational minimum-cost graph-search principle over a discretized route network.
+  \end{block}
+
+  \begin{keyidea}
+    Weighted graph search often solves the global route problem; local motion planning must additionally respect vehicle dynamics and nearby obstacles.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Symbolic Planning with Nonuniform Actions}
+  An AI planner may reason over actions such as:
+  \begin{center}
+    \texttt{drive} \qquad \texttt{fly} \qquad \texttt{charge} \qquad \texttt{purchase} \qquad \texttt{wait}
+  \end{center}
+
+  Different actions may incur different:
+  \begin{itemize}
+    \item durations;
+    \item monetary costs;
+    \item resource consumption;
+    \item risk penalties.
+  \end{itemize}
+
+  The state-space graph can therefore be searched for a minimum-cost plan rather than a minimum-number-of-actions plan.
+
+  \begin{keyidea}
+    Uniform-cost search is a general planning primitive whenever action sequences have additive non-negative costs.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Game and Simulation AI}
+  Navigation graphs and navigation meshes often encode nonuniform traversal preferences.
+
+  \begin{center}
+  \renewcommand{\arraystretch}{1.25}
+  \begin{tabular}{l|c}
+    \textbf{Region} & \textbf{Example cost} \\\hline
+    open floor & 1 \\
+    mud / difficult terrain & 3 \\
+    exposed danger zone & 10
+  \end{tabular}
+  \end{center}
+
+  An AI-controlled character may choose a geometrically longer route because it has lower modeled total cost.
+
+  \begin{keyidea}
+    ``Shortest'' is meaningful only after the system designer specifies the metric being minimized.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Knowledge Graphs: Useful Subroutine, Not the Whole System}
+  Knowledge graphs represent:
+  \begin{itemize}
+    \item entities as vertices;
+    \item relationships as edges;
+    \item confidence, distance, or relation penalties as possible weights.
+  \end{itemize}
+
+  Weighted shortest-path computations can support tasks such as:
+  \begin{itemize}
+    \item finding low-cost relation chains;
+    \item measuring graph proximity;
+    \item generating candidate explanation paths;
+    \item ranking graph-connected candidates.
+  \end{itemize}
+
+  \begin{alertblock}{Modern AI context}
+    Entity linking and knowledge-graph reasoning are usually not ``just Dijkstra.'' Learned representations, retrieval models, language models, and graph neural methods often provide the dominant signal. Shortest-path search is better viewed as a reusable graph primitive inside a larger system.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[shrink=20]{Search Appears Inside Larger AI Architectures}
+  \begin{center}
+    \large perception / retrieval / learned model
+    $\longrightarrow$
+    weighted graph or planning problem
+    $\longrightarrow$
+    search
+    $\longrightarrow$
+    action or explanation
+  \end{center}
+
+  \begin{itemize}
+    \item AI systems frequently combine learned components with classical algorithms.
+    \item A learned model may estimate costs or construct the graph.
+    \item A search algorithm may then enforce global consistency or find a minimum-cost sequence.
+  \end{itemize}
+
+  \begin{keyidea}
+    Classical search and modern machine learning are complementary computational tools, not mutually exclusive definitions of AI.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 7: Why Dijkstra Is Still Uninformed}
+
+\begin{frame}[shrink=20]{Cost-Aware Does Not Mean Goal-Informed}
+  Dijkstra / UCS knows:
+  \[
+    g(n)=\text{cost already paid to reach }n.
+  \]
+
+  It does \textbf{not} know:
+  \begin{itemize}
+    \item how far $n$ is from the goal;
+    \item whether $n$ points in a promising direction;
+    \item whether a neighboring region is likely to contain a solution.
+  \end{itemize}
+
+  \begin{block}{Decision rule}
+    \centering
+    ``Which discovered state has been cheapest to reach so far?''
+  \end{block}
+
+  \begin{keyidea}
+    Dijkstra uses path cost, but no estimate of remaining cost. It is therefore still an uninformed search strategy.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{The Cost Contour Can Expand in the Wrong Direction}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Suppose the goal lies to the east, but a large region to the south contains many very cheap edges.
+
+      Dijkstra may expand much of that region first because:
+      \[
+        g(\text{southern states}) < g(\text{goal route}).
+      \]
+
+      Nothing in $g(n)$ says which direction leads toward the goal.
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: weighted grid with start left, goal right, and Dijkstra cost contours expanding heavily into a cheap but irrelevant southern region.
+      \lectureimage[2.55in]{ucs-cheap-irrelevant-region.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Optimality can require substantial exploration when the search has no estimate of remaining distance.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Lecture 5 vs. Lecture 6}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabular}{l|c|c}
+    & \textbf{Lecture 5} & \textbf{Lecture 6} \\\hline
+    Action model & effectively equal steps & variable costs \\
+    Objective & minimum depth & minimum path cost \\
+    Main frontier & FIFO / stack / depth limit & priority queue \\
+    Key strategies & BFS, DFS, IDDFS & Dijkstra / UCS \\
+    Goal knowledge & none & none
+  \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    We changed what ``best'' means, but we still have no domain-specific estimate of which frontier state is closest to success.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Search Quality Depends on the Model}
+  The Micromouse story gives us a complete modeling ladder:
+
+  \begin{enumerate}
+    \item Change the \textbf{state}: orientation and velocity become relevant.
+    \item Change the \textbf{actions}: diagonal and smooth motion becomes possible.
+    \item Change the \textbf{transition model}: physical motion constraints matter.
+    \item Change the \textbf{cost function}: fastest can replace shortest.
+    \item Change the \textbf{frontier policy}: minimum-cost search becomes necessary.
+  \end{enumerate}
+
+  \begin{keyidea}
+    An AI agent searches the world described by its model. Improving the model can change both which solutions exist and which solution counts as best.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Exit Ticket: Formulate the Right Search Problem}
+  \begin{activity}
+    An autonomous delivery robot can either cross an open courtyard or travel around it on a covered walkway. Rain makes the courtyard slippery and slows the robot.
+
+    Specify:
+    \begin{enumerate}
+      \item what additional state or environment information may matter;
+      \item how \texttt{ACTIONS(s)} could change;
+      \item what the action cost should represent;
+      \item why BFS may return a different route from Uniform-Cost Search.
+    \end{enumerate}
+  \end{activity}
+
+  \begin{keyidea}
+    Outcome: you can explain when a uniform-step search model is insufficient and formulate a minimum-cost search problem that reflects physical or task-specific constraints.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Next Time: Heuristic Search}
+  Dijkstra asks:
+  \begin{block}{Known cost}
+    \centering
+    How much has this path cost so far? \qquad $g(n)$
+  \end{block}
+
+  Suppose the agent could also estimate:
+  \begin{block}{Remaining cost}
+    \centering
+    How much more might it cost to reach the goal? \qquad $h(n)$
+  \end{block}
+
+  Then search can use information about the goal rather than expanding solely by accumulated cost.
+
+  \begin{keyidea}
+    Next: Greedy Best-First Search, heuristic functions, and A$^*$.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Image Placeholder Index}
+  \scriptsize
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \begin{itemize}
+        \item \texttt{micromouse-simple-grid-model.png}
+        \item \texttt{orthogonal-action-set-limits.png}
+        \item \texttt{micromouse-apparent-stagnation.png}
+        \item \texttt{mitee3-diagonal-running.png}
+        \item \texttt{orientation-changes-actions.png}
+        \item \texttt{car-left-action-is-arc.png}
+        \item \texttt{kinematic-bicycle-model.png}
+        \item \texttt{velocity-dependent-stopping.png}
+        \item \texttt{road-friction-changes-trajectory.png}
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.49\textwidth}
+      \begin{itemize}
+        \item \texttt{micromouse-traction-and-fan.png}
+        \item \texttt{micromouse-shortest-vs-fastest.png}
+        \item \texttt{depth-versus-path-cost.png}
+        \item \texttt{dijkstra-1959-paper.png}
+        \item \texttt{dijkstra-example-graph.png}
+        \item \texttt{dijkstra-step0-initialize.png}
+        \item \texttt{dijkstra-step1-expand-s.png}
+        \item \texttt{weighted-sliding-tile-puzzle.png}
+        \item \texttt{robot-weighted-navigation.png}
+        \item \texttt{ucs-cheap-irrelevant-region.png}
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{exampleblockcp}
+    Save each image under \texttt{../assets/lecture-06/}. The labeled placeholder will be replaced automatically when its filename matches.
+  \end{exampleblockcp}
 \end{frame}
 
 \end{document}
