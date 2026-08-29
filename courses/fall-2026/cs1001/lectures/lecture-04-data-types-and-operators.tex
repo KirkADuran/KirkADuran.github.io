@@ -4,20 +4,11 @@
 
 \graphicspath{{../assets/lecture-04/}}
 
-% If an image file is not yet available, the slide displays a labeled
-% placeholder using the intended filename. Place the matching file in
-% ../assets/lecture-04/ to replace the placeholder automatically.
+% If an image file is not yet available, skip the visual slot.
 \newcommand{\lectureimage}[2][1.75in]{%
   \IfFileExists{../assets/lecture-04/#2}{%
     \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
   }{%
-    \fbox{%
-      \parbox[c][#1][c]{0.94\linewidth}{%
-        \centering
-        \small\textbf{Image Placeholder}\\[0.08in]
-        \scriptsize\texttt{\detokenize{#2}}
-      }%
-    }%
   }%
 }
 
@@ -89,7 +80,7 @@
     \begin{column}{0.40\textwidth}
 
       % Search direction: binary bits interpreted as text versus a numerical value.
-      \lectureimage[2.22in]{bits-require-interpretation.png}
+      \lectureimage[2.22in]{slide4.png}
 
     \end{column}
 
@@ -126,7 +117,7 @@
     \begin{column}{0.44\textwidth}
 
       % Search direction: four distinct representations for integer, decimal, text, and two-state data.
-      \lectureimage[2.18in]{fundamental-value-categories.png}
+      \lectureimage[2.18in]{slide5.png}
 
     \end{column}
 
@@ -207,7 +198,7 @@
     \begin{column}{0.41\textwidth}
 
       % Search direction: fixed-size container contrasted with a growing data container.
-      \lectureimage[2.18in]{fixed-versus-variable-size-data.png}
+      \lectureimage[2.18in]{slide7.png}
 
     \end{column}
 
@@ -249,7 +240,7 @@
     \begin{column}{0.45\textwidth}
 
       % Search direction: Generation II Feraligatr sprite beside ten character boxes, with O outside the limit.
-      \lectureimage[2.22in]{feraligatr-ten-character-limit.png}
+      \lectureimage[2.22in]{slide8.jpg}
 
       \begin{keyidea}
 
@@ -343,7 +334,7 @@
     \begin{column}{0.42\textwidth}
 
       % Search direction: Python integer representation expanding as the number gains digits.
-      \lectureimage[2.22in]{python-integer-growing-representation.png}
+      \lectureimage[2.22in]{slide11.jpeg}
 
     \end{column}
 
@@ -430,7 +421,7 @@
     \begin{column}{0.46\textwidth}
 
       % Search direction: high-level floating-point diagram labeled sign, significand, and exponent.
-      \lectureimage[2.25in]{floating-point-sign-significand-exponent.png}
+      \lectureimage[2.25in]{slide13.png}
 
     \end{column}
 
@@ -466,7 +457,7 @@
     \begin{column}{0.42\textwidth}
 
       % Search direction: decimal 0.1 approximated between nearby binary floating-point values.
-      \lectureimage[2.18in]{floating-point-decimal-approximation.png}
+      \lectureimage[2.18in]{slide14.jpg}
 
     \end{column}
 
@@ -548,9 +539,6 @@
 
       \end{itemize}
 
-      % Search direction: restrained two-state True and False visual without logic operators.
-      \lectureimage[1.05in]{boolean-two-literal-values.png}
-
     \end{column}
 
   \end{columns}
@@ -608,7 +596,7 @@
     \begin{column}{0.45\textwidth}
 
       % Search direction: operator receiving typed operands and producing either a typed result or an error.
-      \lectureimage[2.12in]{operator-type-dispatch.png}
+      \lectureimage[2.12in]{slide19.jpeg}
 
     \end{column}
 
@@ -662,9 +650,6 @@
 
   \vspace{0.10in}
 
-  % Search direction: plus operator branching to numeric addition and string concatenation.
-  \lectureimage[1.30in]{plus-number-versus-string.png}
-
 \end{frame}
 
 \begin{frame}{Strings Support Concatenation and Repetition}
@@ -700,9 +685,6 @@
   \end{columns}
 
   \vspace{0.08in}
-
-  % Search direction: text fragments joining and a text fragment repeating three times.
-  \lectureimage[1.25in]{string-concatenation-and-repetition.png}
 
 \end{frame}
 
@@ -781,9 +763,6 @@
 
     \begin{column}{0.46\textwidth}
 
-      % Search direction: incompatible number and text operands blocked before an operator.
-      \lectureimage[2.12in]{incompatible-operands-type-error.png}
-
     \end{column}
 
   \end{columns}
@@ -819,7 +798,7 @@
     \begin{column}{0.46\textwidth}
 
       % Search direction: one value passing through int, float, and str conversion paths to new values.
-      \lectureimage[2.18in]{explicit-conversion-new-value.png}
+      \lectureimage[2.18in]{slide27.jpg}
 
     \end{column}
 
@@ -1052,9 +1031,6 @@
     \end{column}
 
     \begin{column}{0.47\textwidth}
-
-      % Search direction: paired Colab cells evaluating 7 + 2.0 and type(7 + 2.0).
-      \lectureimage[2.23in]{colab-value-and-type-inspection.png}
 
     \end{column}
 

@@ -2,22 +2,13 @@
 
 \input{../../common/preamble.tex}
 
-\graphicspath{{../assets/lecture-05/}}
+\graphicspath{{../assets/lecture-04/}}
 
-% If an image file is not yet available, the slide displays a labeled
-% placeholder using the intended filename. Place the matching file in
-% ../assets/lecture-05/ to replace the placeholder automatically.
+% If an image file is not yet available, skip the visual slot.
 \newcommand{\lectureimage}[2][1.75in]{%
-  \IfFileExists{../assets/lecture-05/#2}{%
+  \IfFileExists{../assets/lecture-04/#2}{%
     \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
   }{%
-    \fbox{%
-      \parbox[c][#1][c]{0.94\linewidth}{%
-        \centering
-        \small\textbf{Image Placeholder}\\[0.08in]
-        \tiny\texttt{\detokenize{#2}}
-      }%
-    }%
   }%
 }
 
@@ -25,9 +16,9 @@
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
-\lecturenumber{5}
-\lecturetitle{Uninformed Search}
-\lecturedate{}
+\lecturenumber{4}
+\lecturetitle{Uninformed Search I}
+\lecturedate{August 31, 2026}
 \courseunit{Search and Problem Solving}
 
 \begin{document}
@@ -68,7 +59,7 @@
 
     \begin{column}{0.40\textwidth}
       % Search direction: branching future-state diagram from one current state to several successors and a goal.
-      \lectureimage[2.38in]{search-reasons-about-futures.png}
+      \lectureimage[2.38in]{slide4.png}
     \end{column}
   \end{columns}
 
@@ -151,7 +142,7 @@
 
     \begin{column}{0.39\textwidth}
       % Search direction: Newell and Simon / Logic Theorist historical image or theorem-proof search tree.
-      \lectureimage[2.50in]{logic-theorist-problem-space.png}
+      \lectureimage[2.50in]{slide7.jpg}
     \end{column}
   \end{columns}
 
@@ -208,7 +199,7 @@
 
     \begin{column}{0.40\textwidth}
       % Search direction: sequence of states and actions from initial state to goal.
-      \lectureimage[2.20in]{solution-action-sequence.png}
+      \lectureimage[2.20in]{slide10.png}
     \end{column}
   \end{columns}
 
@@ -267,7 +258,7 @@
 
     \begin{column}{0.42\textwidth}
       % Search direction: small generated search tree beside a huge faded implicit state space.
-      \lectureimage[2.40in]{generate-search-space-on-demand.png}
+      \lectureimage[2.40in]{slide12.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -316,7 +307,7 @@
 
     \begin{column}{0.40\textwidth}
       % Search direction: goal node with arrows following parent pointers back to start.
-      \lectureimage[2.35in]{parent-pointers-reconstruct-path.png}
+      \lectureimage[2.35in]{slide14.png}
     \end{column}
   \end{columns}
 
@@ -356,7 +347,7 @@
 
     \begin{column}{0.42\textwidth}
       % Search direction: BFS tree colored by depth layers, with queue ordering.
-      \lectureimage[2.45in]{bfs-level-order.png}
+      \lectureimage[2.45in]{slide17.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -433,7 +424,7 @@
 
     \begin{column}{0.42\textwidth}
       % Search direction: DFS tree with one highlighted deep branch and a backtracking arrow.
-      \lectureimage[2.45in]{dfs-deep-branch-backtrack.png}
+      \lectureimage[2.45in]{slide21.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -611,8 +602,6 @@
     \end{column}
 
     \begin{column}{0.39\textwidth}
-      % Search direction: agent internally branching through hypothetical futures before choosing one action.
-      \lectureimage[2.42in]{search-inside-intelligent-agent.png}
     \end{column}
   \end{columns}
 
@@ -673,7 +662,7 @@
 
     \begin{column}{0.40\textwidth}
       % Search direction: top-down Micromouse competition photograph showing autonomous robot inside a maze.
-      \lectureimage[2.48in]{micromouse-competition-overview.png}
+      \lectureimage[2.48in]{slide33.jpg}
     \end{column}
   \end{columns}
 
@@ -694,7 +683,7 @@
 
     \begin{column}{0.41\textwidth}
       % Search direction: grid maze labeled S and G with N/S/E/W discrete actions.
-      \lectureimage[2.42in]{micromouse-discrete-search-abstraction.png}
+      \lectureimage[2.42in]{slide34.jpeg}
     \end{column}
   \end{columns}
 
@@ -731,6 +720,10 @@
     \large sense $\rightarrow$ update map $\rightarrow$ search $\rightarrow$ move $\rightarrow$ sense again
   \end{center}
 
+  \begin{center}
+    \lectureimage[0.95in]{slide35.jpeg}
+  \end{center}
+
   \note{[Sources] Veritasium, ``The Fastest Maze-Solving Competition On Earth.'' The video emphasizes local sensing and incremental discovery of maze walls.}
 \end{frame}
 
@@ -751,7 +744,7 @@
 
     \begin{column}{0.42\textwidth}
       % Search direction: wall-following robot tracing a perimeter or loop around the maze.
-      \lectureimage[2.40in]{micromouse-wall-following-reactive.png}
+      \lectureimage[2.40in]{slide36.jpeg}
     \end{column}
   \end{columns}
 
@@ -778,8 +771,6 @@
     \end{column}
 
     \begin{column}{0.39\textwidth}
-      % Search direction: maze/tree showing a deep DFS route and an unvisited shorter alternative.
-      \lectureimage[2.42in]{micromouse-dfs-misses-shortcut.png}
     \end{column}
   \end{columns}
 
@@ -807,6 +798,10 @@
     \end{column}
   \end{columns}
 
+  \begin{center}
+    \lectureimage[0.78in]{slide38.jpeg}
+  \end{center}
+
   \begin{keyidea}
     The order in which a search algorithm expands states does not have to equal the physical trajectory of the robot.
   \end{keyidea}
@@ -830,8 +825,6 @@
     \end{column}
 
     \begin{column}{0.42\textwidth}
-      % Search direction: grid with center goal value 0 and increasing flood-fill distance labels outward.
-      \lectureimage[2.45in]{micromouse-flood-fill-distance-map.png}
     \end{column}
   \end{columns}
 
@@ -873,7 +866,7 @@
 
     \begin{column}{0.40\textwidth}
       % Search direction: closed-loop diagram sensors -> map -> search -> plan -> actuators -> maze.
-      \lectureimage[2.32in]{micromouse-agent-loop.png}
+      \lectureimage[2.32in]{slide41.jpeg}
     \end{column}
   \end{columns}
 
@@ -971,39 +964,6 @@
   \begin{keyidea}
     Next: move from abstract state transitions to physical motion and richer planning constraints.
   \end{keyidea}
-\end{frame}
-
-\begin{frame}[shrink=20]{Image Placeholder Index}
-  \scriptsize
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.49\textwidth}
-      \begin{itemize}
-        \item \texttt{search-reasons-about-futures.png}
-        \item \texttt{logic-theorist-problem-space.png}
-        \item \texttt{solution-action-sequence.png}
-        \item \texttt{generate-search-space-on-demand.png}
-        \item \texttt{parent-pointers-reconstruct-path.png}
-        \item \texttt{bfs-level-order.png}
-        \item \texttt{dfs-deep-branch-backtrack.png}
-        \item \texttt{search-inside-intelligent-agent.png}
-      \end{itemize}
-    \end{column}
-
-    \begin{column}{0.49\textwidth}
-      \begin{itemize}
-        \item \texttt{micromouse-competition-overview.png}
-        \item \texttt{micromouse-discrete-search-abstraction.png}
-        \item \texttt{micromouse-wall-following-reactive.png}
-        \item \texttt{micromouse-dfs-misses-shortcut.png}
-        \item \texttt{micromouse-flood-fill-distance-map.png}
-        \item \texttt{micromouse-agent-loop.png}
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \begin{exampleblockcp}
-    Save each image under \texttt{../assets/lecture-05/}. The labeled placeholder will be replaced automatically when its filename matches.
-  \end{exampleblockcp}
 \end{frame}
 
 \end{document}
