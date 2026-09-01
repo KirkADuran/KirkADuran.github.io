@@ -83,7 +83,7 @@
     \begin{column}{0.42\textwidth}
 
       % Search direction: isolated expression contrasted with a sequence that retains a value.
-      \lectureimage[2.24in]{expression-versus-stateful-program.png}
+      \lectureimage[1.80in]{expression-versus-stateful-program.png}
 
     \end{column}
 
@@ -171,7 +171,7 @@
     \begin{column}{0.40\textwidth}
 
       % Search direction: two-stage assignment flow, evaluate right side then bind left-side name.
-      \lectureimage[2.30in]{assignment-evaluate-then-bind.png}
+      \lectureimage[2.30in]{slide6.png}
 
     \end{column}
 
@@ -296,7 +296,7 @@
     \begin{column}{0.43\textwidth}
 
       % Search direction: label score moving from object 10 to object 25.
-      \lectureimage[2.23in]{reassignment-moves-binding.png}
+      \lectureimage[2.23in]{slide9.png}
 
     \end{column}
 
@@ -335,94 +335,13 @@
     \begin{column}{0.40\textwidth}
 
       % Search direction: namespace table mapping labels score and message to distinct Python objects.
-      \lectureimage[2.28in]{namespace-name-object-mapping.png}
+      \lectureimage[2.28in]{slide11.png}
 
     \end{column}
 
   \end{columns}
 
   \note{[Sources] Python Language Reference, ``Naming and binding,'' https://docs.python.org/3/reference/executionmodel.html\#naming-and-binding.}
-
-\end{frame}
-
-\begin{frame}{Where Is the Variable Name Stored?}
-
-  \begin{columns}[T,onlytextwidth]
-
-    \begin{column}{0.53\textwidth}
-
-      \begin{itemize}
-
-        \item At the top level of a Colab cell or Python file, assignment records a name in the module's global namespace.
-
-        \item Python exposes a module namespace as a dictionary-like mapping.
-
-        \item Conceptually, an entry looks like:
-
-      \end{itemize}
-
-      \begin{block}{Namespace entry}
-
-        \centering
-        \texttt{"score"} $\longrightarrow$ object representing \texttt{10}
-
-      \end{block}
-
-      \begin{exampleblockcp}
-
-        The spelling \texttt{score} is stored separately from the numerical information in the integer object.
-
-      \end{exampleblockcp}
-
-    \end{column}
-
-    \begin{column}{0.41\textwidth}
-
-      % Search direction: variable name text stored as a namespace key pointing to a separate object.
-      \lectureimage[2.30in]{variable-name-storage-namespace.png}
-
-    \end{column}
-
-  \end{columns}
-
-  \note{[Sources] Python Language Reference, ``Modules,'' https://docs.python.org/3/reference/datamodel.html\#modules.}
-
-\end{frame}
-
-\begin{frame}{Every Python Object Has Identity, Type, and Value}
-
-  \begin{columns}[T,onlytextwidth]
-
-    \begin{column}{0.55\textwidth}
-
-      \begin{description}
-
-        \item[Identity] Distinguishes this object from every other object during its lifetime.
-
-        \item[Type] Determines which operations the object supports and helps determine how its value is represented.
-
-        \item[Value] The information represented by the object, such as \texttt{10} or \texttt{"hello"}.
-
-      \end{description}
-
-      \begin{keyidea}
-
-        The type belongs to the object. A name can later be associated with an object of another type.
-
-      \end{keyidea}
-
-    \end{column}
-
-    \begin{column}{0.39\textwidth}
-
-      % Search direction: one Python object card labeled identity, type, and value.
-      \lectureimage[2.24in]{object-identity-type-value.png}
-
-    \end{column}
-
-  \end{columns}
-
-  \note{[Sources] Python Language Reference, ``Objects, values and types,'' https://docs.python.org/3/reference/datamodel.html\#objects-values-and-types.}
 
 \end{frame}
 
@@ -456,59 +375,13 @@
     \begin{column}{0.39\textwidth}
 
       % Search direction: Colab id(score) output pointing to object identity rather than variable label.
-      \lectureimage[2.30in]{id-current-object-cpython-address.png}
+      \lectureimage[2.30in]{slide14.png}
 
     \end{column}
 
   \end{columns}
 
   \note{[Sources] Python built-in function id(), https://docs.python.org/3/library/functions.html\#id; Python Data Model, https://docs.python.org/3/reference/datamodel.html\#objects-values-and-types.}
-
-\end{frame}
-
-\begin{frame}{Is an Object's Identity Its Memory Address?}
-
-  \begin{columns}[T,onlytextwidth]
-
-    \begin{column}{0.47\textwidth}
-
-      \begin{block}{Python's language-level promise}
-
-        \texttt{id()} returns an integer that is unique and constant for the object during its lifetime.
-
-      \end{block}
-
-    \end{column}
-
-    \begin{column}{0.47\textwidth}
-
-      \begin{block}{CPython's implementation}
-
-        In CPython, that integer is the object's memory address. Other Python implementations need not use an address.
-
-      \end{block}
-
-    \end{column}
-
-  \end{columns}
-
-  \begin{itemize}
-
-    \item Memory management is automatic; programmers ordinarily do not choose these addresses.
-
-    \item After an object no longer exists, a later object may reuse an identity value.
-
-    \item Use \texttt{id()} to test the mental model, not to build arithmetic or program logic around the number.
-
-  \end{itemize}
-
-  \begin{keyidea}
-
-    ``Identity'' is the portable idea; ``memory address'' is a CPython-specific implementation detail.
-
-  \end{keyidea}
-
-  \note{[Sources] Python built-in function id(), https://docs.python.org/3/library/functions.html\#id.}
 
 \end{frame}
 
@@ -586,7 +459,7 @@
     \begin{column}{0.42\textwidth}
 
       % Search direction: message label moving from immutable hello string to a new hello world string.
-      \lectureimage[2.38in]{string-reassignment-new-object.png}
+      \lectureimage[2.38in]{slide17.png}
 
     \end{column}
 
@@ -594,7 +467,7 @@
 
 \end{frame}
 
-\begin{frame}{Why Are Strings Immutable?}
+\begin{frame}[shrink=8]{Why Are Strings Immutable?}
 
   \begin{cpdefinition}
 
@@ -627,7 +500,7 @@
     \begin{column}{0.42\textwidth}
 
       % Search direction: immutable string used as stable identifier and database key.
-      \lectureimage[2.30in]{string-immutability-stable-identifiers.png}
+      \lectureimage[2.05in]{slide18.png}
 
     \end{column}
 
@@ -639,7 +512,7 @@
 
 \sectionframe{Part 3: Special Values and Dynamic Typing}
 
-\begin{frame}{\texttt{None} Represents the Intentional Absence of a Value}
+\begin{frame}[shrink=8]{\texttt{None} Represents the Intentional Absence of a Value}
 
   \begin{columns}[T,onlytextwidth]
 
@@ -674,7 +547,7 @@
     \begin{column}{0.40\textwidth}
 
       % Search direction: many variable labels pointing to the single shared Python None object.
-      \lectureimage[2.30in]{none-singleton-object.png}
+      \lectureimage[2.05in]{none-singleton-object.png}
 
     \end{column}
 
@@ -684,7 +557,7 @@
 
 \end{frame}
 
-\begin{frame}{The ``Billion-Dollar Mistake'' Is a Warning About Absence}
+\begin{frame}[shrink=8]{The ``Billion-Dollar Mistake'' Is a Warning About Absence}
 
   \begin{columns}[T,onlytextwidth]
 
@@ -711,7 +584,7 @@
     \begin{column}{0.38\textwidth}
 
       % Search direction: portrait of Tony Hoare with ALGOL W and null-reference historical context.
-      \lectureimage[2.35in]{tony-hoare-null-reference.png}
+      \lectureimage[2.05in]{slide21.png}
 
     \end{column}
 
@@ -750,7 +623,7 @@
     \begin{column}{0.44\textwidth}
 
       % Search direction: one variable name successively pointing to int, str, and float objects.
-      \lectureimage[2.35in]{dynamic-rebinding-object-types.png}
+      \lectureimage[2.35in]{slide22.png}
 
     \end{column}
 
@@ -800,7 +673,7 @@
 
 \end{frame}
 
-\begin{frame}{Type Annotations Communicate Intended Types}
+\begin{frame}[fragile,shrink=8]{Type Annotations Communicate Intended Types}
 
   \begin{columns}[T,onlytextwidth]
 
@@ -832,8 +705,23 @@
 
     \begin{column}{0.41\textwidth}
 
-      % Search direction: annotated Python variable with editor or type-checker feedback.
-      \lectureimage[2.25in]{type-annotation-intent-not-enforcement.png}
+      \begin{block}{More annotations}
+      \tiny
+\begin{verbatim}
+name: str = "Ada"
+course_title: str = "Intro to Computing"
+
+temperature: float = 72.5
+passing: bool = True
+attempts: int = 3
+
+measurement: int | float = 12
+measurement = 12.75
+
+nickname: str | None = None
+nickname = "Ace"
+\end{verbatim}
+      \end{block}
 
     \end{column}
 
@@ -897,7 +785,7 @@
     \begin{column}{0.45\textwidth}
 
       % Search direction: x and y object-binding diagram showing y remains 6 after x changes to 10.
-      \lectureimage[2.38in]{xy-reassignment-no-retroactive-change.png}
+      \lectureimage[2.38in]{slide27.png}
 
     \end{column}
 
@@ -1012,7 +900,7 @@
     \begin{column}{0.44\textwidth}
 
       % Search direction: ordinary reassignment and augmented assignment shown as the same numeric update flow.
-      \lectureimage[2.35in]{augmented-assignment-update.png}
+      \lectureimage[2.35in]{slide30.png}
 
     \end{column}
 
@@ -1057,7 +945,7 @@
 
 \sectionframe{Part 5: Readable State and Deliberate Practice}
 
-\begin{frame}{Comments Explain Code Without Changing State}
+\begin{frame}[fragile]{Comments Explain Code Without Changing State}
 
   \begin{columns}[T,onlytextwidth]
 
@@ -1084,8 +972,23 @@
 
     \begin{column}{0.40\textwidth}
 
-      % Search direction: Python code with comment text visually separated from state-changing statements.
-      \lectureimage[2.28in]{comments-versus-state-changes.png}
+      \begin{block}{Comment examples}
+      \scriptsize
+\begin{verbatim}
+# Set the initial score.
+score = 10
+
+score += 5  # add quiz bonus
+
+"""
+This triple-quoted string can document
+a larger idea, but it is still a string
+literal, not Python's comment syntax.
+"""
+
+name = "Maya"  # store the user's name
+\end{verbatim}
+      \end{block}
 
     \end{column}
 
@@ -1199,46 +1102,6 @@
 
 \end{frame}
 
-\begin{frame}{Colab Lab: Observe Rebinding with \texttt{id()}}
-
-  \begin{columns}[T,onlytextwidth]
-
-    \begin{column}{0.52\textwidth}
-
-      \begin{block}{Run one line at a time}
-
-        \texttt{message = "hello"}\\
-        \texttt{id(message)}\\
-        \texttt{message += " world"}\\
-        \texttt{id(message)}
-
-      \end{block}
-
-      \begin{activity}
-
-        Before running the second \texttt{id()} call, predict whether the object identity will be the same. Explain the observation using ``evaluate,'' ``new string,'' ``namespace,'' and ``rebind.''
-
-      \end{activity}
-
-    \end{column}
-
-    \begin{column}{0.42\textwidth}
-
-      % Search direction: Google Colab cells comparing id(message) before and after string augmentation.
-      \lectureimage[2.42in]{colab-id-string-reassignment.png}
-
-    \end{column}
-
-  \end{columns}
-
-  \begin{alertblock}{Interpretation rule}
-
-    Compare whether the identity changed; do not try to interpret the magnitude of the integer.
-
-  \end{alertblock}
-
-\end{frame}
-
 \begin{frame}{Misconceptions to Correct Explicitly}
 
   \begin{itemize}
@@ -1258,95 +1121,6 @@
     \item A name can be rebound to an object of another type; the objects themselves still have definite types.
 
   \end{itemize}
-
-\end{frame}
-
-\begin{frame}{Exit Ticket: Explain the Final State}
-
-  \begin{columns}[T,onlytextwidth]
-
-    \begin{column}{0.43\textwidth}
-
-      \begin{block}{Statements}
-
-        \texttt{level = 2}\\
-        \texttt{next\_level = level + 1}\\
-        \texttt{level = 10}\\
-        \texttt{level += 2}
-
-      \end{block}
-
-    \end{column}
-
-    \begin{column}{0.51\textwidth}
-
-      \begin{activity}
-
-        Report the final values of \texttt{level} and \texttt{next\_level}. Then explain:
-
-        \begin{enumerate}
-          \item what each assignment evaluates;
-          \item which namespace association changes;
-          \item why \texttt{next\_level} does not change later.
-        \end{enumerate}
-
-      \end{activity}
-
-    \end{column}
-
-  \end{columns}
-
-  \begin{keyidea}
-
-    Outcome: you can predict how a sequence of assignments changes program state and explain that state using names, objects, and values.
-
-  \end{keyidea}
-
-\end{frame}
-
-\begin{frame}{Image Placeholder Index}
-
-  \scriptsize
-  \begin{columns}[T,onlytextwidth]
-
-    \begin{column}{0.49\textwidth}
-
-      \begin{itemize}
-        \item \texttt{expression-versus-stateful-program.png}
-        \item \texttt{assignment-evaluate-then-bind.png}
-        \item \texttt{reassignment-moves-binding.png}
-        \item \texttt{namespace-name-object-mapping.png}
-        \item \texttt{variable-name-storage-namespace.png}
-        \item \texttt{object-identity-type-value.png}
-        \item \texttt{id-current-object-cpython-address.png}
-        \item \texttt{string-reassignment-new-object.png}
-        \item \texttt{string-immutability-stable-identifiers.png}
-      \end{itemize}
-
-    \end{column}
-
-    \begin{column}{0.49\textwidth}
-
-      \begin{itemize}
-        \item \texttt{none-singleton-object.png}
-        \item \texttt{tony-hoare-null-reference.png}
-        \item \texttt{dynamic-rebinding-object-types.png}
-        \item \texttt{type-annotation-intent-not-enforcement.png}
-        \item \texttt{xy-reassignment-no-retroactive-change.png}
-        \item \texttt{augmented-assignment-update.png}
-        \item \texttt{comments-versus-state-changes.png}
-        \item \texttt{colab-id-string-reassignment.png}
-      \end{itemize}
-
-    \end{column}
-
-  \end{columns}
-
-  \begin{exampleblockcp}
-
-    Save each image under \texttt{../assets/lecture-05/}. The labeled placeholder will be replaced automatically when its filename matches.
-
-  \end{exampleblockcp}
 
 \end{frame}
 
