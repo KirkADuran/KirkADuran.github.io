@@ -1,23 +1,15 @@
 \documentclass[aspectratio=169,10pt]{beamer}
 
 \input{../../common/preamble.tex}
+\usepackage{tikz}
 
-\graphicspath{{../assets/lecture-06/}}
+\graphicspath{{../assets/lecture-05/}}
 
-% If an image file is not yet available, the slide displays a labeled
-% placeholder using the intended filename. Place the matching file in
-% ../assets/lecture-06/ to replace the placeholder automatically.
+% If an image file is not yet available, skip the visual slot.
 \newcommand{\lectureimage}[2][1.75in]{%
-  \IfFileExists{../assets/lecture-06/#2}{%
+  \IfFileExists{../assets/lecture-05/#2}{%
     \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
   }{%
-    \fbox{%
-      \parbox[c][#1][c]{0.94\linewidth}{%
-        \centering
-        \small\textbf{Image Placeholder}\\[0.08in]
-        \tiny\texttt{\detokenize{#2}}
-      }%
-    }%
   }%
 }
 
@@ -25,9 +17,9 @@
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
-\lecturenumber{6}
+\lecturenumber{5}
 \lecturetitle{Uninformed Search II: Action Costs and Uniform-Cost Search}
-\lecturedate{}
+\lecturedate{September 2, 2026}
 \courseunit{Search and Problem Solving}
 
 \begin{document}
@@ -71,7 +63,7 @@
 
     \begin{column}{0.40\textwidth}
       % Search direction: top-down Micromouse maze rendered as an orthogonal grid with a highlighted center goal.
-      \lectureimage[2.45in]{micromouse-simple-grid-model.png}
+      \lectureimage[2.45in]{slide4.png}
     \end{column}
   \end{columns}
 
@@ -99,7 +91,7 @@
 
     \begin{column}{0.46\textwidth}
       % Search direction: side-by-side maze routes, one orthogonal stair-step route and one unavailable diagonal shortcut.
-      \lectureimage[2.55in]{orthogonal-action-set-limits.png}
+      \lectureimage[2.55in]{slide5.png}
     \end{column}
   \end{columns}
 
@@ -124,7 +116,7 @@
 
     \begin{column}{0.38\textwidth}
       % Search direction: historical Micromouse competition timeline showing apparent stagnation in the late 1980s.
-      \lectureimage[2.48in]{micromouse-apparent-stagnation.png}
+      \lectureimage[2.48in]{slide6.jpeg}
     \end{column}
   \end{columns}
 
@@ -149,7 +141,7 @@
 
     \begin{column}{0.40\textwidth}
       % Search direction: Mitee Mouse III or a Micromouse route illustrating 45-degree diagonal movement through square maze cells.
-      \lectureimage[2.48in]{mitee3-diagonal-running.png}
+      \lectureimage[2.48in]{slide7.png}
     \end{column}
   \end{columns}
 
@@ -220,8 +212,6 @@
     \end{column}
 
     \begin{column}{0.41\textwidth}
-      % Search direction: same maze cell shown with two robot orientations producing different legal next movements.
-      \lectureimage[2.55in]{orientation-changes-actions.png}
     \end{column}
   \end{columns}
 
@@ -252,8 +242,6 @@
     \end{column}
 
     \begin{column}{0.40\textwidth}
-      % Search direction: top-down car turning left along a curved arc compared with an impossible sideways grid translation.
-      \lectureimage[2.55in]{car-left-action-is-arc.png}
     \end{column}
   \end{columns}
 
@@ -284,8 +272,6 @@
     \end{column}
 
     \begin{column}{0.44\textwidth}
-      % Search direction: kinematic bicycle-model diagram with x, y, heading theta, wheelbase, and steering angle.
-      \lectureimage[2.42in]{kinematic-bicycle-model.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -351,8 +337,6 @@
     \end{column}
 
     \begin{column}{0.40\textwidth}
-      % Search direction: two identical cars at different speeds approaching a stopping point, with dramatically different stopping distances.
-      \lectureimage[2.50in]{velocity-dependent-stopping.png}
     \end{column}
   \end{columns}
 
@@ -408,8 +392,6 @@
     \end{column}
 
     \begin{column}{0.44\textwidth}
-      % Search direction: same car cornering on dry, wet, and icy pavement with increasing slip trajectories.
-      \lectureimage[2.42in]{road-friction-changes-trajectory.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -453,8 +435,6 @@
     \end{column}
 
     \begin{column}{0.39\textwidth}
-      % Search direction: high-speed Micromouse cornering with suction fan / traction concept, not a generic mouse photo.
-      \lectureimage[2.45in]{micromouse-traction-and-fan.png}
     \end{column}
   \end{columns}
 
@@ -513,7 +493,7 @@
 
     \begin{column}{0.40\textwidth}
       % Search direction: two Micromouse routes through the same maze, shorter route with many turns versus longer route with fewer turns and lower time.
-      \lectureimage[2.50in]{micromouse-shortest-vs-fastest.png}
+      \lectureimage[2.50in]{slide21.png}
     \end{column}
   \end{columns}
 
@@ -595,8 +575,6 @@
     \end{column}
 
     \begin{column}{0.40\textwidth}
-      % Search direction: small weighted graph contrasting a two-edge expensive path and a three-edge cheap path.
-      \lectureimage[2.48in]{depth-versus-path-cost.png}
     \end{column}
   \end{columns}
 
@@ -651,7 +629,7 @@
 
     \begin{column}{0.39\textwidth}
       % Search direction: portrait of Edsger Dijkstra paired with the 1959 paper title or weighted graph sketch.
-      \lectureimage[2.50in]{dijkstra-1959-paper.png}
+      \lectureimage[2.50in]{slide27.jpg}
     \end{column}
   \end{columns}
 
@@ -737,8 +715,37 @@
     \end{column}
 
     \begin{column}{0.48\textwidth}
-      % Search direction: clean weighted directed graph with nodes S,A,B,C,D,G and the listed edge costs.
-      \lectureimage[2.75in]{dijkstra-example-graph.png}
+      \centering
+      \begin{tikzpicture}[
+        >=stealth,
+        every node/.style={font=\small},
+        state/.style={
+          circle,
+          draw=CalPolyGreen,
+          very thick,
+          fill=CalPolyBeige,
+          minimum size=0.38in,
+          inner sep=0pt
+        },
+        edge/.style={->, very thick, draw=DeckMuted},
+        cost/.style={fill=white, inner sep=1.5pt, font=\scriptsize}
+      ]
+        \node[state] (S) at (0,1.1) {S};
+        \node[state] (A) at (1.5,2.0) {A};
+        \node[state] (B) at (1.5,0.2) {B};
+        \node[state] (C) at (3.0,2.0) {C};
+        \node[state] (D) at (3.0,0.2) {D};
+        \node[state] (G) at (4.5,1.1) {G};
+
+        \draw[edge] (S) -- node[cost, above left] {2} (A);
+        \draw[edge] (S) -- node[cost, below left] {5} (B);
+        \draw[edge] (A) -- node[cost, above] {2} (C);
+        \draw[edge] (A) -- node[cost, right] {5} (D);
+        \draw[edge] (B) -- node[cost, below] {1} (D);
+        \draw[edge] (C) -- node[cost, right] {1} (D);
+        \draw[edge] (C) -- node[cost, above right] {7} (G);
+        \draw[edge] (D) -- node[cost, below right] {2} (G);
+      \end{tikzpicture}
     \end{column}
   \end{columns}
 \end{frame}
@@ -767,8 +774,6 @@
     \end{column}
 
     \begin{column}{0.44\textwidth}
-      % Search direction: Dijkstra example graph with S highlighted and all other nodes labeled infinity.
-      \lectureimage[2.55in]{dijkstra-step0-initialize.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -797,8 +802,6 @@
     \end{column}
 
     \begin{column}{0.47\textwidth}
-      % Search direction: weighted graph after expanding S, with A=2 and B=5 highlighted as frontier values.
-      \lectureimage[1.65in]{dijkstra-step1-expand-s.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -995,11 +998,6 @@
     \end{column}
   \end{columns}
 
-  \begin{center}
-    % Search direction: 8-puzzle showing two candidate solution sequences, one fewer moves but expensive tiles and one more moves but cheaper tiles.
-    \lectureimage[1.70in]{weighted-sliding-tile-puzzle.png}
-  \end{center}
-
   \begin{keyidea}
     States and legal transitions can remain identical while the preferred solution changes because the objective changed.
   \end{keyidea}
@@ -1075,8 +1073,6 @@
     \end{column}
 
     \begin{column}{0.40\textwidth}
-      % Search direction: warehouse or mobile robot occupancy grid with weighted terrain cells and a minimum-cost route.
-      \lectureimage[2.45in]{robot-weighted-navigation.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -1224,8 +1220,6 @@
     \end{column}
 
     \begin{column}{0.40\textwidth}
-      % Search direction: weighted grid with start left, goal right, and Dijkstra cost contours expanding heavily into a cheap but irrelevant southern region.
-      \lectureimage[2.55in]{ucs-cheap-irrelevant-region.png}
     \end{column}
   \end{columns}
 
@@ -1304,44 +1298,6 @@
   \begin{keyidea}
     Next: Greedy Best-First Search, heuristic functions, and A$^*$.
   \end{keyidea}
-\end{frame}
-
-\begin{frame}[shrink=20]{Image Placeholder Index}
-  \scriptsize
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.49\textwidth}
-      \begin{itemize}
-        \item \texttt{micromouse-simple-grid-model.png}
-        \item \texttt{orthogonal-action-set-limits.png}
-        \item \texttt{micromouse-apparent-stagnation.png}
-        \item \texttt{mitee3-diagonal-running.png}
-        \item \texttt{orientation-changes-actions.png}
-        \item \texttt{car-left-action-is-arc.png}
-        \item \texttt{kinematic-bicycle-model.png}
-        \item \texttt{velocity-dependent-stopping.png}
-        \item \texttt{road-friction-changes-trajectory.png}
-      \end{itemize}
-    \end{column}
-
-    \begin{column}{0.49\textwidth}
-      \begin{itemize}
-        \item \texttt{micromouse-traction-and-fan.png}
-        \item \texttt{micromouse-shortest-vs-fastest.png}
-        \item \texttt{depth-versus-path-cost.png}
-        \item \texttt{dijkstra-1959-paper.png}
-        \item \texttt{dijkstra-example-graph.png}
-        \item \texttt{dijkstra-step0-initialize.png}
-        \item \texttt{dijkstra-step1-expand-s.png}
-        \item \texttt{weighted-sliding-tile-puzzle.png}
-        \item \texttt{robot-weighted-navigation.png}
-        \item \texttt{ucs-cheap-irrelevant-region.png}
-      \end{itemize}
-    \end{column}
-  \end{columns}
-
-  \begin{exampleblockcp}
-    Save each image under \texttt{../assets/lecture-06/}. The labeled placeholder will be replaced automatically when its filename matches.
-  \end{exampleblockcp}
 \end{frame}
 
 \end{document}
