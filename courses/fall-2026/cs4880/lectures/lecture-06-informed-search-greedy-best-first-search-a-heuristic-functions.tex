@@ -1,54 +1,768 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\usepackage{tikz}
+
+\graphicspath{{../assets/lecture-06/}}
+
+% If an image file is not yet available, skip the visual slot.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-06/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+  }%
+}
+
+% Temporary visible placeholder used while lecture assets are being assembled.
+% Replace each placeholder with \lectureimage[...]{} once the corresponding asset exists.
+\newcommand{\lectureplaceholder}[2][1.75in]{%
+  \begin{center}
+    \fbox{%
+      \parbox[c][#1][c]{0.90\linewidth}{%
+        \centering\small\textcolor{DeckMuted}{\textbf{Image placeholder}\\[0.08in]#2}%
+      }%
+    }
+  \end{center}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{6}
-\lecturetitle{Informed Search -- greedy best-first search, A*, heuristic functions}
+\lecturetitle{Heuristic Search}
 \lecturedate{September 4, 2026}
-\courseunit{Course sequence}
+\courseunit{Search and Problem Solving}
 
 \begin{document}
 
 \makedecktitle
 
-\begin{frame}{Today}
+\begin{frame}[shrink=20]{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Informed Search -- greedy best-first search, A*, heuristic functions
-    \item Placeholder for announcements and context.
+    \item Why uninformed search wastes effort when the state space is large.
+    \item How a heuristic function estimates remaining cost to the goal.
+    \item How Greedy Best-First Search uses only heuristic guidance.
+    \item How A* combines path cost and heuristic guidance.
+    \item Why admissibility and consistency matter for A*.
+    \item How Weighted A* and related variants trade solution quality for search effort.
   \end{itemize}
+
+  \begin{keyidea}
+    Informed search uses problem-specific estimates to decide which frontier states appear most promising.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: From Uninformed Search to Informed Search}
+
+\begin{frame}[shrink=20]{Last Time: Breadth-First Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Unit-cost search}
+        \begin{itemize}
+          \item BFS expands states in increasing depth.
+          \item With unit action costs, minimum depth is minimum path cost.
+          \item A FIFO frontier is sufficient because every step contributes the same cost.
+        \end{itemize}
+      \end{block}
+
+      \begin{itemize}
+        \item In the source example, BFS reaches the goal using three edges.
+        \item The search ignores edge-specific costs because the model treats every action equally.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.45in]{BFS table from A to Z with queue, visited set, and reconstructed path.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    BFS is optimal only for the objective it represents: minimizing the number of unit-cost actions.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}[shrink=20]{Last Time: Dijkstra / Uniform-Cost Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Cost-aware frontier}
+        \begin{itemize}
+          \item Dijkstra / UCS expands the frontier state with minimum cumulative path cost.
+          \item Priority is determined by $g(n)$.
+          \item Edge relaxation replaces an expensive route when a cheaper route is discovered.
+        \end{itemize}
+      \end{block}
+
+      \begin{itemize}
+        \item The source example reaches $Z$ with total path cost $17$.
+        \item Search is cost-aware, but it still has no estimate of which direction leads toward the goal.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.45in]{Dijkstra table from A to Z showing $g$ values, priority queue, and parent updates.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Uniform-Cost Search knows how expensive the path has been, but not how promising the remaining path appears.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}[shrink=20]{A Human Would Look Toward the Goal}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      Suppose we are navigating a city and trying to reach a visible landmark.
+
+      \begin{itemize}
+        \item BFS can systematically enumerate nearby intersections.
+        \item Dijkstra can account for travel cost along roads.
+        \item A person can also use the visible landmark to estimate which direction is promising.
+      \end{itemize}
+
+      \begin{block}{Useful extra information}
+        The landmark provides an estimate of how far we still appear to be from the goal.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.55in]{slide6.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Search can exploit information that is not encoded by graph connectivity alone.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{The Search Problem Solver Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Uninformed search uses only the structure of the problem space.
+
+      \begin{itemize}
+        \item BFS, DFS, and iterative deepening do not use problem-specific estimates of progress.
+        \item In deep or highly branching spaces, large amounts of work may be spent in irrelevant regions.
+        \item Even simple puzzle domains can contain enormous state spaces.
+      \end{itemize}
+
+      \begin{block}{Example}
+        The 15-puzzle has more than $20$ trillion reachable states.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      \lectureimage[2.48in]{slide7.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Systematic search is not enough by itself; large problems require a way to prioritize promising states.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Cognitive Psychology Meets AI}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      The source lecture motivates heuristics using observations from human problem solving.
+
+      \begin{itemize}
+        \item People estimate how far they appear to be from a goal.
+        \item People often avoid paths that appear to move in the wrong direction.
+        \item Human problem solving is therefore not purely blind enumeration.
+      \end{itemize}
+
+      \begin{block}{AI question}
+        How can we encode ``how close does this state appear to be to the goal?''
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.55in]{slide8.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A heuristic converts domain knowledge into a numerical estimate that can guide search order.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 2: Heuristic Functions --- Estimating Cost-to-Go}
+
+\begin{frame}[shrink=20]{Heuristic Function}
+  \begin{cpdefinition}
+    A \textbf{heuristic function} $h(n)$ estimates the cost of a cheapest path from state $n$ to a goal state.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Smaller $h(n)$ means the state appears closer to the goal.
+        \item Heuristics are typically designed for a particular problem domain.
+        \item A good heuristic can reduce the number of states that must be expanded.
+      \end{itemize}
+
+      \begin{block}{Interpretation}
+        $h(n)$ predicts future cost; it does not measure the cost already incurred.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureimage[2.42in]{slide10.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The purpose of a heuristic is not to solve the problem directly, but to rank frontier states more intelligently.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Common Heuristics: Grids and Sliding-Tile Puzzles}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Grid navigation}
+        \begin{itemize}
+          \item Euclidean distance
+          \item Manhattan distance
+        \end{itemize}
+      \end{block}
+
+      For states $(x_1,y_1)$ and $(x_2,y_2)$:
+      \[
+        h_{\mathrm{Manhattan}}=|x_1-x_2|+|y_1-y_2|.
+      \]
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+      \begin{block}{8-puzzle}
+        \begin{itemize}
+          \item number of misplaced tiles;
+          \item sum of Manhattan distances from tiles to their goal positions.
+        \end{itemize}
+      \end{block}
+
+      \lectureimage[1.60in]{slide11.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Different heuristics summarize different approximations of the remaining work.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Common Heuristics Across AI Domains}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Traveling Salesperson}
+        Minimum spanning tree over unvisited cities.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Robot Motion Planning}
+        Straight-line distance to the target while ignoring obstacles.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Planning / STRIPS}
+        Number of goal conditions or preconditions that remain unsatisfied.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.12in}
+  \lectureimage[1.35in]{slide12.png}
+
+  \begin{keyidea}
+    Heuristic design is problem-specific: the estimate should capture structure that correlates with true remaining cost.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Making Heuristic Functions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{1. Solve a relaxed problem}
+        Remove constraints so that the remaining problem is easier to solve.
+        \begin{itemize}
+          \item ignore obstacles;
+          \item ignore interactions;
+          \item ignore selected costs or restrictions.
+        \end{itemize}
+      \end{block}
+
+      \begin{block}{2. Use domain knowledge}
+        Encode expert knowledge about distance, effort, or utility.
+      \end{block}
+
+      \begin{block}{3. Learn the heuristic}
+        Train a model to approximate cost-to-go from solved instances.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.65in]{slide13.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Uninformative Heuristic Regions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      An \textbf{uninformative region} occurs when many distinct states receive similar or identical heuristic values.
+
+      \begin{itemize}
+        \item The heuristic cannot clearly distinguish which states are more promising.
+        \item Greedy Best-First Search or A* may expand many states unnecessarily.
+        \item Search can begin to resemble uninformed exploration.
+        \item Large flat regions can produce substantial slowdowns.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      \lectureimage[2.55in]{slide14.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A heuristic is useful only to the extent that its values meaningfully rank competing frontier states.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Greedy Best-First Search --- Follow the Heuristic}
+
+\begin{frame}[shrink=20]{Greedy Best-First Search}
+  \begin{cpdefinition}
+    \textbf{Greedy Best-First Search (GBFS)} expands the frontier node with the smallest heuristic value $h(n)$.
+  \end{cpdefinition}
+
+  \[
+    \mathrm{priority}(n)=h(n)
+  \]
+
+  \begin{itemize}
+    \item GBFS attempts to reach the goal quickly by following the state that appears closest.
+    \item It repeatedly removes the minimum-$h$ state, expands it, and inserts its successors.
+    \item It ignores accumulated path cost $g(n)$ when choosing what to expand next.
+  \end{itemize}
+
+  \begin{keyidea}
+    GBFS is greedy because it optimizes only its estimate of the remaining path, not the total solution cost.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Greedy Best-First Search Pseudocode}
+  \begin{block}{Algorithm}
+  \ttfamily\small
+  frontier $\leftarrow$ PriorityQueue(order by $h$)\\
+  frontier.insert(initial\_state, priority=$h(initial\_state)$)\\
+  came\_from[initial\_state] $\leftarrow$ None\\[0.06in]
+  while frontier is not empty:\\
+  \quad state $\leftarrow$ frontier.remove\_min()\\[0.03in]
+  \quad if goal\_test(state):\\
+  \qquad return reconstruct\_path(came\_from, state)\\[0.03in]
+  \quad for child in SUCCESSORS(state):\\
+  \qquad if child has not been explored:\\
+  \qquad\quad came\_from[child] $\leftarrow$ state\\
+  \qquad\quad frontier.insert(child, priority=$h(child)$)\\[0.03in]
+  return failure
+  \end{block}
+
+  \begin{keyidea}
+    The priority queue contains only heuristic estimates; edge costs do not affect expansion order.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{GBFS Worked Example: From \texttt{A} to \texttt{Z}}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      Source heuristic values include:
+      \[
+        h(A)=14,\quad h(C)=11,\quad h(E)=4,\quad h(Z)=0.
+      \]
+
+      \begin{block}{Expansion sequence}
+        \centering
+        $A:14$\\
+        $\downarrow$\\
+        $C:11$\\
+        $\downarrow$\\
+        $E:4$\\
+        $\downarrow$\\
+        $Z:0$
+      \end{block}
+
+      GBFS chooses the smallest available $h$ value at every step.
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureimage[2.55in]{slide18.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The route looks promising according to $h$, even though GBFS does not compare the path costs used to reach those states.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Why Purely Greedy Search Can Be Misleading}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      GBFS can perform well when the heuristic points reliably toward the goal.
+
+      \begin{itemize}
+        \item It may take long detours because it ignores $g(n)$.
+        \item A locally attractive state can lead into an expensive region.
+        \item Weak or deceptive heuristics can cause extensive exploration.
+        \item GBFS does not provide a general minimum-cost guarantee.
+      \end{itemize}
+
+      \begin{block}{The missing information}
+        Search needs both what we have already paid and what we estimate remains.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.48in]{Pathfinding scene where a greedy route is drawn toward the goal but must detour around obstacles.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 4: A* Search --- Balance Cost-So-Far and Cost-to-Go}
+
+\begin{frame}[shrink=20]{A* Combines Two Signals}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      A* evaluates each frontier node using:
+      \[
+        f(n)=g(n)+h(n).
+      \]
+
+      \begin{itemize}
+        \item $g(n)$: exact path cost from the start to $n$;
+        \item $h(n)$: estimated cost from $n$ to a goal;
+        \item $f(n)$: estimated total solution cost through $n$.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Special cases}
+        \begin{itemize}
+          \item If $h(n)=0$, A* behaves like Dijkstra / UCS.
+          \item If $g(n)$ is ignored, the policy becomes GBFS.
+        \end{itemize}
+      \end{block}
+
+      \lectureimage[1.55in]{slide21.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A* prefers nodes that are inexpensive so far \emph{and} appear inexpensive to finish.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{A* Search Pseudocode}
+  \begin{block}{Algorithm}
+  \ttfamily\small
+  frontier $\leftarrow$ PriorityQueue(order by $f$)\\
+  frontier.insert(start, priority=$h(start)$)\\
+  cost\_so\_far[start] $\leftarrow 0$\\
+  came\_from[start] $\leftarrow$ None\\[0.06in]
+  while frontier is not empty:\\
+  \quad state $\leftarrow$ frontier.remove\_min()\\
+  \quad if goal\_test(state): return reconstruct\_path(...)\\[0.03in]
+  \quad for child in SUCCESSORS(state):\\
+  \qquad new\_cost $\leftarrow g(state)+c(state,child)$\\
+  \qquad if child is new or new\_cost $< g(child)$:\\
+  \qquad\quad $g(child)\leftarrow$new\_cost\\
+  \qquad\quad $f(child)\leftarrow g(child)+h(child)$\\
+  \qquad\quad frontier.insert(child, priority=$f(child)$)
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}[shrink=20]{A* Worked Example: Initial Expansions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Start at $A$:
+      \[
+        f(A)=0+14=14.
+      \]
+
+      Expand $A$:
+      \[
+        f(C)=3+11=14,
+      \]
+      \[
+        f(B)=4+12=16.
+      \]
+
+      Frontier:
+      \[
+        [C:14,\;B:16].
+      \]
+
+      Expand $C$:
+      \[
+        f(D)=10+6=16,\qquad f(E)=13+4=17.
+      \]
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.55in]{A--Z graph with edge costs and heuristic values used by the A* example.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{A* Worked Example: Updating the Best Route}
+  Continuing the source example:
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item After expanding $B$, the frontier contains $D:16$, $E:17$, and $F:20$.
+    \item Expanding $D$ discovers a cheaper route to $E$:
+      \[
+        g(E)=12,\qquad f(E)=12+4=16.
+      \]
+    \item Expanding $E:16$ generates:
+      \[
+        f(Z)=17+0=17.
+      \]
+    \item When $Z:17$ is selected, the search terminates with solution cost $17$.
   \end{itemize}
+
+  \begin{keyidea}
+    Unlike GBFS, A* can revise a promising-looking state when a cheaper path to that state is discovered.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Admissible Heuristics}
+  \begin{cpdefinition}
+    A heuristic is \textbf{admissible} if it never overestimates the true minimum remaining cost.
+  \end{cpdefinition}
+
+  \[
+    h(n)\le h^*(n)
+  \]
+
+  where $h^*(n)$ is the true minimum cost from $n$ to a goal.
+
+  \begin{itemize}
+    \item An admissible heuristic is optimistic: it may underestimate, but it does not claim the goal is farther away than it really is.
+    \item The closer $h(n)$ is to $h^*(n)$ while remaining admissible, the more strongly it can guide search.
+  \end{itemize}
+
+  \begin{keyidea}
+    Admissibility connects heuristic quality to A*'s minimum-cost guarantee.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Consistent Heuristics}
+  \begin{cpdefinition}
+    A heuristic is \textbf{consistent} (monotone) if for every transition from $n$ to successor $n'$:
+  \end{cpdefinition}
+
+  \[
+    h(n)\le c(n,n')+h(n').
+  \]
+
+  \begin{itemize}
+    \item The estimated remaining cost cannot decrease by more than the cost of the step just taken.
+    \item Consistency is a triangle-inequality condition on heuristic estimates.
+    \item In graph search, consistency supports the standard rule that a state need not be reopened after it has been finalized under the usual A* formulation.
+  \end{itemize}
+
+  \begin{keyidea}
+    Consistency makes heuristic estimates behave coherently along paths, not merely at isolated states.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{What A* Pays for Its Guidance}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Search costs}
+        \begin{itemize}
+          \item can store a very large open and closed set;
+          \item high branching factors still create many candidates;
+          \item enormous state spaces can remain impractical;
+          \item priority-queue maintenance adds computation.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Heuristic dependence}
+        \begin{itemize}
+          \item weak heuristics approach uninformed search;
+          \item heuristic evaluation itself may be expensive;
+          \item exact optimal search may be too slow for real-time decisions.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A* improves search order, but it does not eliminate the combinatorial growth of difficult state spaces.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Variants --- Trading Optimality, Memory, and Exploration}
+
+\begin{frame}[shrink=20]{Related A* Variants and Tradeoffs}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Bidirectional A*}
+        Search simultaneously from the start and goal to reduce the effective search depth.
+      \end{block}
+
+      \begin{block}{Iterative Deepening A* (IDA*)}
+        Use heuristic cost thresholds with depth-first traversal to reduce memory requirements.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Beam Search}
+        Keep only a limited number of promising frontier states, sacrificing completeness or optimality for memory and speed.
+      \end{block}
+
+      \begin{block}{Weighted A*}
+        Increase the influence of the heuristic to search more aggressively toward the goal.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Weighted A*}
+  \begin{cpdefinition}
+    \textbf{Weighted A*} modifies the A* evaluation function by multiplying the heuristic by a weight $w>1$.
+  \end{cpdefinition}
+
+  \[
+    f_w(n)=g(n)+w\,h(n).
+  \]
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Weight bias}
+        \begin{itemize}
+          \item $w=1$: ordinary A*;
+          \item larger $w$: stronger preference for states that appear close to the goal;
+          \item very large $w$: behavior approaches GBFS.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Tradeoff}
+        \begin{itemize}
+          \item often expands fewer states;
+          \item may return a suboptimal solution;
+          \item can provide bounded suboptimality under appropriate heuristic assumptions.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Weighted A* in Uninformative Heuristic Regions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Increasing $w$ makes the search behave more like GBFS.
+
+      \begin{itemize}
+        \item The influence of $g(n)$ becomes smaller relative to $w\,h(n)$.
+        \item In a flat heuristic region, many states still receive nearly indistinguishable priorities.
+        \item The search can lose direction despite using a larger heuristic weight.
+        \item More aggressive weighting also increases the expected loss of optimality.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide31.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Increasing heuristic influence helps only when the heuristic contains useful information to amplify.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Exploration vs. Exploitation in Greedy Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\textwidth}
+      The source deck introduces mechanisms that deliberately add exploration to greedy search:
+
+      \begin{itemize}
+        \item \textbf{Randomized GBFS}: occasionally choose among several best-ranked states.
+        \item \textbf{$\varepsilon$-greedy GBFS}: with probability $\varepsilon$, choose a random open state; otherwise choose minimum $h$.
+        \item \textbf{Multiple queues}: maintain frontier views organized by different metadata or search criteria.
+        \item \textbf{Type-based GBFS}: group states into domain-defined types and sample across groups.
+        \item \textbf{Diverse best-first search}: favor dissimilar states among highly ranked candidates.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.36\textwidth}
+      \lectureimage[2.55in]{slide32.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Exploration Mechanisms in Weighted A*}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Randomized focal selection}
+        Break ties or select randomly within a focal list to encourage diversity among similarly promising states.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.32\textwidth}
+      \begin{block}{$\varepsilon$-greedy focal WA*}
+        With probability $\varepsilon$, select a random focal state; otherwise optimize a secondary heuristic.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Type-based Weighted A*}
+        Group focal states by domain-specific type and favor under-explored structural categories.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Modern variants can combine bounded-cost search with explicit mechanisms for diversity and exploration.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Search Policies at a Glance}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabular}{l|c|l}
+    \textbf{Algorithm} & \textbf{Priority} & \textbf{Main behavior} \\\hline
+    Dijkstra / UCS & $g(n)$ & cheapest path discovered so far \\
+    GBFS & $h(n)$ & state that appears closest to goal \\
+    A* & $g(n)+h(n)$ & balance cost-so-far and estimated cost-to-go \\
+    Weighted A* & $g(n)+w h(n)$ & favor heuristic guidance more aggressively
+  \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The evaluation function determines what the search algorithm considers ``promising.''
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Takeaways}
+  \begin{itemize}
+    \item Uninformed algorithms differ mainly in how they order states using depth or accumulated cost.
+    \item A heuristic $h(n)$ estimates the remaining cost to a goal and injects domain knowledge into search.
+    \item GBFS uses only $h(n)$, which can be fast but can also be misled.
+    \item A* uses $f(n)=g(n)+h(n)$ to combine actual cost and estimated remaining cost.
+    \item Admissibility and consistency formalize when heuristic guidance is safe for optimal graph search.
+    \item Weighted and exploratory variants deliberately trade exact optimality, memory, or determinism for practical search performance.
+  \end{itemize}
+
+  \begin{keyidea}
+    Better search comes from matching the frontier priority rule to the information and guarantees the problem actually requires.
+  \end{keyidea}
 \end{frame}
 
 \end{document}
