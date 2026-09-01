@@ -56,60 +56,6 @@
 
 \sectionframe{Part 1: From Uninformed Search to Informed Search}
 
-\begin{frame}[shrink=20]{Last Time: Breadth-First Search}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.54\textwidth}
-      \begin{block}{Unit-cost search}
-        \begin{itemize}
-          \item BFS expands states in increasing depth.
-          \item With unit action costs, minimum depth is minimum path cost.
-          \item A FIFO frontier is sufficient because every step contributes the same cost.
-        \end{itemize}
-      \end{block}
-
-      \begin{itemize}
-        \item In the source example, BFS reaches the goal using three edges.
-        \item The search ignores edge-specific costs because the model treats every action equally.
-      \end{itemize}
-    \end{column}
-
-    \begin{column}{0.40\textwidth}
-      \lectureplaceholder[2.45in]{BFS table from A to Z with queue, visited set, and reconstructed path.}
-    \end{column}
-  \end{columns}
-
-  \begin{keyidea}
-    BFS is optimal only for the objective it represents: minimizing the number of unit-cost actions.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}[shrink=20]{Last Time: Dijkstra / Uniform-Cost Search}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.54\textwidth}
-      \begin{block}{Cost-aware frontier}
-        \begin{itemize}
-          \item Dijkstra / UCS expands the frontier state with minimum cumulative path cost.
-          \item Priority is determined by $g(n)$.
-          \item Edge relaxation replaces an expensive route when a cheaper route is discovered.
-        \end{itemize}
-      \end{block}
-
-      \begin{itemize}
-        \item The source example reaches $Z$ with total path cost $17$.
-        \item Search is cost-aware, but it still has no estimate of which direction leads toward the goal.
-      \end{itemize}
-    \end{column}
-
-    \begin{column}{0.40\textwidth}
-      \lectureplaceholder[2.45in]{Dijkstra table from A to Z showing $g$ values, priority queue, and parent updates.}
-    \end{column}
-  \end{columns}
-
-  \begin{keyidea}
-    Uniform-Cost Search knows how expensive the path has been, but not how promising the remaining path appears.
-  \end{keyidea}
-\end{frame}
-
 \begin{frame}[shrink=20]{A Human Would Look Toward the Goal}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.53\textwidth}
@@ -307,29 +253,6 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}[shrink=20]{Uninformative Heuristic Regions}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.55\textwidth}
-      An \textbf{uninformative region} occurs when many distinct states receive similar or identical heuristic values.
-
-      \begin{itemize}
-        \item The heuristic cannot clearly distinguish which states are more promising.
-        \item Greedy Best-First Search or A* may expand many states unnecessarily.
-        \item Search can begin to resemble uninformed exploration.
-        \item Large flat regions can produce substantial slowdowns.
-      \end{itemize}
-    \end{column}
-
-    \begin{column}{0.39\textwidth}
-      \lectureimage[2.55in]{slide14.png}
-    \end{column}
-  \end{columns}
-
-  \begin{keyidea}
-    A heuristic is useful only to the extent that its values meaningfully rank competing frontier states.
-  \end{keyidea}
-\end{frame}
-
 \sectionframe{Part 3: Greedy Best-First Search --- Follow the Heuristic}
 
 \begin{frame}[shrink=20]{Greedy Best-First Search}
@@ -406,27 +329,27 @@
   \end{keyidea}
 \end{frame}
 
-\begin{frame}[shrink=20]{Why Purely Greedy Search Can Be Misleading}
+\begin{frame}[shrink=20]{Uninformative Heuristic Regions}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.55\textwidth}
-      GBFS can perform well when the heuristic points reliably toward the goal.
+      An \textbf{uninformative region} occurs when many distinct states receive similar or identical heuristic values.
 
       \begin{itemize}
-        \item It may take long detours because it ignores $g(n)$.
-        \item A locally attractive state can lead into an expensive region.
-        \item Weak or deceptive heuristics can cause extensive exploration.
-        \item GBFS does not provide a general minimum-cost guarantee.
+        \item The heuristic cannot clearly distinguish which states are more promising.
+        \item Greedy Best-First Search or A* may expand many states unnecessarily.
+        \item Search can begin to resemble uninformed exploration.
+        \item Large flat regions can produce substantial slowdowns.
       \end{itemize}
-
-      \begin{block}{The missing information}
-        Search needs both what we have already paid and what we estimate remains.
-      \end{block}
     \end{column}
 
     \begin{column}{0.39\textwidth}
-      \lectureplaceholder[2.48in]{Pathfinding scene where a greedy route is drawn toward the goal but must detour around obstacles.}
+      \lectureimage[2.55in]{slide14.png}
     \end{column}
   \end{columns}
+
+  \begin{keyidea}
+    A heuristic is useful only to the extent that its values meaningfully rank competing frontier states.
+  \end{keyidea}
 \end{frame}
 
 \sectionframe{Part 4: A* Search --- Balance Cost-So-Far and Cost-to-Go}
