@@ -1,12 +1,39 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-07/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-07/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-07/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+% Inline Python without repeatedly escaping underscores and operators.
+\newcommand{\py}[1]{\texttt{\detokenize{#1}}}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{7}
 \lecturetitle{Code Tracing and Trace Tables}
-\lecturedate{September 9, 2026}
-\courseunit{3. Boolean Logic and Tracing}
+\lecturedate{Fall 2026}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
@@ -14,41 +41,814 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Code Tracing and Trace Tables
-    \item Placeholder for announcements and context.
+    \item How to reason about a Python program as a sequence of state changes.
+    \item How to build a trace table using \textbf{Line \#} and \textbf{Known bindings}.
+    \item How to distinguish program \textbf{state} from program \textbf{output}.
+    \item How assignment, reassignment, arithmetic, strings, conversions, comparisons, and Boolean operators interact during execution.
+    \item How to stop a trace at the first statement that cannot execute successfully.
   \end{itemize}
+
+  \begin{keyidea}
+    Tracing is not a new Python feature. It is a disciplined method for explaining what already-known Python statements do, one statement at a time.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}{Scope: Straight-Line Programs Only}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Included}
+        \begin{itemize}
+          \item assignment and reassignment,
+          \item arithmetic expressions,
+          \item \py{int}, \py{float}, \py{str}, and \py{bool},
+          \item type conversions,
+          \item comparisons,
+          \item \py{and}, \py{or}, and \py{not},
+          \item \py{print()}.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Not yet}
+        \begin{itemize}
+          \item conditionals,
+          \item loops,
+          \item functions,
+          \item lists,
+          \item user input,
+          \item exception handling,
+          \item repeated or nested control flow.
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Every program in this lecture executes exactly once from top to bottom.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\sectionframe{Part 1: Programs as Sequences of State Changes}
+
+\begin{frame}[shrink=8]{Execution Has an Order}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item Python executes a straight-line program in textual order: first statement, then second statement, then third statement, and so on.
+        \item Each statement sees the program state produced by all successfully completed statements above it.
+        \item A later assignment can change the state available to statements below it.
+        \item A later assignment does \emph{not} travel backward and recompute earlier assignments.
+      \end{itemize}
+
+      \begin{block}{Execution order}
+        \centering
+        \texttt{statement 1} $\rightarrow$ \texttt{statement 2} $\rightarrow$ \texttt{statement 3} $\rightarrow$ $\cdots$
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      % Search direction: vertical program lines with an execution arrow moving downward.
+      \lectureimage[2.55in]{execution-top-to-bottom.png}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Program State Means the Current Variable Associations}
+  \begin{cpdefinition}
+    The \textbf{program state} is the collection of variable names and the values currently associated with those names at a particular moment during execution.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{After one statement}
+        \py{x = 5}
+        \vspace{0.10in}
+
+        State: \py{x} $\rightarrow$ \py{5}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{After another statement}
+        \py{y = x + 2}
+        \vspace{0.10in}
+
+        State: \py{x} $\rightarrow$ \py{5}, \quad \py{y} $\rightarrow$ \py{7}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A trace table is a history of these states.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace One Assignment}
+  \begin{block}{Program}
+    \centering
+    \Large\py{x = 5}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|l}
+      \textbf{Line \#} & \textbf{Known bindings} \\\hline
+      1 & \emph{none} \\
+      End & \py{x -> 5}
+    \end{tabular}
+  \end{center}
+
+  \begin{enumerate}
+    \item Evaluate the right-hand side: \py{5} is already a value.
+    \item Associate \py{x} with \py{5}.
+    \item Advance to the next line; the new binding is visible in the next row of the trace.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Dependent Assignments Use the Current State}
+  \begin{block}{Program}
+    \py{x = 5}\\[0.06in]
+    \py{y = x * 2}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{c|l}
+      \textbf{Line \#} & \textbf{Known bindings} \\\hline
+      1 & \emph{none} \\
+      2 & \py{x -> 5} \\
+      End & \py{x -> 5, y -> 10}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    When the second statement executes, \py{x} already has a current value. Python retrieves that value before evaluating \py{x * 2}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Activity: Predict the State Before We Trace}
+  \begin{block}{Program}
+    \py{base = 8}\\
+    \py{height = base + 4}\\
+    \py{area = base * height}
+  \end{block}
+
+  \begin{activity}
+    Without running Python, determine the bindings known when execution reaches each line. Include an \textbf{End} row to show the state after the final statement.
+  \end{activity}
+
+  \begin{block}{Questions to ask yourself}
+    What values exist before each statement? Which names are read? Which name, if any, is updated?
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\sectionframe{Part 2: A Disciplined Tracing Procedure}
+
+\begin{frame}{The Five-Step Tracing Procedure}
+  \begin{enumerate}
+    \item Record the current line number and all bindings known \textbf{before} that line executes.
+    \item Evaluate the statement using only those currently known bindings.
+    \item If the statement is an assignment, update the set of bindings.
+    \item If the statement is \py{print()}, record the displayed output without changing the bindings.
+    \item Advance to the next line and record the updated bindings there. After the final line, record an \textbf{End} row.
+  \end{enumerate}
+
+  \begin{keyidea}
+    A numbered row describes the state \emph{when execution reaches that line}. The effects of that line appear in the next row.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=8]{A Trace Table Separates Time, State, and Output}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item The \textbf{Line \#} column identifies the statement Python is about to execute.
+        \item \textbf{Known bindings} records every variable-value association already established when execution reaches that line.
+        \item Therefore, line 1 begins with no known program-variable bindings.
+        \item The effect of an assignment first appears on the \emph{next} row; an \textbf{End} row records the state after the final statement.
+        \item Program output is recorded separately so that bindings and displayed output are not conflated.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Search direction: annotated trace table showing statement, state, and output regions.
+      \lectureimage[2.45in]{trace-table-anatomy.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Worked Trace: Assignment, Dependency, Reassignment, Output}
+  \begin{block}{Program}
+    \py{x = 5}\\
+    \py{y = x * 2}\\
+    \py{x = y - 3}\\
+    \py{print(x)}
+  \end{block}
+
+  \begin{center}
+    \scriptsize
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|l}
+      \textbf{Line \#} & \textbf{Known bindings} \\\hline
+      1 & \emph{none} \\
+      2 & \py{x -> 5} \\
+      3 & \py{x -> 5, y -> 10} \\
+      4 & \py{x -> 7, y -> 10} \\
+      End & \py{x -> 7, y -> 10}
+    \end{tabular}
+
+    \vspace{0.10in}
+    \textbf{Output produced at line 4:} \py{7}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Reassignment Replaces a Variable's Current Association}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Program fragment}
+        \py{x = 5}\\
+        \py{x = 10}
+      \end{block}
+
+      \begin{itemize}
+        \item After the first statement, \py{x} refers to \py{5}.
+        \item After the second statement, \py{x} refers to \py{10}.
+        \item The old association is no longer the current state for \py{x}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Search direction: variable x first pointing to 5, then arrow redirected to 10.
+      \lectureimage[2.35in]{reassignment-overwrites-current-state.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=8]{Reassignment Does Not Recompute Earlier Assignments}
+  \begin{block}{Program}
+    \py{x = 3}\\
+    \py{y = x + 2}\\
+    \py{x = 10}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.28}
+    \begin{tabular}{c|l}
+      \textbf{Line \#} & \textbf{Known bindings} \\\hline
+      1 & \emph{none} \\
+      2 & \py{x -> 3} \\
+      3 & \py{x -> 3, y -> 5} \\
+      End & \py{x -> 10, y -> 5}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Assignment stores the value computed at that moment. \py{y} does not contain a live formula that automatically follows future changes to \py{x}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Activity: Trace Reassignment Carefully}
+  \begin{block}{Program}
+    \py{a = 4}\\
+    \py{b = a + 6}\\
+    \py{a = b * 2}\\
+    \py{c = a - b}
+  \end{block}
+
+  \begin{activity}
+    Build the trace table using \textbf{Line \#} and \textbf{Known bindings}. Circle the row where the binding for \py{a} changes from its earlier value.
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 3: State Is Not Output}
+
+\begin{frame}{Assignment Changes State; \texttt{print()} Produces Output}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Assignment}
+        \centering
+        \Large\py{x = 7}
+      \end{block}
+      \begin{itemize}
+        \item Updates program state.
+        \item Displays nothing by itself.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Output}
+        \centering
+        \Large\py{print(x)}
+      \end{block}
+      \begin{itemize}
+        \item Reads the current value of \py{x}.
+        \item Displays that value.
+        \item Does not reassign \py{x}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Trace State and Record Output Separately}
+  \begin{block}{Program}
+    \py{price = 12}\\
+    \py{quantity = 3}\\
+    \py{total = price * quantity}\\
+    \py{print(total)}
+  \end{block}
+
+  \begin{center}
+    \scriptsize
+    \renewcommand{\arraystretch}{1.22}
+    \begin{tabular}{c|l}
+      \textbf{Line \#} & \textbf{Known bindings} \\\hline
+      1 & \emph{none} \\
+      2 & \py{price -> 12} \\
+      3 & \py{price -> 12, quantity -> 3} \\
+      4 & \py{price -> 12, quantity -> 3, total -> 36} \\
+      End & \py{price -> 12, quantity -> 3, total -> 36}
+    \end{tabular}
+
+    \vspace{0.10in}
+    \textbf{Output produced at line 4:} \py{36}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Activity: Predict Both State and Output}
+  \begin{block}{Program}
+    \py{minutes = 90}\\
+    \py{hours = minutes / 60}\\
+    \py{print(hours)}\\
+    \py{minutes = 120}
+  \end{block}
+
+  \begin{activity}
+    Trace the program. After the final statement, what is the state? What was displayed earlier? Keep those answers separate.
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 4: Tracing Arithmetic and Basic Types}
+
+\begin{frame}{Arithmetic Expressions Are Evaluated Before Assignment}
+  \begin{block}{Program}
+    \py{width = 8}\\
+    \py{height = 5}\\
+    \py{area = width * height}\\
+    \py{perimeter = 2 * (width + height)}
+  \end{block}
+
+  \begin{block}{Evaluation of one statement}
+    \centering
+    \py{perimeter = 2 * (width + height)}\\[0.08in]
+    $\downarrow$ substitute current values\\[0.08in]
+    \py{perimeter = 2 * (8 + 5)} $\rightarrow$ \py{perimeter = 26}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Code Writing: Rectangle Calculator}
+  \begin{activity}
+    Write a straight-line Python script for a rectangle with width \py{7.5} and height \py{4}.
+
+    Your script should:
+    \begin{enumerate}
+      \item store the width and height,
+      \item calculate the area,
+      \item calculate the perimeter,
+      \item print the area,
+      \item print the perimeter.
+    \end{enumerate}
+  \end{activity}
+
+  \begin{keyidea}
+    Before running it, predict the value and type of every variable.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{One Possible Rectangle Calculator}
+  \begin{block}{Script}
+    \py{width = 7.5}\\
+    \py{height = 4}\\
+    \py{area = width * height}\\
+    \py{perimeter = 2 * (width + height)}\\
+    \py{print(area)}\\
+    \py{print(perimeter)}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item \py{width} is a \py{float}; \py{height} is an \py{int}.
+    \item The arithmetic expressions involving \py{width} produce floating-point results.
+    \item The two \py{print()} statements produce output but do not modify the four variables.
   \end{itemize}
+\end{frame}
+
+\begin{frame}[shrink=8]{Division Often Introduces a Floating-Point Value}
+  \begin{block}{Program}
+    \py{distance = 150}\\
+    \py{time = 2}\\
+    \py{speed = distance / time}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{c|l}
+      \textbf{Line \#} & \textbf{Known bindings} \\\hline
+      1 & \emph{none} \\
+      2 & \py{distance -> 150} \\
+      3 & \py{distance -> 150, time -> 2} \\
+      End & \py{distance -> 150, time -> 2, speed -> 75.0}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    A correct trace records both value and, when relevant, type: \py{75.0} is not written as \py{75}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Strings Can Depend on Numeric Computations}
+  \begin{block}{Program}
+    \py{units = 4}\\
+    \py{hours = 3.5}\\
+    \py{workload = units * hours}\\
+    \py{label = "Estimated workload: " + str(workload)}
+  \end{block}
+
+  \begin{block}{Last statement}
+    \py{workload} has the numeric value \py{14.0}.\\[0.08in]
+    \py{str(workload)} produces the string \py{"14.0"}.\\[0.08in]
+    Concatenation produces \py{"Estimated workload: 14.0"}.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Trace Mixed Numeric and String Values}
+  \begin{center}
+    \scriptsize
+    \renewcommand{\arraystretch}{1.20}
+    \begin{tabular}{c|l}
+      \textbf{Line \#} & \textbf{Known bindings} \\\hline
+      1 & \emph{none} \\
+      2 & \py{units -> 4} \\
+      3 & \py{units -> 4, hours -> 3.5} \\
+      4 & \py{units -> 4, hours -> 3.5, workload -> 14.0} \\
+      End & \py{units -> 4, hours -> 3.5, workload -> 14.0, label -> "Estimated workload: 14.0"}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The trace records the value actually stored in each variable, not merely the source expression that produced it.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Code Writing: Workload Estimate}
+  \begin{activity}
+    Write a straight-line script that stores:
+    \begin{itemize}
+      \item \py{courses = 5},
+      \item \py{hours_per_course = 4.5},
+      \item the total weekly hours,
+      \item a string such as \py{"Weekly hours: 22.5"}.
+    \end{itemize}
+
+    Print the final string. Use \py{str()} only where it is needed.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{One Possible Workload Script}
+  \begin{block}{Script}
+    \py{courses = 5}\\
+    \py{hours_per_course = 4.5}\\
+    \py{weekly_hours = courses * hours_per_course}\\
+    \py{summary = "Weekly hours: " + str(weekly_hours)}\\
+    \py{print(summary)}
+  \end{block}
+
+  \begin{itemize}
+    \item The arithmetic result is \py{22.5}.
+    \item The conversion produces \py{"22.5"} for concatenation.
+    \item The variable \py{weekly_hours} remains numeric; converting it for the string does not reassign it.
+  \end{itemize}
+\end{frame}
+
+\sectionframe{Part 5: Tracing Comparisons and Boolean Values}
+
+\begin{frame}{Comparisons Produce Values That Can Be Traced}
+  \begin{block}{Program}
+    \py{score = 84}\\
+    \py{minimum_score = 70}\\
+    \py{is_passing = score >= minimum_score}
+  \end{block}
+
+  \begin{block}{Evaluation}
+    \centering
+    \py{score >= minimum_score} $\rightarrow$ \py{84 >= 70} $\rightarrow$ \py{True}
+  \end{block}
+
+  \begin{keyidea}
+    The comparison is evaluated first; assignment then associates \py{is_passing} with the Boolean result.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Boolean Variables Become Part of Program State}
+  \begin{block}{Program}
+    \py{score = 84}\\
+    \py{minimum_score = 70}\\
+    \py{is_passing = score >= minimum_score}\\
+    \py{is_honors = score >= 90}\\
+    \py{eligible = is_passing and not is_honors}
+  \end{block}
+
+  \begin{center}
+    \scriptsize
+    \renewcommand{\arraystretch}{1.16}
+    \begin{tabular}{c|l}
+      \textbf{Line \#} & \textbf{Known bindings} \\\hline
+      1 & \emph{none} \\
+      2 & \py{score -> 84} \\
+      3 & \py{score -> 84, minimum_score -> 70} \\
+      4 & \py{score -> 84, minimum_score -> 70, is_passing -> True} \\
+      5 & \py{score -> 84, minimum_score -> 70, is_passing -> True, is_honors -> False} \\
+      End & \py{score -> 84, minimum_score -> 70, is_passing -> True, is_honors -> False, eligible -> True}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Do Not Confuse Assignment with Equality Comparison}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Assignment}
+        \centering
+        \Large\py{x = 10}
+      \end{block}
+      Changes the state of \py{x}.
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Comparison}
+        \centering
+        \Large\py{x == 10}
+      \end{block}
+      Computes \py{True} or \py{False}; does not change \py{x}.
+    \end{column}
+  \end{columns}
+
+  \begin{activity}
+    Suppose \py{x} currently equals \py{7}. Describe the effect and result of each expression above.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Code Writing: A Simple Budget Check}
+  \begin{activity}
+    Write a straight-line script that stores:
+    \begin{itemize}
+      \item \py{budget = 100},
+      \item \py{item_price = 64.50},
+      \item \py{tax_rate = 0.08},
+      \item the tax,
+      \item the total cost,
+      \item a Boolean named \py{within_budget} that compares the total cost with the budget.
+    \end{itemize}
+
+    Print \py{total_cost} and \py{within_budget}. Do not use a conditional statement.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{One Possible Budget Script}
+  \begin{block}{Script}
+    \py{budget = 100}\\
+    \py{item_price = 64.50}\\
+    \py{tax_rate = 0.08}\\
+    \py{tax = item_price * tax_rate}\\
+    \py{total_cost = item_price + tax}\\
+    \py{within_budget = total_cost <= budget}\\
+    \py{print(total_cost)}\\
+    \py{print(within_budget)}
+  \end{block}
+
+  \begin{keyidea}
+    A Boolean can summarize a relationship among previously computed values even though the program does not yet make a decision based on it.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: Full Trace Synthesis}
+
+\begin{frame}{Integrated Example}
+  \begin{block}{Program}
+    \py{x = 3}\\
+    \py{y = x + 2}\\
+    \py{x = 10}\\
+    \py{z = x + y}\\
+    \py{larger = z > 10}\\
+    \py{same = x == y}\\
+    \py{result = larger and not same}\\
+    \py{print(result)}
+  \end{block}
+
+  \begin{activity}
+    Before tracing, predict the final value and type of every variable.
+  \end{activity}
+\end{frame}
+
+\begin{frame}[shrink=8]{Integrated Example: Complete Trace}
+  \begin{center}
+    \scriptsize
+    \renewcommand{\arraystretch}{1.16}
+    \begin{tabular}{c|l}
+      \textbf{Line \#} & \textbf{Known bindings} \\\hline
+      1 & \emph{none} \\
+      2 & \py{x -> 3} \\
+      3 & \py{x -> 3, y -> 5} \\
+      4 & \py{x -> 10, y -> 5} \\
+      5 & \py{x -> 10, y -> 5, z -> 15} \\
+      6 & \py{x -> 10, y -> 5, z -> 15, larger -> True} \\
+      7 & \py{x -> 10, y -> 5, z -> 15, larger -> True, same -> False} \\
+      8 & \py{x -> 10, y -> 5, z -> 15, larger -> True, same -> False, result -> True} \\
+      End & \py{x -> 10, y -> 5, z -> 15, larger -> True, same -> False, result -> True}
+    \end{tabular}
+
+    \vspace{0.08in}
+    \textbf{Output produced at line 8:} \py{True}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Read the Integrated Trace as a Sequence of Questions}
+  \begin{enumerate}
+    \item When \py{y = x + 2} executes, which \py{x} exists? \textbf{3}.
+    \item After \py{x = 10}, does \py{y} change? \textbf{No}; it remains \textbf{5}.
+    \item What values does \py{z = x + y} read? \textbf{10} and \textbf{5}.
+    \item What does \py{z > 10} compare? \textbf{15} and \textbf{10}.
+    \item What does \py{x == y} compare? \textbf{10} and \textbf{5}.
+    \item What does \py{larger and not same} evaluate to? \textbf{True}.
+    \item What changes on the final line? \textbf{Output only}.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Activity: Trace a Calculation Script}
+  \begin{block}{Program}
+    \py{miles = 180}\\
+    \py{gallons = 6}\\
+    \py{mpg = miles / gallons}\\
+    \py{target = 28}\\
+    \py{meets_target = mpg >= target}\\
+    \py{message = "MPG: " + str(mpg)}\\
+    \py{print(message)}\\
+    \py{print(meets_target)}
+  \end{block}
+
+  \begin{activity}
+    Construct the complete trace table using Line \# and Known bindings. Include variable types in annotations beside your table.
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 7: Tracing to the First Error}
+
+\begin{frame}{A Trace Stops When a Statement Cannot Complete}
+  \begin{block}{Program}
+    \py{count = 5}\\
+    \py{label = "Count: " + count}\\
+    \py{double = count * 2}
+  \end{block}
+
+  \begin{itemize}
+    \item The first statement executes successfully: \py{count} becomes \py{5}.
+    \item The second statement attempts to concatenate a string and an integer directly.
+    \item That statement does not successfully produce a value for \py{label}.
+    \item Execution stops there; the later assignment to \py{double} is not traced as executed.
+  \end{itemize}
+
+  \begin{alertblock}{Tracing rule}
+    Identify the first failing statement. Do not invent state changes from statements that were never reached.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Trace Only the Successfully Completed State}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.28}
+    \begin{tabular}{c|l}
+      \textbf{Line \#} & \textbf{Known bindings} \\\hline
+      1 & \emph{none} \\
+      2 & \py{count -> 5}
+    \end{tabular}
+
+    \vspace{0.10in}
+    \textbf{Line 2 fails.} No binding for \py{label} is created; execution stops with \py{count -> 5}.
+  \end{center}
+
+  \begin{activity}
+    Rewrite only the failing statement so that the program can continue, using a type conversion already introduced in this course.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Common Tracing Errors}
+  \begin{itemize}
+    \item Reading the whole program as though all assignments happen simultaneously.
+    \item Forgetting that reassignment replaces a variable's current value.
+    \item Recomputing a previous assignment after one of its source variables changes.
+    \item Treating \py{print()} as though it changes program state.
+    \item Confusing \py{=} with \py{==}.
+    \item Treating \py{"5"} and \py{5} as interchangeable values.
+    \item Skipping rows and losing the exact moment when state changes.
+    \item Reporting only the final answer instead of showing the execution history.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{A Useful Self-Check for Every Row}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{enumerate}
+        \item What statement just executed?
+        \item What values did it read?
+        \item What expression result did it compute?
+        \item What variable, if any, changed?
+        \item What output, if any, appeared?
+      \end{enumerate}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Search direction: checklist beside a small trace table, emphasizing one row at a time.
+      \lectureimage[2.35in]{trace-row-checklist.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 8: Writing Small Scripts You Can Trace}
+
+\begin{frame}{Code Writing: Temperature Conversion}
+  \begin{activity}
+    Write a straight-line script that:
+    \begin{enumerate}
+      \item stores \py{fahrenheit = 77},
+      \item computes Celsius using \py{(fahrenheit - 32) * 5 / 9},
+      \item builds a string beginning with \py{"Celsius: "},
+      \item prints the string,
+      \item stores a Boolean named \py{is_warm} that is true when Celsius is at least \py{20}.
+    \end{enumerate}
+
+    Predict the known bindings at each line before running it, and include the final bindings at \textbf{End}.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{One Possible Temperature Script}
+  \begin{block}{Script}
+    \py{fahrenheit = 77}\\
+    \py{celsius = (fahrenheit - 32) * 5 / 9}\\
+    \py{label = "Celsius: " + str(celsius)}\\
+    \py{print(label)}\\
+    \py{is_warm = celsius >= 20}
+  \end{block}
+
+  \begin{itemize}
+    \item The calculation produces \py{25.0}.
+    \item \py{label} stores \py{"Celsius: 25.0"}.
+    \item Printing the label does not change it.
+    \item \py{is_warm} becomes \py{True}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Code Writing: Purchase Summary}
+  \begin{activity}
+    Write a script for a purchase of \py{3} notebooks at \py{2.75} dollars each.
+
+    Include variables for:
+    \begin{itemize}
+      \item quantity,
+      \item unit price,
+      \item subtotal,
+      \item a fixed shipping cost of \py{4.00},
+      \item final total,
+      \item a Boolean that records whether the final total is less than \py{15},
+      \item a printable string summary of the final total.
+    \end{itemize}
+  \end{activity}
+\end{frame}
+
+\begin{frame}{From Writing to Tracing}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{When writing}
+        \begin{itemize}
+          \item Choose meaningful variable names.
+          \item Build calculations from previously available values.
+          \item Keep each statement conceptually simple.
+          \item Predict values before running.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+      \begin{block}{When tracing}
+        \begin{itemize}
+          \item Respect top-to-bottom order.
+          \item Use only the current state.
+          \item Record every state-changing statement.
+          \item Separate state from displayed output.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Writing and tracing reinforce the same execution model from opposite directions.
+  \end{keyidea}
 \end{frame}
 
 \end{document}
