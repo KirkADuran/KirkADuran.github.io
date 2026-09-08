@@ -14,18 +14,6 @@
   }%
 }
 
-% Temporary visible placeholder used while lecture assets are being assembled.
-% Replace each placeholder with \lectureimage[...]{} once the corresponding asset exists.
-\newcommand{\lectureplaceholder}[2][1.75in]{%
-  \begin{center}
-    \fbox{%
-      \parbox[c][#1][c]{0.90\linewidth}{%
-        \centering\small\textcolor{DeckMuted}{\textbf{Image placeholder}\\[0.08in]#2}%
-      }%
-    }
-  \end{center}%
-}
-
 \setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
@@ -74,7 +62,7 @@
     \end{column}
 
     \begin{column}{0.39\textwidth}
-      \lectureplaceholder[2.55in]{Contrast a search tree/path with a single candidate configuration, such as a partially scrambled cube or optimization state.}
+      \lectureimage[2.55in]{slide4.png}
     \end{column}
   \end{columns}
 
@@ -101,7 +89,7 @@
     \end{column}
 
     \begin{column}{0.40\textwidth}
-      \lectureplaceholder[2.65in]{Exponentially expanding search tree beside a Rubik's Cube; label branching factor approximately 18.}
+      \lectureimage[2.65in]{slide5.png}
     \end{column}
   \end{columns}
 
@@ -130,7 +118,7 @@
     \end{column}
 
     \begin{column}{0.42\textwidth}
-      \lectureplaceholder[2.45in]{Single current-state node surrounded by neighboring states; arrows emphasize local movement rather than a stored tree.}
+      \lectureimage[2.45in]{slide6.png}
     \end{column}
   \end{columns}
 
@@ -156,7 +144,7 @@
     \end{column}
 
     \begin{column}{0.44\textwidth}
-      \lectureplaceholder[2.65in]{Two 8-queens boards: one conflicted configuration and one valid non-attacking configuration.}
+      \lectureimage[2.65in]{slide7.png}
     \end{column}
   \end{columns}
 
@@ -189,7 +177,7 @@
     \end{column}
 
     \begin{column}{0.42\textwidth}
-      \lectureplaceholder[2.45in]{Objective-function diagram for 8 queens showing attacking queen pairs and a conflict score.}
+      \lectureimage[2.45in]{slide9.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -214,7 +202,7 @@
     \end{column}
 
     \begin{column}{0.44\textwidth}
-      \lectureplaceholder[2.60in]{One 8-queens board with arrows showing a single queen moving within its column; annotate 56 possible neighbors.}
+      \lectureimage[2.60in]{slide10.png}
     \end{column}
   \end{columns}
 
@@ -241,7 +229,7 @@
     \end{column}
 
     \begin{column}{0.41\textwidth}
-      \lectureplaceholder[2.65in]{3D objective landscape labeled current state, shoulder, local maximum, flat local maximum, and global maximum.}
+      \lectureimage[2.65in]{slide11.png}
     \end{column}
   \end{columns}
 
@@ -272,7 +260,7 @@
     \end{column}
 
     \begin{column}{0.41\textwidth}
-      \lectureplaceholder[2.55in]{Objective surface with a trajectory climbing from a low point to a nearby peak.}
+      \lectureimage[2.55in]{slide13.png}
     \end{column}
   \end{columns}
 
@@ -325,7 +313,7 @@
     \end{column}
 
     \begin{column}{0.42\textwidth}
-      \lectureplaceholder[2.60in]{8-queens board over a contour landscape; show one queen move reducing the number of attacking pairs.}
+      \lectureimage[2.60in]{slide15.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -344,7 +332,7 @@
     \end{column}
 
     \begin{column}{0.41\textwidth}
-      \lectureplaceholder[2.70in]{Landscape labeled local maximum, global optimum, ridge, plateau, shoulder, and flat local maximum.}
+      \lectureimage[2.70in]{slide16.png}
     \end{column}
   \end{columns}
 
@@ -370,7 +358,7 @@
     \end{column}
 
     \begin{column}{0.40\textwidth}
-      \lectureplaceholder[2.55in]{Plateau landscape with a sideways trajectory, an eventual uphill exit, and a loop-risk annotation.}
+      \lectureimage[2.55in]{slide17.png}
     \end{column}
   \end{columns}
 
@@ -396,7 +384,7 @@
     \end{column}
 
     \begin{column}{0.41\textwidth}
-      \lectureplaceholder[2.55in]{Landscape with several improving arrows and one randomly selected stochastic uphill move.}
+      \lectureimage[2.55in]{slide18.png}
     \end{column}
   \end{columns}
 
@@ -423,7 +411,7 @@
     \end{column}
 
     \begin{column}{0.40\textwidth}
-      \lectureplaceholder[2.50in]{Current state with many possible neighbors; highlight the first sampled neighbor that improves the objective.}
+      \lectureimage[2.50in]{slide19.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -445,7 +433,7 @@
     \end{column}
 
     \begin{column}{0.42\textwidth}
-      \lectureplaceholder[2.65in]{Multi-peak landscape with several random starting points and independent hill-climbing trajectories.}
+      \lectureimage[2.65in]{slide20.png}
     \end{column}
   \end{columns}
 
@@ -478,7 +466,7 @@
     \end{column}
 
     \begin{column}{0.42\textwidth}
-      \lectureplaceholder[2.65in]{Annealing landscape showing an early trajectory that crosses out of a local optimum and later settles near a global optimum.}
+      \lectureimage[2.65in]{slide22.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -530,7 +518,7 @@
         \end{itemize}
       \end{block}
 
-      \lectureplaceholder[1.40in]{Temperature-versus-time curves comparing fast and slow cooling schedules.}
+      \lectureimage[1.40in]{slide24.jpeg}
     \end{column}
   \end{columns}
 
@@ -562,7 +550,7 @@
     \end{column}
 
     \begin{column}{0.41\textwidth}
-      \lectureplaceholder[2.60in]{Beam-search tree showing $k$ retained states at each level while other successors are discarded.}
+      \lectureimage[2.60in]{slide26.png}
     \end{column}
   \end{columns}
 
@@ -588,7 +576,6 @@
     \end{column}
 
     \begin{column}{0.46\textwidth}
-      \lectureplaceholder[2.55in]{Two beam-search sketches: one collapsing to similar states and one maintaining diverse branches.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -607,7 +594,6 @@
     \end{column}
 
     \begin{column}{0.46\textwidth}
-      \lectureplaceholder[2.60in]{Four-stage infographic: crowd of candidates $\rightarrow$ fitness filter $\rightarrow$ recombination $\rightarrow$ random mutation spark.}
     \end{column}
   \end{columns}
 
@@ -642,7 +628,7 @@
   \end{columns}
 
   \vspace{0.10in}
-  \lectureplaceholder[1.45in]{Genetic-algorithm cycle showing population $\rightarrow$ selection $\rightarrow$ crossover $\rightarrow$ mutation $\rightarrow$ next generation.}
+  \lectureimage[1.45in]{slide29.png}
 
   \begin{keyidea}
     Genetic algorithms perform global exploration by evolving a population rather than improving only one current state.
@@ -650,20 +636,28 @@
 \end{frame}
 
 \begin{frame}[shrink=20]{Genetic-Algorithm Pseudocode}
-  \begin{block}{Algorithmic structure}
-  \ttfamily\small
-  population $\leftarrow$ RANDOM\_POPULATION()\\[0.03in]
-  while stopping condition not met:\\
-  \quad evaluate FITNESS for every individual\\
-  \quad new\_population $\leftarrow [\ ]$\\[0.03in]
-  \quad while new\_population is not full:\\
-  \qquad parent1, parent2 $\leftarrow$ SELECT(population)\\
-  \qquad child $\leftarrow$ CROSSOVER(parent1,parent2)\\
-  \qquad child $\leftarrow$ MUTATE(child)\\
-  \qquad add child to new\_population\\[0.03in]
-  \quad population $\leftarrow$ new\_population\\[0.03in]
-  return best individual
-  \end{block}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.60\textwidth}
+      \begin{block}{Algorithmic structure}
+      \ttfamily\scriptsize
+      population $\leftarrow$ RANDOM\_POPULATION()\\[0.03in]
+      while stopping condition not met:\\
+      \quad evaluate FITNESS for every individual\\
+      \quad new\_population $\leftarrow [\ ]$\\[0.03in]
+      \quad while new\_population is not full:\\
+      \qquad parent1, parent2 $\leftarrow$ SELECT(population)\\
+      \qquad child $\leftarrow$ CROSSOVER(parent1,parent2)\\
+      \qquad child $\leftarrow$ MUTATE(child)\\
+      \qquad add child to new\_population\\[0.03in]
+      \quad population $\leftarrow$ new\_population\\[0.03in]
+      return best individual
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.34\textwidth}
+      \lectureimage[2.65in]{slide30.jpeg}
+    \end{column}
+  \end{columns}
 
   \begin{keyidea}
     Selection increases pressure toward strong solutions, while crossover and mutation generate new combinations for later generations.
@@ -690,7 +684,7 @@
     \end{column}
 
     \begin{column}{0.40\textwidth}
-      \lectureplaceholder[2.75in]{8-queens genetic encoding with two parent vectors, crossover point, child vector, and a single-row mutation.}
+      \lectureimage[2.75in]{slide31.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -791,7 +785,6 @@
     \end{column}
 
     \begin{column}{0.40\textwidth}
-      \lectureplaceholder[2.55in]{Classical-AI local-search iconography beside modern generative-AI imagery; include optimization, robotics, and game examples.}
     \end{column}
   \end{columns}
 
