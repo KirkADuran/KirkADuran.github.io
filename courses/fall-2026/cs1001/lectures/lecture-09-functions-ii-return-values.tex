@@ -1,12 +1,46 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-09/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-09/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-09/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\newcommand{\lectureplaceholder}[2][1.75in]{%
+  \fbox{%
+    \parbox[c][#1][c]{0.94\linewidth}{%
+      \centering
+      \small\textbf{Image Placeholder}\\[0.08in]
+      \scriptsize #2
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{9}
-\lecturetitle{Functions II -- Return Values}
-\lecturedate{September 14, 2026}
-\courseunit{4. Function Fundamentals}
+\lecturetitle{Functions II --- Return Values}
+\lecturedate{Fall 2026}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
@@ -14,41 +48,667 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Functions II -- Return Values
-    \item Placeholder for announcements and context.
+    \item Treat a value-returning function call as an expression that itself produces a value.
+    \item Trace argument evaluation and positional parameter binding explicitly.
+    \item Model one function call using a temporary local execution environment.
+    \item Define the semantics of \texttt{return}: evaluate a value, end the call, and resume the caller.
+    \item Distinguish returning a value from printing a value.
+    \item Trace repeated calls to the same function without conflating their local bindings.
   \end{itemize}
+
+  \begin{keyidea}
+    Lecture 8 treated a function as an abstraction. Today we open one call and trace exactly how its value is produced.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: A Function Call Is an Expression}
+
+\begin{frame}{Expressions Produce Values}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item An expression is evaluated to obtain a value.
+        \item Assignment then binds a name to that resulting value.
+        \item This model does not change when the expression is a function call.
+      \end{itemize}
+
+      \begin{block}{Arithmetic expression}
+        \texttt{answer = 3 + 4}
+      \end{block}
+
+      \begin{block}{Function-call expression}
+        \texttt{answer = double(4)}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Intended visual: two expression trees, one arithmetic and one function call,
+      % each reducing to a single value before assignment.
+      \lectureimage[2.65in]{call-is-expression.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The Returned Value Can Participate in a Larger Expression}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Assignment}
+        \texttt{x = double(4)}\\[0.06in]
+        \texttt{double(4) -> 8}\\
+        \texttt{x -> 8}
+      \end{block}
+
+      \begin{block}{Arithmetic context}
+        \texttt{y = 3 + double(4)}\\[0.06in]
+        \texttt{3 + 8 -> 11}\\
+        \texttt{y -> 11}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Comparison context}
+        \texttt{double(4) > 5}\\[0.06in]
+        \texttt{8 > 5 -> True}
+      \end{block}
+
+      \begin{alertblock}{Boundary for today}
+        We will use ordinary expressions as arguments. Function calls nested inside other function calls are deferred to Lecture 10.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 2: The Function-Call Evaluation Model}
+
+\begin{frame}{A Call Temporarily Changes the Flow of Execution}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Initial code normally executes sequentially.
+        \item At a function call, evaluation transfers to the function body.
+        \item The body executes in its own local execution environment.
+        \item When the call returns, the suspended caller resumes.
+      \end{itemize}
+
+      \begin{block}{Control-flow shape}
+        \centering
+        caller $\rightarrow$ function body $\rightarrow$ caller resumes
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: a control-flow arrow leaving the caller, entering a function,
+      % then returning to the exact call site.
+      \lectureimage[2.55in]{call-control-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=4]{The Call-Evaluation Procedure}
+  \begin{enumerate}
+    \item Encounter the function-call expression.
+    \item Evaluate each argument expression to obtain argument values.
+    \item Create a new local execution environment for this call.
+    \item Bind each parameter name to its corresponding argument value.
+    \item Execute statements in the function body sequentially.
+    \item When \texttt{return expression} is encountered, evaluate that expression.
+    \item End the current call and make the resulting value available to the caller.
+    \item Resume evaluation at the location of the original call.
+  \end{enumerate}
+
+  \begin{keyidea}
+    This procedure is the mental model we will repeatedly test with manual traces and the debugger.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace One Call from Start to Finish}
+  \begin{block}{Program}
+    \texttt{def double(n: int) -> int:}\\
+    \hspace*{0.22in}\texttt{result = n * 2}\\
+    \hspace*{0.22in}\texttt{return result}\\[0.08in]
+    \texttt{x = 4}\\
+    \texttt{answer = double(x)}
+  \end{block}
+
+  \begin{block}{Before the call}
+    \texttt{x -> 4}\qquad\texttt{answer: not yet bound}
+  \end{block}
+
+  \begin{activity}
+    Predict the values of \texttt{n}, \texttt{result}, the returned value, and finally \texttt{answer}.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{The Argument Value Becomes the Parameter Binding}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Caller}
+        \texttt{x -> 4}
+      \end{block}
+
+      \begin{block}{Argument expression}
+        \texttt{x} $\longrightarrow$ \texttt{4}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Call to \texttt{double}}
+        \texttt{n -> 4}
+      \end{block}
+
+      \begin{itemize}
+        \item The name \texttt{x} is not renamed to \texttt{n}.
+        \item The expression \texttt{x} is evaluated.
+        \item Its resulting value is bound to \texttt{n}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Data crosses the function boundary as a value; caller variable names do not become parameter names.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Function Body Then Executes Sequentially}
+  \begin{block}{At function entry}
+    \texttt{n -> 4}
+  \end{block}
+
+  \begin{block}{Execute the first statement}
+    \texttt{result = n * 2}\\[0.06in]
+    \texttt{n * 2} $\longrightarrow$ \texttt{4 * 2} $\longrightarrow$ \texttt{8}\\[0.06in]
+    therefore \texttt{result -> 8}
+  \end{block}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item Parameters already have bindings when the function body begins.
+    \item Local variables appear only when their assignment statements execute.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Returning Reconnects the Function with Its Caller}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{block}{Inside \texttt{double}}
+        \texttt{return result}\\[0.06in]
+        \texttt{result -> 8}\\[0.06in]
+        returned value: \texttt{8}
+      \end{block}
+
+      \begin{block}{Back in the caller}
+        \texttt{answer = double(x)}\\
+        conceptually becomes\\
+        \texttt{answer = 8}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      % Intended visual: value 8 leaving a local function environment and flowing
+      % back into the suspended assignment in the caller.
+      \lectureimage[2.55in]{return-to-caller.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 3: Arguments and Parameters}
+
+\begin{frame}{Arguments Are Expressions; Parameters Are Local Names}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{cpdefinition}
+        An \textbf{argument} is an expression supplied at a function-call site.
+      \end{cpdefinition}
+
+      \begin{block}{Call site}
+        \texttt{difference(x, y)}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{cpdefinition}
+        A \textbf{parameter} is a local name declared in a function definition.
+      \end{cpdefinition}
+
+      \begin{block}{Definition}
+        \texttt{def difference(first, second):}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Arguments are evaluated; parameters receive bindings to the resulting values.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Multiple Positional Arguments Bind by Position}
+  \begin{block}{Function and call}
+    \texttt{def difference(first: int, second: int) -> int:}\\
+    \hspace*{0.22in}\texttt{return first - second}\\[0.08in]
+    \texttt{answer = difference(10, 4)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|c|c}
+      \textbf{Position} & \textbf{Argument value} & \textbf{Parameter binding} \\\hline
+      1 & \texttt{10} & \texttt{first -> 10} \\
+      2 & \texttt{4} & \texttt{second -> 4}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Changing Argument Order Changes the Bindings}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Call A}
+        \texttt{difference(10, 4)}\\[0.08in]
+        \texttt{first -> 10}\\
+        \texttt{second -> 4}\\[0.08in]
+        result: \texttt{6}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Call B}
+        \texttt{difference(4, 10)}\\[0.08in]
+        \texttt{first -> 4}\\
+        \texttt{second -> 10}\\[0.08in]
+        result: \texttt{-6}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Positional semantics}
+    Python does not infer intended roles from the values. For positional arguments, position determines the parameter binding.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Caller Names Do Not Need to Match Parameter Names}
+  \begin{block}{Program}
+    \texttt{def rectangle\_area(width: int, height: int) -> int:}\\
+    \hspace*{0.22in}\texttt{return width * height}\\[0.08in]
+    \texttt{w = 5}\\
+    \texttt{h = 3}\\
+    \texttt{area = rectangle\_area(w, h)}
+  \end{block}
+
+  \begin{block}{Data movement}
+    \centering
+    \texttt{w -> 5 -> width}
+    \qquad
+    \texttt{h -> 3 -> height}
+  \end{block}
+
+  \begin{keyidea}
+    Names are meaningful within their own context. The values, not the caller's variable names, are passed into the call.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace an Argument Expression Pedantically}
+  \begin{block}{Statement}
+    \centering
+    \Large\texttt{answer = square(x + 2)}
+  \end{block}
+
+  \begin{enumerate}
+    \item Evaluate \texttt{x}: obtain \texttt{3}.
+    \item Evaluate \texttt{3 + 2}: obtain \texttt{5}.
+    \item Bind \texttt{n -> 5} for this call.
+    \item Evaluate \texttt{n * n}: obtain \texttt{25}.
+    \item Return \texttt{25} to the caller.
+    \item Bind \texttt{answer -> 25}.
+  \end{enumerate}
+\end{frame}
+
+\sectionframe{Part 4: The Semantics of \texttt{return}}
+
+\begin{frame}{\texttt{return} Ends the Current Function Call}
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item Once an executed \texttt{return} is reached, the current call is complete.
+    \item Control transfers back to the caller.
+    \item The caller receives the returned value as the value of the call expression.
   \end{itemize}
+
+  \begin{block}{Conceptual rule}
+    \centering
+    \texttt{return expression}
+    $\Longrightarrow$
+    evaluate expression $\rightarrow$ end call $\rightarrow$ resume caller
+  \end{block}
+
+  \begin{alertblock}{Terminology}
+    Avoid saying that \texttt{return} ``prints the answer'' or ``stores the answer.'' Neither description captures its semantics.
+  \end{alertblock}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{The Caller Determines What Happens to the Returned Value}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Store it}
+        \texttt{x = square(4)}\\[0.08in]
+        \texttt{x -> 16}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Use it}
+        \texttt{y = 2 * square(4)}\\[0.08in]
+        \texttt{y -> 32}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Ignore it}
+        \texttt{square(4)}\\[0.08in]
+        value produced, but not bound
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A function returns a value to its caller; the surrounding caller expression determines how that value is used.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Printing and Returning Are Different Operations}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Return a value}
+        \texttt{def square\_return(n):}\\
+        \hspace*{0.18in}\texttt{return n * n}
+      \end{block}
+      \begin{itemize}
+        \item Produces a value for the caller.
+        \item The caller can store or combine that value.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Print a value}
+        \texttt{def square\_print(n):}\\
+        \hspace*{0.18in}\texttt{print(n * n)}
+      \end{block}
+      \begin{itemize}
+        \item Produces visible output as a side effect.
+        \item Does not explicitly return the printed number.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A Function Without Explicit \texttt{return} Returns \texttt{None}}
+  \begin{block}{Example}
+    \texttt{def square\_print(n):}\\
+    \hspace*{0.22in}\texttt{print(n * n)}\\[0.08in]
+    \texttt{result = square\_print(4)}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Visible output}
+        \centering
+        \texttt{16}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Returned value}
+        \centering
+        \texttt{None}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Visible output and a returned value are independent concepts.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Prediction: Return or Print?}
+  \begin{block}{Program}
+    \texttt{def show\_double(n):}\\
+    \hspace*{0.22in}\texttt{print(n * 2)}\\[0.08in]
+    \texttt{def get\_double(n):}\\
+    \hspace*{0.22in}\texttt{return n * 2}\\[0.08in]
+    \texttt{a = show\_double(6)}\\
+    \texttt{b = get\_double(6)}
+  \end{block}
+
+  \begin{activity}
+    Predict (1) what is displayed, (2) the final binding of \texttt{a}, and (3) the final binding of \texttt{b}. Explain each using call semantics rather than intuition.
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 5: Local Bindings and Independent Calls}
+
+\begin{frame}{Each Call Has a Local Execution Environment}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{cpdefinition}
+        A \textbf{local execution environment} is the set of parameter and local-variable bindings associated with one active function call.
+      \end{cpdefinition}
+
+      \begin{block}{During \texttt{rectangle\_area(5, 3)}}
+        \texttt{width -> 5}\\
+        \texttt{height -> 3}\\
+        \texttt{area -> 15}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: caller environment beside a temporary function environment.
+      \lectureimage[2.55in]{local-execution-environment.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Local Variables Appear as Their Assignments Execute}
+  \begin{block}{Function}
+    \texttt{def rectangle\_area(width, height):}\\
+    \hspace*{0.22in}\texttt{area = width * height}\\
+    \hspace*{0.22in}\texttt{return area}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l}
+      \textbf{Execution point} & \textbf{Local bindings} \\\hline
+      Function entry & \texttt{width -> 5, height -> 3} \\
+      After assignment & \texttt{width -> 5, height -> 3, area -> 15} \\
+      After return & call no longer active
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Function-Local Bindings Have Call-Limited Lifetime}
+  \begin{itemize}
+    \item Parameter bindings are created for a specific call.
+    \item Local-variable bindings are created as statements in that call execute.
+    \item When the call completes, that local execution environment is no longer active.
+    \item The returned value may survive because the caller can bind or use it.
+  \end{itemize}
+
+  \begin{block}{Before, during, after}
+    \centering
+    caller bindings
+    $\rightarrow$
+    caller + local call bindings
+    $\rightarrow$
+    caller bindings + returned result
+  \end{block}
+
+  \begin{alertblock}{Scope preview}
+    Lecture 10 will examine what happens when more than one function call is active at the same time.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Calling the Same Function Twice Creates Two Separate Calls}
+  \begin{block}{Program}
+    \texttt{def increase(value: int) -> int:}\\
+    \hspace*{0.22in}\texttt{result = value + 1}\\
+    \hspace*{0.22in}\texttt{return result}\\[0.08in]
+    \texttt{first = increase(4)}\\
+    \texttt{second = increase(10)}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{First call}
+        \texttt{value -> 4}\\
+        \texttt{result -> 5}\\
+        returns \texttt{5}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Second call}
+        \texttt{value -> 10}\\
+        \texttt{result -> 11}\\
+        returns \texttt{11}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Trace Tables Need a Location Column Once Functions Appear}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|l|l|l}
+      \textbf{Step} & \textbf{Location} & \textbf{Statement} & \textbf{Relevant bindings} \\\hline
+      1 & caller & \texttt{x = 4} & \texttt{x -> 4} \\
+      2 & \texttt{double} & function entry & \texttt{n -> 4} \\
+      3 & \texttt{double} & \texttt{result = n * 2} & \texttt{result -> 8} \\
+      4 & \texttt{double} & \texttt{return result} & returns \texttt{8} \\
+      5 & caller & assignment completes & \texttt{answer -> 8}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    A useful trace records both \emph{what executes} and \emph{where it executes}.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: Manual Tracing and Debugger Verification}
+
+\begin{frame}{Manual Prediction Comes Before the Debugger}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{enumerate}
+        \item Predict argument values.
+        \item Predict parameter bindings.
+        \item Predict each local assignment.
+        \item Predict the returned value.
+        \item Predict the caller's resulting state.
+      \end{enumerate}
+
+      \begin{keyidea}
+        The debugger is evidence used to test a mental model, not a replacement for reasoning.
+      \end{keyidea}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: Predict -> Trace -> Debug -> Compare loop.
+      \lectureimage[2.55in]{predict-trace-debug-compare.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{\texttt{Step Into} Exposes Function-Call Execution}
+  \begin{itemize}
+    \item \textbf{Step Over} executes a function call without tracing through its body line by line.
+    \item \textbf{Step Into} transfers debugger focus into the called function.
+    \item Inside the function, inspect parameter bindings and local variables as they appear.
+    \item When the function returns, observe execution resume at the caller.
+  \end{itemize}
+
+  \begin{block}{Lab question}
+    Does the debugger's Variables frame match the bindings predicted by your manual trace?
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Worked Trace: Discounted Price}
+  \begin{block}{Program}
+    \texttt{def discounted\_price(price: float, rate: float) -> float:}\\
+    \hspace*{0.22in}\texttt{discount = price * rate}\\
+    \hspace*{0.22in}\texttt{final = price - discount}\\
+    \hspace*{0.22in}\texttt{return final}\\[0.08in]
+    \texttt{original = 80.0}\\
+    \texttt{sale = discounted\_price(original, 0.25)}
+  \end{block}
+
+  \begin{activity}
+    Trace the complete call. Record the argument values, parameter bindings, \texttt{discount}, \texttt{final}, returned value, and final binding of \texttt{sale}.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Worked Trace: Reason from Values, Not Similar Names}
+  \begin{block}{Program}
+    \texttt{def difference(first: int, second: int) -> int:}\\
+    \hspace*{0.22in}\texttt{result = first - second}\\
+    \hspace*{0.22in}\texttt{return result}\\[0.08in]
+    \texttt{first = 20}\\
+    \texttt{second = 7}\\
+    \texttt{answer = difference(second, first)}
+  \end{block}
+
+  \begin{activity}
+    Determine the parameter bindings without relying on the repeated names. Begin by evaluating the two argument expressions in their written order.
+  \end{activity}
+
+  \begin{alertblock}{Expected discipline}
+    Caller names and parameter names may be identical, different, or misleading. Positional evaluation still determines the bindings.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Common Failure Modes in Function Tracing}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.28}
+    \begin{tabular}{p{0.43\textwidth}|p{0.49\textwidth}}
+      \textbf{Incorrect model} & \textbf{Correction} \\\hline
+      ``The argument variable becomes the parameter.'' & The argument expression is evaluated; its value is bound to the parameter. \\
+      ``\texttt{return} prints the result.'' & \texttt{return} produces the value of the call for the caller. \\
+      ``A local variable exists as soon as the function starts.'' & A local binding appears when its assignment executes. \\
+      ``The next call remembers the previous locals.'' & Each call creates a distinct local execution environment. \\
+      ``Assignment happens before the call finishes.'' & The right-hand-side call must finish before assignment can bind its result.
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{The Boundary of Today's Model}
+  \begin{block}{Today: at most one active user-defined function call}
+    \centering
+    caller
+    $\longrightarrow$
+    function
+    $\longrightarrow$
+    caller resumes
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item We can trace calls with multiple parameters and local variables.
+    \item We can evaluate ordinary expressions before and after a call.
+    \item We can call the same function repeatedly, one call after another.
   \end{itemize}
+
+  \begin{alertblock}{Next conceptual problem}
+    What if a function calls another function \emph{before the first call has finished}?
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item A value-returning function call is an expression and therefore evaluates to a value.
+    \item Argument expressions are evaluated before their values are bound to parameters.
+    \item Positional arguments correspond to parameters by position, not by caller variable name.
+    \item One call has a temporary local execution environment containing parameter and local-variable bindings.
+    \item \texttt{return} evaluates an expression, ends the current call, and supplies that value to the caller.
+    \item Printing a value is not equivalent to returning it; functions without explicit \texttt{return} return \texttt{None}.
+    \item Separate calls to the same function create separate local bindings.
+  \end{itemize}
+
+  \begin{keyidea}
+    Mental model: \textbf{evaluate arguments $\rightarrow$ bind parameters $\rightarrow$ execute locally $\rightarrow$ return a value $\rightarrow$ resume the caller}.
+  \end{keyidea}
 \end{frame}
 
 \end{document}

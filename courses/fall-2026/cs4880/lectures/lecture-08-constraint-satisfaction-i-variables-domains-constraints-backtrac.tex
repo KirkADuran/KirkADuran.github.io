@@ -1,54 +1,915 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\usepackage{tikz}
+
+\graphicspath{{../assets/lecture-08/}}
+
+% If an image file is not yet available, skip the visual slot.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-08/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+  }%
+}
+
+% Temporary visible placeholder used while lecture assets are being assembled.
+% Replace each placeholder with \lectureimage[...]{} once the corresponding asset exists.
+\newcommand{\lectureplaceholder}[2][1.75in]{%
+  \begin{center}
+    \fbox{%
+      \parbox[c][#1][c]{0.90\linewidth}{%
+        \centering\small\textcolor{DeckMuted}{\textbf{Image placeholder}\\[0.08in]#2}%
+      }%
+    }
+  \end{center}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{8}
-\lecturetitle{Constraint Satisfaction I -- variables, domains, constraints, backtracking search}
+\lecturetitle{Constraint Satisfaction I}
 \lecturedate{September 11, 2026}
-\courseunit{Course sequence}
+\courseunit{Local and Constraint Search}
 
 \begin{document}
 
 \makedecktitle
 
-\begin{frame}{Today}
+\begin{frame}[shrink=20]{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Constraint Satisfaction I -- variables, domains, constraints, backtracking search
-    \item Placeholder for announcements and context.
+    \item Why many problems are better described by \emph{requirements} than by action sequences.
+    \item How a constraint satisfaction problem is defined using variables, domains, and constraints.
+    \item How unary, binary, higher-order, and global constraints capture problem structure.
+    \item How partial assignments and consistency define a specialized search space.
+    \item How recursive backtracking systematically constructs a satisfying assignment.
+    \item How map coloring and Sudoku become CSPs under the same general formulation.
   \end{itemize}
+
+  \begin{keyidea}
+    Constraint satisfaction changes the search abstraction: instead of asking which path reaches a goal, we ask which assignment makes all required relationships true.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: From General Search to Constraint Satisfaction}
+
+\begin{frame}[shrink=20]{Humans Reason With Constraints Constantly}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Many everyday planning tasks are naturally expressed as restrictions on a final configuration.
+
+      \begin{itemize}
+        \item Schedule meetings so that required participants do not overlap.
+        \item Seat guests so that incompatible people are separated.
+        \item Assign classrooms while respecting capacity and availability.
+        \item Color neighboring regions differently.
+      \end{itemize}
+
+      \begin{block}{Common structure}
+        We know what relationships must hold, but we may not know the sequence of choices that will produce a valid configuration.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.55in]{Split visual: calendar scheduling constraints and a seating arrangement with allowed/forbidden adjacencies.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Constraint problems are defined more naturally by what must be true than by how the solution is reached.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}[shrink=20]{Map Coloring as a Constraint Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.51\textwidth}
+      Suppose every region of a map must be assigned one of three colors.
+
+      \begin{itemize}
+        \item Each region receives exactly one color.
+        \item Adjacent regions may not receive the same color.
+        \item We care about the final legal coloring, not the order in which regions were colored.
+      \end{itemize}
+
+      \begin{block}{Question}
+        Can Australia be colored using only \{Red, Green, Blue\} while respecting every adjacency?
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.43\textwidth}
+      \lectureplaceholder[2.70in]{Outline map of Australia labeled WA, NT, SA, Q, NSW, V, T; no colors assigned yet.}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}[shrink=20]{Scaling Exposes the Real Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Small instances may be solvable by inspection. Larger instances expose the combinatorial structure.
+
+      \begin{itemize}
+        \item With $n$ variables and $d$ possible values per variable, there are up to $d^n$ complete assignments.
+        \item Most assignments may violate constraints.
+        \item Treating every assignment as an opaque state ignores useful relationships among variables.
+      \end{itemize}
+
+      \begin{block}{Example}
+        Forty-eight states with three candidate colors already permit
+        \[
+          3^{48}
+        \]
+        possible complete colorings before constraints are used.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.65in]{Map of the contiguous United States colored with three colors; emphasize many interacting adjacency constraints.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The central challenge is not generating assignments; it is exploiting constraints to avoid generating assignments that cannot possibly work.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Why General Search Is an Awkward Fit}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Classical search}
+        \begin{itemize}
+          \item Must encode partial assignments as states.
+          \item Generates many illegal or redundant branches.
+          \item Different assignment orders can represent the same partial solution.
+          \item Generic successor generation does not automatically exploit constraint structure.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Local search}
+        \begin{itemize}
+          \item Can begin from a complete but inconsistent assignment.
+          \item May become trapped or fail to establish that no solution exists.
+          \item Requires an objective that quantifies violation quality.
+          \item Does not naturally provide a complete systematic solver.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    CSP algorithms specialize search around the internal structure of assignments and constraints rather than treating states as indivisible objects.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{The Declarative Perspective}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      A constraint model specifies the conditions that any acceptable solution must satisfy.
+
+      \begin{itemize}
+        \item The model describes \emph{what} a solution looks like.
+        \item The solver determines \emph{how} to construct one.
+        \item The same solving machinery can apply to maps, schedules, puzzles, layouts, and allocation problems.
+      \end{itemize}
+
+      \begin{block}{Shift in representation}
+        Search is no longer primarily over paths. It is over assignments to named variables with explicit domains and relationships.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.50in]{Diagram: problem specification (variables + domains + constraints) flows into a generic CSP solver, producing a satisfying assignment.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Specify what must be true, then let the search procedure determine a consistent assignment.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 2: The CSP Model --- Variables, Domains, and Constraints}
+
+\begin{frame}[shrink=20]{Constraint Satisfaction Problem}
+  \begin{cpdefinition}
+    A \textbf{constraint satisfaction problem (CSP)} is a triple
+    \[
+      (X,D,C),
+    \]
+    where $X$ is a set of variables, $D$ assigns a domain of possible values to each variable, and $C$ is a set of constraints over those variables.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Variables}
+        \[
+          X=\{X_1,\ldots,X_n\}
+        \]
+        Quantities whose values must be chosen.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Domains}
+        \[
+          D_i=\mathrm{Dom}(X_i)
+        \]
+        Values currently allowed for $X_i$.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.34\textwidth}
+      \begin{block}{Constraints}
+        Relations that specify which combinations of values are permitted.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Assignments: The Vocabulary of CSP Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Partial assignment}
+        Assigns values to only some variables.
+        \[
+          \{WA=R,\;NT=G\}
+        \]
+      \end{block}
+
+      \begin{block}{Complete assignment}
+        Assigns a value to every variable in $X$.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Consistent assignment}
+        Violates no constraint whose variables have all been assigned.
+      \end{block}
+
+      \begin{block}{Solution}
+        A complete assignment that satisfies every constraint in $C$.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Backtracking search grows a partial consistent assignment until it either becomes a complete solution or reaches a contradiction.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Australia as a CSP}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{Variables}
+        \[
+          X=\{WA,NT,SA,Q,NSW,V,T\}.
+        \]
+      \end{block}
+
+      \begin{block}{Domains}
+        For every region,
+        \[
+          D_i=\{R,G,B\}.
+        \]
+      \end{block}
+
+      \begin{block}{Binary constraints}
+        Examples include
+        \[
+          WA\neq NT,\quad WA\neq SA,\quad NT\neq SA,
+        \]
+        \[
+          NT\neq Q,\quad SA\neq Q,\quad Q\neq NSW.
+        \]
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.75in]{Australia map labeled by variables; annotate a few borders with inequality symbols.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Constraint Graphs}
+  \begin{cpdefinition}
+    For a binary CSP, a \textbf{constraint graph} has one vertex for each variable and an edge between two variables when a binary constraint relates them.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{itemize}
+        \item Vertices expose the variables that remain to be assigned.
+        \item Edges expose direct dependencies among assignments.
+        \item Graph structure will later guide variable-ordering and inference algorithms.
+      \end{itemize}
+
+      \begin{block}{Australia}
+        Tasmania is isolated in the standard adjacency model, while South Australia is highly connected.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.60in]{Constraint graph for Australia: WA, NT, SA, Q, NSW, V, T with edges representing adjacency.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The graph tells the solver which decisions can directly constrain one another.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{A Solution Is Not a Path}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      One possible solution is a set of variable-value bindings such as
+      \[
+        WA=R,\quad NT=G,\quad SA=B,
+      \]
+      \[
+        Q=R,\quad NSW=G,\quad V=R,\quad T=R.
+      \]
+
+      What matters is that:
+      \begin{itemize}
+        \item every variable has a value from its domain;
+        \item every constraint is satisfied.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.55in]{Completed Australia coloring corresponding to a consistent red/green/blue assignment.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Two algorithms that reach the same complete satisfying assignment have solved the same CSP even if their internal search histories differ.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Constraints Have Structure}
+
+\begin{frame}[shrink=20]{Unary and Binary Constraints}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Unary constraint}
+        Restricts one variable.
+        \[
+          X\neq Red
+        \]
+        It can often be enforced simply by removing values from the variable's domain.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Binary constraint}
+        Restricts a pair of variables.
+        \[
+          X\neq Y
+        \]
+        Binary constraints are naturally represented as edges in a constraint graph.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.10in}
+  \lectureplaceholder[1.55in]{Small visual with one variable under a unary restriction and two variables connected by a binary inequality constraint.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Higher-Order and Global Constraints}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Higher-order constraint}
+        Relates three or more variables simultaneously.
+
+        Example: three assigned courses cannot occupy the same room-time combination.
+      \end{block}
+
+      \begin{block}{Global constraint}
+        A single high-level relation over a collection of variables.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Example: \texttt{AllDifferent}}
+        \[
+          \mathrm{AllDifferent}(X_1,\ldots,X_k)
+        \]
+        requires every variable in the scope to take a distinct value.
+      \end{block}
+
+      This is a natural representation for rows, columns, and boxes in Sudoku.
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Constraints are not limited to pairwise inequality; expressive global relations can summarize substantial problem structure.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Constraints Beyond ``Not Equal''}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Precedence}
+        One activity must occur before another.
+        \[
+          start(A)+dur(A)\le start(B)
+        \]
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Disjunctive}
+        At least one alternative relationship must hold.
+        \[
+          A\prec B\;\lor\;B\prec A
+        \]
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.33\textwidth}
+      \begin{block}{Resource / capacity}
+        Multiple decisions share a limited resource such as rooms, machines, or staff.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.12in}
+  \lectureplaceholder[1.45in]{Three small application diagrams: precedence timeline, non-overlapping machine jobs, and resource-capacity scheduling.}
+\end{frame}
+
+\begin{frame}[shrink=20]{Why Structure Helps Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      In generic search, a state is often treated as an indivisible object.
+
+      In a CSP, the solver can inspect the internal structure:
+      \begin{itemize}
+        \item which variables are already assigned;
+        \item which values remain legal;
+        \item which variables constrain one another;
+        \item which assignments immediately violate a relation.
+      \end{itemize}
+
+      \begin{block}{Consequence}
+        Search can reject an entire family of complete assignments after detecting a contradiction in only a small partial assignment.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.55in]{Search tree where an early constraint violation prunes a large subtree of complete assignments.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 4: Consistency --- Detecting Impossible Values Early}
+
+\begin{frame}[shrink=20]{Local Consistency: The Central Question}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Constraints let us ask whether values remain compatible with what is currently known.
+
+      \begin{block}{Reasoning question}
+        Can this candidate value still participate in some assignment that satisfies the relevant constraints?
+      \end{block}
+
+      \begin{itemize}
+        \item If not, the value can be removed from consideration.
+        \item If a variable has no values left, the current search branch is impossible.
+        \item Stronger forms of consistency inspect larger neighborhoods of the constraint graph.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.55in]{Variable domains shown as sets of candidate values; inconsistent values are crossed out as constraints are considered.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Constraint reasoning converts logical incompatibilities into domain reduction before complete assignments are generated.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Node Consistency}
+  \begin{cpdefinition}
+    A variable is \textbf{node-consistent} when every value remaining in its domain satisfies all unary constraints on that variable.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      Suppose
+      \[
+        D_X=\{1,2,3,4\}
+      \]
+      with unary constraint
+      \[
+        X>2.
+      \]
+
+      Enforcing node consistency removes values $1$ and $2$:
+      \[
+        D_X\leftarrow\{3,4\}.
+      \]
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.20in]{Domain {1,2,3,4} with 1 and 2 crossed out under the unary constraint X > 2.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Arc Consistency --- Intuition}
+  \begin{cpdefinition}
+    For a directed arc $X_i\rightarrow X_j$, the arc is \textbf{consistent} when every value in $D_i$ has at least one supporting value in $D_j$ that satisfies the binary constraint between the variables.
+  \end{cpdefinition}
+
+  \begin{itemize}
+    \item A value without any compatible neighbor value cannot appear in a solution consistent with that arc.
+    \item Removing one value may cause other values elsewhere to lose their support.
+    \item This creates the possibility of \emph{constraint propagation}.
+  \end{itemize}
+
+  \begin{keyidea}
+    Today we use arc consistency only as a reasoning concept; Lecture 9 turns it into an explicit propagation algorithm.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Arc Consistency Example}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      Let
+      \[
+        D_X=\{1,2,3\},\qquad D_Y=\{2,3\}
+      \]
+      with constraint
+      \[
+        X<Y.
+      \]
+
+      For the arc $X\rightarrow Y$:
+      \begin{itemize}
+        \item $X=1$ has support: $Y=2$ or $3$.
+        \item $X=2$ has support: $Y=3$.
+        \item $X=3$ has no supporting value.
+      \end{itemize}
+
+      Therefore
+      \[
+        D_X\leftarrow\{1,2\}.
+      \]
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.60in]{Bipartite support diagram between X={1,2,3} and Y={2,3}; show valid X<Y support edges and cross out X=3.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 5: Backtracking Search --- A Complete Baseline Solver}
+
+\begin{frame}[shrink=20]{Backtracking Search}
+  \begin{cpdefinition}
+    \textbf{Backtracking search} constructs a CSP solution incrementally by assigning one unassigned variable at a time and undoing decisions when the current partial assignment cannot be extended consistently.
+  \end{cpdefinition}
+
+  \begin{itemize}
+    \item Search state: a partial assignment.
+    \item Action: choose an unassigned variable and assign one candidate value.
+    \item Rejection rule: do not continue with an assignment that violates a constraint.
+    \item Goal: a complete consistent assignment.
+  \end{itemize}
+
+  \begin{keyidea}
+    Backtracking is depth-first search specialized to the structure of variable assignments.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Search Over Partial Assignments}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      The root is the empty assignment:
+      \[
+        \{\}.
+      \]
+
+      A path may grow as
+      \[
+        \{WA=R\}
+      \]
+      \[
+        \{WA=R,NT=G\}
+      \]
+      \[
+        \{WA=R,NT=G,SA=B\}.
+      \]
+
+      Any extension that violates a constraint is immediately abandoned.
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.65in]{Small backtracking tree for Australia: root {}, then WA assignments, then NT, with inconsistent branches crossed out.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Commutativity Removes Redundant Action Orders}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      In ordinary path search, different action orders may describe genuinely different paths.
+
+      In a CSP,
+      \[
+        WA=R\;\text{ then }NT=G
+      \]
+      and
+      \[
+        NT=G\;\text{ then }WA=R
+      \]
+      produce the same partial assignment.
+
+      \begin{block}{Specialization}
+        A backtracking solver chooses exactly one variable at each depth, so it need not explore all permutations of assignment order as separate paths.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      \lectureplaceholder[2.55in]{Two action sequences converging to the same set-valued partial assignment {WA=R, NT=G}; contrast with separate generic-search paths.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    CSP assignment actions are commutative, allowing a much smaller specialized search tree than a naive action-sequence formulation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Basic Backtracking Pseudocode}
+  \begin{block}{Algorithm}
+  \ttfamily\small
+  BACKTRACK(assignment):\\
+  \quad if assignment is complete:\\
+  \qquad return assignment\\[0.04in]
+  \quad $X \leftarrow$ choose an unassigned variable\\[0.04in]
+  \quad for value in DOMAIN($X$):\\
+  \qquad if value is consistent with assignment:\\
+  \qquad\quad add $X=$value to assignment\\
+  \qquad\quad result $\leftarrow$ BACKTRACK(assignment)\\
+  \qquad\quad if result $\neq$ failure: return result\\
+  \qquad\quad remove $X=$value from assignment\\[0.04in]
+  \quad return failure
   \end{block}
+
+  \begin{keyidea}
+    This is the correct baseline algorithm. Lecture 9 will change how variables and values are selected and add inference between recursive calls.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}[shrink=20]{Worked Example: Beginning the Australia Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      Assume the fixed variable order
+      \[
+        WA,NT,SA,Q,NSW,V,T
+      \]
+      and value order
+      \[
+        R,G,B.
+      \]
+
+      Start:
+      \[
+        \{\}
+      \]
+
+      Try
+      \[
+        WA=R.
+      \]
+
+      Next try
+      \[
+        NT=R.
+      \]
+
+      But $WA\neq NT$, so this branch is rejected immediately.
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.70in]{Australia backtracking tree highlighting WA=R, then failed NT=R, followed by the next candidate NT=G.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Worked Example: Continuing After Failure}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      After rejecting $NT=R$, try
+      \[
+        NT=G.
+      \]
+
+      Then consider $SA$:
+      \begin{itemize}
+        \item $SA=R$ conflicts with $WA=R$.
+        \item $SA=G$ conflicts with $NT=G$.
+        \item $SA=B$ is consistent with both.
+      \end{itemize}
+
+      The partial assignment becomes
+      \[
+        \{WA=R,\;NT=G,\;SA=B\}.
+      \]
+
+      Search continues recursively from this smaller feasible region.
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      \lectureplaceholder[2.65in]{Australia map with WA red, NT green, SA blue; alongside a search-tree fragment showing two rejected SA values and SA=blue accepted.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A single failed consistency test can discard every complete assignment that extends that inconsistent partial assignment.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Completeness Does Not Mean Efficiency}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      With finite domains, basic backtracking is complete: if a solution exists, exhaustive search will eventually find one.
+
+      But the worst-case search remains exponential.
+      \[
+        O(d^n)
+      \]
+      for $n$ variables with at most $d$ candidate values each.
+
+      \begin{itemize}
+        \item Arbitrary variable order can postpone obvious failures.
+        \item Arbitrary value order can destroy future flexibility.
+        \item Basic consistency checks may detect contradictions much later than necessary.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.55in]{Large backtracking tree with many explored branches; highlight that correctness does not prevent exponential growth.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Backtracking gives us a complete foundation; the next problem is to make that foundation intelligent enough to scale.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: Modeling a Larger CSP --- Sudoku}
+
+\begin{frame}[shrink=20]{Sudoku as a Constraint Satisfaction Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      A standard $9\times 9$ Sudoku can be modeled with one variable per cell.
+
+      \begin{block}{Variables}
+        \[
+          X_{r,c},\qquad 1\le r,c\le 9.
+        \]
+      \end{block}
+
+      \begin{block}{Domains}
+        \[
+          D_{r,c}\subseteq\{1,2,\ldots,9\}.
+        \]
+        A given clue fixes the corresponding variable to a singleton domain.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.70in]{Partially filled 9x9 Sudoku grid; annotate one empty cell as variable $X_{r,c}$ with domain $\{1,\ldots,9\}$.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Sudoku Constraints}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      Every row, column, and $3\times 3$ box must contain distinct digits.
+
+      \begin{block}{Rows}
+        \[
+          \mathrm{AllDifferent}(X_{r,1},\ldots,X_{r,9})
+        \]
+      \end{block}
+
+      \begin{block}{Columns}
+        \[
+          \mathrm{AllDifferent}(X_{1,c},\ldots,X_{9,c})
+        \]
+      \end{block}
+
+      The same global constraint is applied to each of the nine boxes.
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.65in]{Sudoku grid with one row, one column, and one 3x3 box highlighted as three AllDifferent scopes.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Map coloring and Sudoku look very different visually, but both reduce to assignments constrained by explicit relations.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Naive Backtracking on Sudoku}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      A basic solver can proceed exactly as before:
+
+      \begin{enumerate}
+        \item choose an unassigned cell;
+        \item try one value from its domain;
+        \item reject values that violate a row, column, or box constraint;
+        \item recurse;
+        \item undo the assignment after failure.
+      \end{enumerate}
+
+      \begin{block}{The algorithm is general}
+        Nothing fundamental about backtracking changes between map coloring and Sudoku; only the CSP model changes.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.55in]{Sudoku search sequence: choose cell, try digit, mark conflict, undo, then try another digit.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{The Problem With Naive Backtracking}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      Suppose three unassigned variables currently have domains
+      \[
+        D_A=\{2,4,7\},
+      \]
+      \[
+        D_B=\{5\},
+      \]
+      \[
+        D_C=\{1,3,8,9\}.
+      \]
+
+      A fixed-order solver may choose $A$ or $C$ before $B$ even though $B$ is almost completely determined.
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Two questions for Lecture 9}
+        \begin{enumerate}
+          \item Which variable should we assign next?
+          \item What consequences can we infer immediately after an assignment?
+        \end{enumerate}
+      \end{block}
+
+      \lectureplaceholder[1.65in]{Three variable boxes with domain sizes 3, 1, and 4; visually emphasize the singleton-domain variable as the obvious choice.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The baseline solver treats many decisions as arbitrary even when the current domains and constraint graph contain strong information about what should happen next.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{From Basic Search to Intelligent CSP Solving}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabular}{l|l}
+    \textbf{Today: Foundation} & \textbf{Next: Efficient CSP Solving} \\\hline
+    Variables, domains, constraints & Minimum Remaining Values (MRV) \\
+    Constraint graphs & Degree heuristic \\
+    Partial and complete assignments & Least Constraining Value (LCV) \\
+    Consistency checking & Forward checking \\
+    Basic backtracking & Arc consistency and propagation \\
+    Map coloring and Sudoku models & Maintaining Arc Consistency (MAC)
+  \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Lecture 8 establishes a complete solver; Lecture 9 improves its search order and adds inference so that contradictions are discovered much earlier.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Takeaways}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item A CSP is defined by variables $X$, domains $D$, and constraints $C$.
+    \item A solution is a complete assignment that satisfies every constraint.
+    \item Constraint graphs expose dependencies among variables in binary CSPs.
+    \item Constraint types include unary, binary, higher-order, and global relations such as \texttt{AllDifferent}.
+    \item Local consistency asks whether candidate values remain supportable under the known constraints.
+    \item Backtracking performs depth-first search over partial assignments and is complete for finite CSPs.
+    \item Basic backtracking can still require exponential search because it makes uninformed ordering decisions and performs only limited inference.
   \end{itemize}
+
+  \begin{keyidea}
+    The power of the CSP representation is that search can reason about the internal structure of a partial solution; the next lecture turns that structure into aggressive pruning and propagation.
+  \end{keyidea}
 \end{frame}
 
 \end{document}

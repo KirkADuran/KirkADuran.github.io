@@ -1,12 +1,46 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-10/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-10/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-10/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\newcommand{\lectureplaceholder}[2][1.75in]{%
+  \fbox{%
+    \parbox[c][#1][c]{0.94\linewidth}{%
+      \centering
+      \small\textbf{Image Placeholder}\\[0.08in]
+      \scriptsize #2
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{10}
-\lecturetitle{Functions III -- Composition}
-\lecturedate{September 16, 2026}
-\courseunit{4. Function Fundamentals}
+\lecturetitle{Functions III --- Composition}
+\lecturedate{Fall 2026}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
@@ -14,41 +48,663 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Functions III -- Composition
-    \item Placeholder for announcements and context.
+    \item Extend the one-call model to programs with multiple active function calls.
+    \item Represent active calls using separate execution environments organized by a call stack.
+    \item Distinguish runtime execution environments from lexical scope and name visibility.
+    \item Trace functions that call other functions, including nested call expressions.
+    \item Use returned values to compose smaller computations into larger ones.
+    \item Treat built-in and library functions through the same argument--return-value interface.
   \end{itemize}
+
+  \begin{keyidea}
+    Lecture 9 traced one active call. Today we keep unfinished callers active while additional calls begin.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: From One Active Call to Multiple Calls}
+
+\begin{frame}{One Function Can Call Another Function}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Program}
+        \texttt{def double(n: int) -> int:}\\
+        \hspace*{0.20in}\texttt{return 2 * n}\\[0.08in]
+        \texttt{def square\_perimeter(length: int) -> int:}\\
+        \hspace*{0.20in}\texttt{two\_sides = double(length)}\\
+        \hspace*{0.20in}\texttt{return two\_sides + two\_sides}
+      \end{block}
+
+      \begin{itemize}
+        \item Calling \texttt{square\_perimeter} begins one function call.
+        \item Its body then begins a second call to \texttt{double}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: square_perimeter calling double while the outer call remains active.
+      \lectureimage[2.75in]{nested-call-overview.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The Caller Is Suspended, Not Finished}
+  \begin{block}{Execution reaches}
+    \centering
+    \Large\texttt{two\_sides = double(length)}
+  \end{block}
+
+  \begin{enumerate}
+    \item Evaluate \texttt{length} to obtain the argument value.
+    \item Begin a new call to \texttt{double}.
+    \item Suspend execution of \texttt{square\_perimeter} at the call site.
+    \item Execute \texttt{double} until it returns.
+    \item Resume \texttt{square\_perimeter} and complete the assignment.
+  \end{enumerate}
+
+  \begin{keyidea}
+    An unfinished caller retains its local bindings while the callee executes.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Active Calls Form a Stack}
+  \begin{cpdefinition}
+    The \textbf{call stack} is the runtime ordering of currently active function calls, organized by caller--callee relationships.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{While \texttt{double} executes}
+        \centering
+        \texttt{double}\\
+        $\uparrow$ current call\\[0.08in]
+        \texttt{square\_perimeter}\\[0.08in]
+        initial code
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}
+        \item The most recently started unfinished call is current.
+        \item Earlier callers remain beneath it.
+        \item Returning removes the current call and resumes its immediate caller.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Each Active Call Has Its Own Execution Environment}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{\texttt{double} call}
+        \texttt{n -> 2}
+      \end{block}
+
+      \begin{block}{\texttt{square\_perimeter} call}
+        \texttt{length -> 2}\\
+        \texttt{two\_sides}: not yet bound
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}
+        \item Each call has a distinct set of parameter and local-variable bindings.
+        \item The outer call's bindings do not disappear when the inner call begins.
+        \item The current frame changes as calls begin and return.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Same program, multiple simultaneously active environments.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Returning Unwinds One Call at a Time}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.51\textwidth}
+      \begin{block}{Inside \texttt{double}}
+        \texttt{return 2 * n}\\[0.05in]
+        \texttt{2 * 2 -> 4}\\
+        return \texttt{4}
+      \end{block}
+
+      \begin{block}{Resume \texttt{square\_perimeter}}
+        \texttt{two\_sides = 4}\\
+        \texttt{return 4 + 4}\\
+        return \texttt{8}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.43\textwidth}
+      % Intended visual: stack shrinking from double -> square_perimeter -> initial code.
+      \lectureimage[2.65in]{call-stack-unwind.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 2: Execution Environments and Scope}
+
+\begin{frame}{Execution Environment and Scope Are Related but Different}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{cpdefinition}
+        An \textbf{execution environment} is a runtime mapping from names to values for one active call.
+      \end{cpdefinition}
+
+      \begin{block}{Runtime question}
+        What bindings exist in this active call right now?
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{cpdefinition}
+        A \textbf{scope} determines where a name's binding is visible in program text.
+      \end{cpdefinition}
+
+      \begin{block}{Name-resolution question}
+        Which binding does this occurrence of a name refer to?
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The Same Spelling Can Refer to Different Bindings}
+  \begin{block}{Program fragment}
+    \texttt{x = 10}\\[0.06in]
+    \texttt{def compute(value):}\\
+    \hspace*{0.20in}\texttt{x = value + 1}\\
+    \hspace*{0.20in}\texttt{return x}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Module-level binding}
+        \texttt{x -> 10}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{During \texttt{compute(4)}}
+        \texttt{value -> 4}\\
+        local \texttt{x -> 5}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A variable name is not globally unique; its meaning depends on its scope and active environment. A local assignment to \texttt{x} does not rebind a separate module-level \texttt{x}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Callee Does Not Inherit Its Caller's Local Variables}
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item A function's local scope is determined by its definition, not by whichever function happened to call it.
+    \item Calling \texttt{adjust} from \texttt{compute} does not make \texttt{compute}'s local names automatically local to \texttt{adjust}.
+    \item Data should cross the call boundary explicitly through arguments and returned values.
   \end{itemize}
+
+  \begin{block}{Preferred data flow}
+    \centering
+    caller value $\rightarrow$ argument $\rightarrow$ parameter $\rightarrow$ computation $\rightarrow$ return value
+  \end{block}
+
+  \begin{keyidea}
+    Call-stack position describes control flow; lexical scope determines name visibility.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}[shrink=4]{Worked Scope Trace: Three Different Bindings Named \texttt{x}}
+  \begin{block}{Program}
+    \texttt{def adjust(x: int) -> int:}\\
+    \hspace*{0.20in}\texttt{y = x + 2}\\
+    \hspace*{0.20in}\texttt{return y * 3}\\[0.05in]
+    \texttt{def compute(value: int) -> int:}\\
+    \hspace*{0.20in}\texttt{x = value + 1}\\
+    \hspace*{0.20in}\texttt{answer = adjust(x)}\\
+    \hspace*{0.20in}\texttt{return answer}\\[0.05in]
+    \texttt{x = 10}\qquad \texttt{result = compute(4)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{l|l}
+      \textbf{Environment} & \textbf{Relevant binding} \\\hline
+      module level & \texttt{x -> 10} \\
+      \texttt{compute} call & \texttt{x -> 5} \\
+      \texttt{adjust} call & parameter \texttt{x -> 5}
+    \end{tabular}
+  \end{center}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{The Debugger Lets You Select Different Active Frames}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item When stopped inside a nested call, the call stack lists active frames.
+        \item Selecting a frame changes which local bindings the debugger displays.
+        \item The program has not changed; you are inspecting a different active environment.
+      \end{itemize}
+
+      \begin{activity}
+        While stopped inside \texttt{adjust}, inspect the \texttt{adjust}, \texttt{compute}, and module-level frames. Identify every binding named \texttt{x}.
+      \end{activity}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: IDE call-stack panel with three frames and separate variable panes.
+      \lectureimage[2.70in]{debugger-frame-selection.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 3: Function Composition}
+
+\begin{frame}{Composition Connects Returned Values to New Computations}
+  \begin{cpdefinition}
+    \textbf{Function composition} uses the value produced by one function call as input to another computation.
+  \end{cpdefinition}
+
+  \begin{block}{Explicit data flow}
+    \texttt{step1 = add\_one(4)}\\
+    \texttt{result = double(step1)}\\[0.06in]
+    Equivalent nested form: \texttt{result = double(add\_one(4))}
+  \end{block}
+
+  \begin{block}{Data-flow interpretation}
+    \centering
+    \texttt{4} $\rightarrow$ \texttt{add\_one} $\rightarrow$ \texttt{5}
+    $\rightarrow$ \texttt{double} $\rightarrow$ \texttt{10}
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}{Nested Calls Encode the Same Data Flow More Compactly}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{With an intermediate name}
+        \texttt{step1 = add\_one(4)}\\
+        \texttt{result = double(step1)}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Nested composition}
+        \texttt{result = double(add\_one(4))}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The nested form removes an intermediate binding; it does not remove the intermediate value or the need to evaluate it.
+  \end{keyidea}
 \end{frame}
+
+\begin{frame}{Trace Nested Composition from the Inside Out}
+  \begin{block}{Expression}
+    \centering
+    \Large\texttt{double(add\_one(4))}
+  \end{block}
+
+  \begin{enumerate}
+    \item Identify the outer callable \texttt{double}.
+    \item Evaluate its argument expression \texttt{add\_one(4)}.
+    \item The \texttt{add\_one} body executes and returns \texttt{5}.
+    \item The outer call now has argument value \texttt{5}.
+    \item The \texttt{double} body executes and returns \texttt{10}.
+  \end{enumerate}
+
+  \begin{block}{Expression reduction}
+    \centering
+    \texttt{double(add\_one(4))} $\rightarrow$ \texttt{double(5)} $\rightarrow$ \texttt{10}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Composition Is Order-Sensitive}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Double, then square}
+        \texttt{square(double(3))}\\[0.06in]
+        \texttt{double(3) -> 6}\\
+        \texttt{square(6) -> 36}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Square, then double}
+        \texttt{double(square(3))}\\[0.06in]
+        \texttt{square(3) -> 9}\\
+        \texttt{double(9) -> 18}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Function composition is generally not commutative: changing the order can change the result.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Call May Contain Multiple Function-Call Arguments}
+  \begin{block}{Example}
+    \centering
+    \Large\texttt{result = add(square(3), square(4))}
+  \end{block}
+
+  \begin{block}{Values required before \texttt{add} can execute}
+    \texttt{square(3) -> 9}\\
+    \texttt{square(4) -> 16}\\[0.06in]
+    then \texttt{add(9, 16) -> 25}
+  \end{block}
+
+  \begin{activity}
+    How many distinct calls occur? During which call is the parameter name \texttt{n} bound to \texttt{3}, and during which is it bound to \texttt{4}?
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Python Evaluates Argument Expressions from Left to Right}
+  \begin{block}{Expression}
+    \centering
+    \texttt{add(square(3), square(4))}
+  \end{block}
+
+  \begin{enumerate}
+    \item Evaluate the first argument expression \texttt{square(3)} $\rightarrow$ \texttt{9}.
+    \item Evaluate the second argument expression \texttt{square(4)} $\rightarrow$ \texttt{16}.
+    \item Bind \texttt{x -> 9} and \texttt{y -> 16} for the call to \texttt{add}.
+    \item Execute \texttt{add} and return \texttt{25}.
+  \end{enumerate}
+
+  \begin{alertblock}{Tracing discipline}
+    Do not merge the two calls to \texttt{square}; each call has its own parameter binding and lifetime.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 4: Tracing Functions That Call Functions}
+
+\begin{frame}{Parameter Bindings Must Be Kept Separate Across Calls}
+  \begin{block}{Program}
+    \texttt{def difference(a: int, b: int) -> int:}\\
+    \hspace*{0.20in}\texttt{return a - b}\\[0.06in]
+    \texttt{def distance\_between(left: int, right: int) -> int:}\\
+    \hspace*{0.20in}\texttt{distance = difference(right, left)}\\
+    \hspace*{0.20in}\texttt{return distance}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Call} & \textbf{Parameter bindings} \\\hline
+      \texttt{distance\_between(4, 10)} & \texttt{left -> 4, right -> 10} \\
+      \texttt{difference(right, left)} & \texttt{a -> 10, b -> 4}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Full Trace: Follow Values Across Two Function Boundaries}
+  \begin{enumerate}
+    \item \texttt{distance\_between(4, 10)} creates \texttt{left -> 4}, \texttt{right -> 10}.
+    \item Evaluate arguments to \texttt{difference}: \texttt{right -> 10}, \texttt{left -> 4}.
+    \item The nested call creates \texttt{a -> 10}, \texttt{b -> 4}.
+    \item \texttt{difference} returns \texttt{6}.
+    \item The suspended outer call binds \texttt{distance -> 6}.
+    \item \texttt{distance\_between} returns \texttt{6} to its own caller.
+  \end{enumerate}
+
+  \begin{keyidea}
+    Record both the current frame and its bindings while tracing. Returned values travel one caller boundary at a time; they do not skip directly to the outermost code.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Return Always Resumes the Immediate Caller}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Call chain}
+        initial code\\
+        $\downarrow$\\
+        \texttt{distance\_between}\\
+        $\downarrow$\\
+        \texttt{difference}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \begin{block}{Return chain}
+        \texttt{difference} returns\\
+        $\downarrow$\\
+        \texttt{distance\_between} resumes\\
+        $\downarrow$\\
+        then it may return to initial code
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Common mistake}
+    A nested function's returned value is first delivered to the expression that called it, not automatically to every outer caller.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Common Failure Modes with Nested Calls}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.20}
+    \begin{tabular}{p{0.43\textwidth}|p{0.49\textwidth}}
+      \textbf{Incorrect model} & \textbf{Correction} \\\hline
+      ``The caller disappears while the callee runs.'' & The caller remains active and suspended on the stack. \\
+      ``Same variable name means same variable.'' & Bindings belong to scopes and execution environments. \\
+      ``A callee can see the caller's locals.'' & Call relationships do not create lexical scope relationships. \\
+      ``Nested syntax executes from the outside inward.'' & Argument values must be produced before the outer function body can execute. \\
+      ``Returning exits every active function.'' & A return completes only the current call.
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\sectionframe{Part 5: Library Functions and Abstraction Boundaries}
+
+\begin{frame}{Library Functions Participate in the Same Data-Flow Model}
+  \begin{block}{Example}
+    \texttt{from math import sqrt}\\[0.08in]
+    \texttt{value = 25.0}\\
+    \texttt{root = sqrt(value)}
+  \end{block}
+
+  \begin{itemize}
+    \item Evaluate the argument expression \texttt{value} to obtain \texttt{25.0}.
+    \item Call \texttt{sqrt} with that value.
+    \item Receive the returned value \texttt{5.0}.
+    \item Bind \texttt{root -> 5.0}.
+  \end{itemize}
+
+  \begin{keyidea}
+    The same argument--return-value model applies even when we do not inspect the function's implementation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=4]{Capstone Example: User-Defined Functions Plus \texttt{sqrt}}
+  \begin{block}{Program}
+    \texttt{from math import sqrt}\\[0.05in]
+    \texttt{def square(n: float) -> float:}\\
+    \hspace*{0.20in}\texttt{return n * n}\\[0.05in]
+    \texttt{def magnitude(x: float, y: float) -> float:}\\
+    \hspace*{0.20in}\texttt{x\_squared = square(x)}\\
+    \hspace*{0.20in}\texttt{y\_squared = square(y)}\\
+    \hspace*{0.20in}\texttt{result = sqrt(x\_squared + y\_squared)}\\
+    \hspace*{0.20in}\texttt{return result}\\[0.05in]
+    \texttt{answer = magnitude(3, 4)}
+  \end{block}
+
+  \begin{activity}
+    Predict every intermediate value and the call stack while the first call to \texttt{square} is executing.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Trace the Data Before Tracing the Implementation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Data flow}
+        \texttt{3 -> square -> 9}\\
+        \texttt{4 -> square -> 16}\\
+        \texttt{9 + 16 -> 25}\\
+        \texttt{25 -> sqrt -> 5.0}\\
+        \texttt{5.0 -> return -> answer}
+      \end{block}
+
+      \begin{itemize}
+        \item First establish what values must flow between calls.
+        \item Then inspect frames when a detailed execution trace is required.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: data-flow graph for magnitude(3,4) with square and sqrt nodes.
+      \lectureimage[2.85in]{magnitude-data-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Use an Abstraction Boundary for Trusted Library Functions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{User-defined function under study}
+        Trace inside when you need to understand:
+        \begin{itemize}
+          \item parameter bindings;
+          \item local assignments;
+          \item nested calls;
+          \item returned values.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Trusted library function}
+        Often reason from its documented interface:
+        \begin{itemize}
+          \item accepted arguments;
+          \item documented behavior;
+          \item returned value.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Abstraction lets us choose the appropriate level of detail for the reasoning task.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Debugger Strategy: Step Into Selectively}
+  \begin{itemize}
+    \item Use \textbf{Step Into} when the implementation of a user-defined call is part of the concept you are tracing.
+    \item Use \textbf{Step Over} when a trusted call can be treated through its interface.
+    \item Inspect the call stack whenever more than one user-defined call is active.
+    \item Select different frames to compare their parameter and local-variable bindings.
+  \end{itemize}
+
+  \begin{block}{Lab 3 discipline}
+    Predict the stack and bindings first; then use the debugger to test the prediction.
+  \end{block}
+\end{frame}
+
+\sectionframe{Part 6: Decomposition and Program Design}
+
+\begin{frame}{Decomposition and Composition Are Complementary Ideas}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{cpdefinition}
+        \textbf{Decomposition} separates a larger computation into smaller functions with focused responsibilities.
+      \end{cpdefinition}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{cpdefinition}
+        \textbf{Composition} reconnects those functions by passing produced values into later computations.
+      \end{cpdefinition}
+    \end{column}
+  \end{columns}
+
+  \begin{block}{Design pattern}
+    \centering
+    large problem $\rightarrow$ smaller transformations $\rightarrow$ connected data flow
+  \end{block}
+\end{frame}
+
+\begin{frame}{Worked Design: Separate Discount and Tax Calculations}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Smaller transformations}
+        \texttt{def apply\_discount(price, rate):}\\
+        \hspace*{0.18in}\texttt{return price - price * rate}\\[0.07in]
+        \texttt{def apply\_tax(price, rate):}\\
+        \hspace*{0.18in}\texttt{return price + price * rate}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Composition}
+        \texttt{def final\_price(price, discount, tax):}\\
+        \hspace*{0.18in}\texttt{discounted = apply\_discount(price, discount)}\\
+        \hspace*{0.18in}\texttt{return apply\_tax(discounted, tax)}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Each function names one transformation; the outer function expresses how the transformations are connected.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Good Interfaces Make Composition Easier to Reason About}
+  \begin{itemize}
+    \item Parameters should represent the data a computation genuinely requires.
+    \item Returned values should expose the result needed by the caller.
+    \item Avoid relying on unrelated external state when a value can be passed explicitly.
+    \item Prefer functions whose names communicate the transformation they perform.
+  \end{itemize}
+
+  \begin{block}{Mental contract}
+    \centering
+    \textbf{required input data} $\rightarrow$ \textbf{named computation} $\rightarrow$ \textbf{returned result}
+  \end{block}
+
+  \begin{alertblock}{Why this matters for tracing}
+    Explicit inputs and outputs make the path of data visible across function boundaries.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[shrink=5]{Practice: Trace a Composed Program}
+  \begin{block}{Program}
+    \texttt{def triple(n: int) -> int:}\\
+    \hspace*{0.20in}\texttt{return n * 3}\\[0.05in]
+    \texttt{def difference(a: int, b: int) -> int:}\\
+    \hspace*{0.20in}\texttt{return a - b}\\[0.05in]
+    \texttt{def compute(x: int, y: int) -> int:}\\
+    \hspace*{0.20in}\texttt{left = triple(x)}\\
+    \hspace*{0.20in}\texttt{right = triple(y)}\\
+    \hspace*{0.20in}\texttt{return difference(left, right)}\\[0.05in]
+    \texttt{answer = compute(5, 2)}
+  \end{block}
+
+  \begin{activity}
+    Predict: (1) every parameter binding, (2) every returned value, (3) the maximum call-stack depth, and (4) the final binding of \texttt{answer}.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item A function may begin another call before it has finished; unfinished callers remain active.
+    \item The call stack records active calls, while each call has its own runtime execution environment.
+    \item Scope determines which binding a name refers to; call-stack position does not create new lexical visibility.
+    \item Returned values let functions be composed so that one computation supplies data to another.
+    \item Nested argument expressions must produce values before the receiving function body can execute.
+    \item Returning completes only the current call and resumes its immediate caller.
+    \item Library functions can often be reasoned about through their documented input--output interface.
+    \item Decomposition creates focused transformations; composition connects them into a larger program.
+  \end{itemize}
+
+  \begin{keyidea}
+    Mental model: \textbf{values flow through calls; active calls keep separate bindings; return values reconnect the suspended computation}.
+  \end{keyidea}
+\end{frame}
+
+% Reference notes for instructor/source maintenance:
+% Python Language Reference, Expressions: calls, return values, and left-to-right evaluation order.
+% Python Language Reference, Execution model: name binding, local/global scope, and name resolution.
 
 \end{document}

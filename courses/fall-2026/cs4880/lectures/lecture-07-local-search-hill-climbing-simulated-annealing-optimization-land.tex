@@ -1,54 +1,819 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\usepackage{tikz}
+
+\graphicspath{{../assets/lecture-07/}}
+
+% If an image file is not yet available, skip the visual slot.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-07/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+  }%
+}
+
+% Temporary visible placeholder used while lecture assets are being assembled.
+% Replace each placeholder with \lectureimage[...]{} once the corresponding asset exists.
+\newcommand{\lectureplaceholder}[2][1.75in]{%
+  \begin{center}
+    \fbox{%
+      \parbox[c][#1][c]{0.90\linewidth}{%
+        \centering\small\textcolor{DeckMuted}{\textbf{Image placeholder}\\[0.08in]#2}%
+      }%
+    }
+  \end{center}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{7}
-\lecturetitle{Local Search -- hill climbing, simulated annealing, optimization landscapes}
+\lecturetitle{Local Search}
 \lecturedate{September 9, 2026}
-\courseunit{Course sequence}
+\courseunit{Search and Problem Solving}
 
 \begin{document}
 
 \makedecktitle
 
-\begin{frame}{Today}
+\begin{frame}[shrink=20]{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Local Search -- hill climbing, simulated annealing, optimization landscapes
-    \item Placeholder for announcements and context.
+    \item Why path-based tree search can be the wrong abstraction for large optimization problems.
+    \item How local search represents a problem using a complete state, an objective function, and a neighborhood.
+    \item How hill climbing improves a single current state and why it can become trapped.
+    \item How random restarts and simulated annealing introduce exploration.
+    \item How local beam search and genetic algorithms search with populations of candidate states.
+    \item Why local search remains useful in classical AI, combinatorial optimization, robotics, and games.
   \end{itemize}
+
+  \begin{keyidea}
+    Local search gives up explicit path construction in order to search enormous state spaces with very little memory.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: When Paths Stop Mattering}
+
+\begin{frame}[shrink=20]{From Path Finding to State Optimization}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Systematic search asks which path connects an initial state to a goal.
+
+      \begin{itemize}
+        \item DFS explores deeply before backtracking.
+        \item BFS explores level by level.
+        \item A\* prioritizes states using path cost and heuristic guidance.
+        \item Each method maintains enough information to reconstruct a path.
+      \end{itemize}
+
+      \begin{block}{A different question}
+        What if we care primarily about the \emph{quality of the final state}, not the sequence of actions used to reach it?
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.55in]{Contrast a search tree/path with a single candidate configuration, such as a partially scrambled cube or optimization state.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Optimization problems often need a good final configuration rather than an explicitly stored route through the state space.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}[shrink=20]{When Tree Search Fails}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Tree search can become inefficient or infeasible when:
+
+      \begin{itemize}
+        \item the state space is vast or effectively infinite;
+        \item only the final state matters;
+        \item the problem is naturally phrased as optimization rather than navigation;
+        \item storing visited states, predecessors, and complete paths consumes too much memory.
+      \end{itemize}
+
+      \begin{block}{Rubik's Cube illustration}
+        If each position has roughly 18 legal moves, a naive tree has about 18 nodes at depth 1, 324 at depth 2, and 5,832 at depth 3.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.65in]{Exponentially expanding search tree beside a Rubik's Cube; label branching factor approximately 18.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Exponential growth makes explicit search trees unattractive when the path itself provides little value.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}[shrink=20]{Local Search}
+  \begin{cpdefinition}
+    \textbf{Local search} operates from one or more current states and improves them using neighboring states, without explicitly storing complete paths through the search space.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Evaluate the current state.
+        \item Generate or sample neighboring states.
+        \item Move according to an improvement or exploration rule.
+        \item Repeat until a solution or stopping condition is reached.
+      \end{itemize}
+
+      \begin{block}{Why use it?}
+        Local search uses very little memory and can find good solutions even when systematic search is impractical.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.45in]{Single current-state node surrounded by neighboring states; arrows emphasize local movement rather than a stored tree.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Local search is not systematic: it may never visit large portions of the state space, including regions containing solutions.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{A New Problem: Eight Queens}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      Place eight queens on an $8\times 8$ chessboard so that no two queens attack one another.
+
+      \begin{block}{Complete-state formulation}
+        Keep exactly one queen in each column. A state specifies the row occupied by the queen in every column.
+      \end{block}
+
+      \begin{itemize}
+        \item Every candidate already contains all eight queens.
+        \item Most candidates are invalid because queens attack one another.
+        \item Search improves the arrangement until all conflicts disappear.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.65in]{Two 8-queens boards: one conflicted configuration and one valid non-attacking configuration.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Local search often starts with a complete but imperfect solution and iteratively improves it.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 2: Objective Functions and State-Space Landscapes}
+
+\begin{frame}[shrink=20]{Objective Function}
+  \begin{cpdefinition}
+    An \textbf{objective function} assigns a real-valued quality score to a complete candidate state:
+    \[
+      f(s)\in\mathbb{R}.
+    \]
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item A local-search problem may seek to \textbf{minimize} or \textbf{maximize} this value.
+        \item The score provides graded feedback even when the current state is not yet a solution.
+        \item The neighborhood function determines which states can be reached by one local move.
+      \end{itemize}
+
+      \begin{block}{Optimization model}
+        State space $+$ objective function $+$ neighborhood function.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.45in]{Objective-function diagram for 8 queens showing attacking queen pairs and a conflict score.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Eight Queens as Optimization}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      For the complete-state formulation:
+
+      \begin{itemize}
+        \item \textbf{State}: eight queens, one queen per column.
+        \item \textbf{Objective}: number of attacking pairs of queens.
+        \item \textbf{Goal}: minimize the objective to $0$.
+        \item \textbf{Neighbor}: move one queen to a different row in its column.
+      \end{itemize}
+
+      Each of 8 queens can move to 7 other rows, giving
+      \[
+        8\cdot 7=56
+      \]
+      immediate neighboring states.
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.60in]{One 8-queens board with arrows showing a single queen moving within its column; annotate 56 possible neighbors.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The neighborhood defines the algorithm's local view of the optimization landscape.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{State-Space Landscape}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      A \textbf{state-space landscape} visualizes candidate states according to their objective values.
+
+      \begin{itemize}
+        \item Each point represents a complete state.
+        \item Height represents objective value.
+        \item Neighboring points correspond to locally reachable states.
+        \item Local search moves across this landscape by choosing neighboring states.
+      \end{itemize}
+
+      \begin{block}{Direction depends on the problem}
+        For maximization, ``uphill'' is better. For minimization, the same picture can be interpreted by reversing the objective or descending toward lower cost.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      \lectureplaceholder[2.65in]{3D objective landscape labeled current state, shoulder, local maximum, flat local maximum, and global maximum.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Local-search performance depends strongly on the topography induced by the objective and neighborhood functions.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Hill Climbing --- Repeated Local Improvement}
+
+\begin{frame}[shrink=20]{Hill Climbing}
+  \begin{cpdefinition}
+    \textbf{Hill climbing} repeatedly moves from the current state to its best improving neighbor.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{itemize}
+        \item Keep only a single current state.
+        \item Evaluate the immediate neighborhood.
+        \item Move in the direction of greatest improvement.
+        \item Stop when no neighboring state improves the objective.
+      \end{itemize}
+
+      \begin{block}{Memory}
+        Hill climbing does not need to store the path, previously visited states, or a large frontier.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      \lectureplaceholder[2.55in]{Objective surface with a trajectory climbing from a low point to a nearby peak.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Hill climbing is a greedy local optimizer: it uses immediate improvement without planning several moves ahead.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Hill-Climbing Pseudocode}
+  \begin{block}{Algorithm}
+  \ttfamily\small
+  current $\leftarrow$ initial\_state\\[0.03in]
+  while true:\\
+  \quad neighbors $\leftarrow$ NEIGHBORS(current)\\
+  \quad next $\leftarrow$ best state in neighbors\\[0.03in]
+  \quad if next does not improve current:\\
+  \qquad return current\\[0.03in]
+  \quad current $\leftarrow$ next
   \end{block}
+
+  \begin{itemize}
+    \item For maximization, ``best'' means highest objective value.
+    \item For minimization, ``best'' means lowest objective value.
+    \item The returned state may be a global optimum, a local optimum, or a plateau state.
+  \end{itemize}
+
+  \begin{keyidea}
+    The algorithm's simplicity is also its weakness: a one-step local decision cannot see a better region separated by worse intermediate states.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}[shrink=20]{Hill Climbing on Eight Queens}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      Use the number of attacking pairs as the cost $h(s)$.
+
+      \begin{itemize}
+        \item Start with eight queens, one per column.
+        \item Generate the 56 states obtained by moving one queen within its column.
+        \item Choose the neighbor with the fewest attacking pairs.
+        \item Repeat until $h(s)=0$ or no improvement exists.
+      \end{itemize}
+
+      \begin{block}{Goal state}
+        \[
+          h(s)=0
+        \]
+        means that no pair of queens attacks one another.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.60in]{8-queens board over a contour landscape; show one queen move reducing the number of attacking pairs.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Why Hill Climbing Gets Stuck}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      The state-space landscape can contain structures that defeat purely greedy improvement.
+
+      \begin{itemize}
+        \item \textbf{Local maximum}: better than every neighbor but worse than a distant state.
+        \item \textbf{Ridge}: improvement requires coordinated movement not captured by one simple local step.
+        \item \textbf{Plateau}: a flat region in which many neighboring states have equal value.
+        \item \textbf{Shoulder}: a flat region from which an improving move eventually becomes available.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      \lectureplaceholder[2.70in]{Landscape labeled local maximum, global optimum, ridge, plateau, shoulder, and flat local maximum.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A locally optimal state need not be globally optimal.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Sideways Moves}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      A \textbf{sideways move} transitions to a neighboring state with the same objective value.
+
+      \begin{itemize}
+        \item It neither improves nor worsens the current solution.
+        \item It can move across a plateau until an improving exit is found.
+        \item It can also wander indefinitely through a flat region.
+      \end{itemize}
+
+      \begin{block}{Practical safeguard}
+        Limit the number of consecutive sideways moves; the source example suggests a cap such as 100.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.55in]{Plateau landscape with a sideways trajectory, an eventual uphill exit, and a loop-risk annotation.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Allowing neutral moves expands local mobility, but it requires a stopping rule to avoid infinite wandering.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Stochastic Hill Climbing}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      Instead of always selecting the single steepest improvement:
+
+      \begin{itemize}
+        \item identify neighbors that improve the objective;
+        \item choose randomly among the available improving moves;
+        \item repeat from the newly selected state.
+      \end{itemize}
+
+      \begin{block}{Tradeoff}
+        Randomness can explore different uphill trajectories and reduce deterministic trapping, but convergence may be slower.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      \lectureplaceholder[2.55in]{Landscape with several improving arrows and one randomly selected stochastic uphill move.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Random choice among improving moves creates diversity without yet accepting worse states.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Best-First Hill Climbing}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      The source lecture describes a variant that examines successors incrementally rather than evaluating the full neighborhood.
+
+      \begin{itemize}
+        \item Generate candidate successors one at a time.
+        \item Stop when the first improving neighbor is found.
+        \item Move immediately to that state.
+        \item Avoid scoring every successor when neighborhoods are large.
+      \end{itemize}
+
+      \begin{block}{When it helps}
+        This approach can reduce evaluation cost when there are many possible successors and improvements are common.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.50in]{Current state with many possible neighbors; highlight the first sampled neighbor that improves the objective.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Random-Restart Hill Climbing}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      Random restart runs hill climbing repeatedly from independently sampled initial states.
+
+      \begin{itemize}
+        \item Each run explores a different region of the landscape.
+        \item A failed run does not force the next run to begin from the same local optimum.
+        \item Continue until a satisfactory solution is found or a restart budget is exhausted.
+      \end{itemize}
+
+      \begin{block}{Effective when}
+        The state space contains many local optima and finding a sufficiently good solution matters more than following one deterministic trajectory.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.65in]{Multi-peak landscape with several random starting points and independent hill-climbing trajectories.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Restarts trade additional time for robustness across difficult landscapes.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Simulated Annealing --- Sometimes Move the Wrong Way}
+
+\begin{frame}[shrink=20]{Simulated Annealing}
+  \begin{cpdefinition}
+    \textbf{Simulated annealing} combines local improvement with controlled random exploration by sometimes accepting a worse neighboring state.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      At each step:
+
+      \begin{itemize}
+        \item select a random neighboring state;
+        \item accept it if it improves the objective;
+        \item if it is worse, accept it with a probability controlled by temperature;
+        \item gradually reduce that temperature over time.
+      \end{itemize}
+
+      \begin{block}{Physical analogy}
+        Metallurgical annealing uses high heat for random motion, followed by gradual cooling toward a stable crystal structure.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.65in]{Annealing landscape showing an early trajectory that crosses out of a local optimum and later settles near a global optimum.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{Simulated-Annealing Pseudocode}
+  \begin{block}{Algorithmic structure}
+  \ttfamily\small
+  current $\leftarrow$ initial\_state\\[0.03in]
+  for step $=1,2,\ldots$:\\
+  \quad $T \leftarrow$ TEMPERATURE(step)\\
+  \quad if $T$ is sufficiently low: return current\\[0.03in]
+  \quad next $\leftarrow$ random neighbor of current\\
+  \quad if next improves current:\\
+  \qquad current $\leftarrow$ next\\
+  \quad else if ACCEPT\_WORSE(next,current,$T$):\\
+  \qquad current $\leftarrow$ next
+  \end{block}
+
+  \begin{keyidea}
+    Early randomness can escape local traps; later low temperature makes the search increasingly conservative.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Temperature Controls Exploration}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{High temperature}
+        \begin{itemize}
+          \item high randomness;
+          \item worse moves are accepted more often;
+          \item broad exploration of the state space.
+        \end{itemize}
+      \end{block}
+
+      \begin{block}{Low temperature}
+        \begin{itemize}
+          \item low randomness;
+          \item worse moves are rarely accepted;
+          \item search concentrates near promising states.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Cooling schedule}
+        \begin{itemize}
+          \item fast cooling: quicker convergence, greater risk of getting stuck;
+          \item slow cooling: more exploration and computation, greater opportunity to reach a better optimum.
+        \end{itemize}
+      \end{block}
+
+      \lectureplaceholder[1.40in]{Temperature-versus-time curves comparing fast and slow cooling schedules.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The cooling schedule determines how quickly simulated annealing shifts from exploration to exploitation.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Population-Based Local Search}
+
+\begin{frame}[shrink=20]{Local Beam Search}
+  \begin{cpdefinition}
+    \textbf{Local beam search} maintains $k$ candidate states in parallel instead of a single current state.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      Each iteration:
+
+      \begin{itemize}
+        \item generate successors from all $k$ current states;
+        \item evaluate the combined successor pool;
+        \item retain the best $k$ states for the next iteration.
+      \end{itemize}
+
+      \begin{block}{Beam width}
+        $k=1$ behaves like single-state hill climbing. Larger $k$ increases breadth and exploration, but also computation and memory.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      \lectureplaceholder[2.60in]{Beam-search tree showing $k$ retained states at each level while other successors are discarded.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A population lets several regions of the state space compete at the same time.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Beam Search Can Lose Diversity}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Premature convergence}
+        If the best candidates become too similar, the beam may collapse into one region of the state space.
+      \end{block}
+
+      \begin{block}{Mitigations from the source}
+        \begin{itemize}
+          \item begin from diverse initial states;
+          \item use a sufficiently wide beam;
+          \item preserve enough variation for competing regions to survive.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \lectureplaceholder[2.55in]{Two beam-search sketches: one collapsing to similar states and one maintaining diverse branches.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{The ``Hive Mind'' Intuition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      The source motivates population search using four ideas:
+
+      \begin{enumerate}
+        \item \textbf{Crowd}: generate many candidate solutions.
+        \item \textbf{Filter}: keep the candidates with the strongest fitness.
+        \item \textbf{Synthesis}: combine useful pieces from different candidates.
+        \item \textbf{Spark}: introduce a small random change to avoid a rut.
+      \end{enumerate}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \lectureplaceholder[2.60in]{Four-stage infographic: crowd of candidates $\rightarrow$ fitness filter $\rightarrow$ recombination $\rightarrow$ random mutation spark.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Population methods replace one trajectory with repeated selection, recombination, and diversity.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Genetic Algorithms}
+  \begin{cpdefinition}
+    A \textbf{genetic algorithm} maintains a population of candidate solutions and repeatedly applies fitness-based selection, crossover, and mutation.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Selection}
+        Candidates with higher fitness are more likely to reproduce.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Crossover}
+        Two parent candidates combine portions of their representations to produce offspring.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.32\textwidth}
+      \begin{block}{Mutation}
+        Small random changes introduce new variation into the population.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.10in}
+  \lectureplaceholder[1.45in]{Genetic-algorithm cycle showing population $\rightarrow$ selection $\rightarrow$ crossover $\rightarrow$ mutation $\rightarrow$ next generation.}
+
+  \begin{keyidea}
+    Genetic algorithms perform global exploration by evolving a population rather than improving only one current state.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Genetic-Algorithm Pseudocode}
+  \begin{block}{Algorithmic structure}
+  \ttfamily\small
+  population $\leftarrow$ RANDOM\_POPULATION()\\[0.03in]
+  while stopping condition not met:\\
+  \quad evaluate FITNESS for every individual\\
+  \quad new\_population $\leftarrow [\ ]$\\[0.03in]
+  \quad while new\_population is not full:\\
+  \qquad parent1, parent2 $\leftarrow$ SELECT(population)\\
+  \qquad child $\leftarrow$ CROSSOVER(parent1,parent2)\\
+  \qquad child $\leftarrow$ MUTATE(child)\\
+  \qquad add child to new\_population\\[0.03in]
+  \quad population $\leftarrow$ new\_population\\[0.03in]
+  return best individual
+  \end{block}
+
+  \begin{keyidea}
+    Selection increases pressure toward strong solutions, while crossover and mutation generate new combinations for later generations.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Genetic Algorithms on Eight Queens}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      The source encodes an individual as eight row indices:
+      \[
+        [r_0,r_1,\ldots,r_7],
+      \]
+      where index $i$ is a column and $r_i$ is the queen's row.
+
+      \begin{itemize}
+        \item \textbf{Initial population}: 100 random individuals.
+        \item \textbf{Fitness}: number of non-attacking queen pairs.
+        \item \textbf{Maximum fitness}: $\binom{8}{2}=28$.
+        \item \textbf{Selection}: tournament among 3 randomly selected individuals.
+        \item \textbf{Crossover}: combine two parents at a random point.
+        \item \textbf{Mutation}: with small probability (source example: $0.05$), change one queen's row.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.75in]{8-queens genetic encoding with two parent vectors, crossover point, child vector, and a single-row mutation.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=20]{What Genetic Algorithms Trade}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Strengths}
+        \begin{itemize}
+          \item highly parallel population search;
+          \item effective global exploration;
+          \item useful when direct gradient information is unavailable or misleading;
+          \item recombination can preserve useful traits from multiple candidates.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Limitations}
+        \begin{itemize}
+          \item no general guarantee of convergence;
+          \item performance depends on population size;
+          \item crossover and mutation rates require tuning;
+          \item populations can still lose diversity.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Population diversity is valuable only if selection pressure does not eliminate it too quickly.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: Comparing Local-Search Strategies}
+
+\begin{frame}[shrink=20]{Local Search at a Glance}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.30}
+  \begin{tabular}{l|c|l}
+    \textbf{Algorithm} & \textbf{Current states} & \textbf{Main exploration mechanism} \\\hline
+    Hill climbing & 1 & best local improvement \\
+    Stochastic hill climbing & 1 & random improving move \\
+    Random restart & 1 per run & new random initial states \\
+    Simulated annealing & 1 & occasionally accept worse moves \\
+    Local beam search & $k$ & retain best states from a population \\
+    Genetic algorithm & population & selection, crossover, and mutation
+  \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    These algorithms differ primarily in how much diversity they preserve and what kinds of non-greedy exploration they permit.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Exploration vs. Exploitation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Exploitation}
+        Prefer states that already appear better.
+        \begin{itemize}
+          \item hill climbing;
+          \item low-temperature annealing;
+          \item strong fitness selection.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Exploration}
+        Deliberately preserve alternatives or tolerate temporary regressions.
+        \begin{itemize}
+          \item stochastic choices;
+          \item random restarts;
+          \item high-temperature annealing;
+          \item wider beams and mutation.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Local-search design is largely the problem of balancing rapid improvement against the risk of premature convergence.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Is This AI?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Local search belongs to the classical AI toolkit.
+
+      \begin{itemize}
+        \item Like BFS, DFS, and A\*, it searches a space of possible solutions.
+        \item Unlike path-finding algorithms, it emphasizes state quality rather than reconstructing a complete action sequence.
+        \item Its mechanisms may feel systematic compared with modern generative AI, but the underlying search problems remain central to AI.
+        \item The source highlights continued relevance in combinatorial optimization, robotics, and game AI.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.55in]{Classical-AI local-search iconography beside modern generative-AI imagery; include optimization, robotics, and game examples.}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    AI includes both learned models and explicit search procedures for finding useful solutions in difficult state spaces.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=20]{Takeaways}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Local search focuses on the quality of complete states rather than storing explicit paths through a search tree.
+    \item An optimization formulation requires a state space, an objective function, and a neighborhood function.
+    \item Hill climbing is memory efficient but can become trapped by local optima, ridges, and plateaus.
+    \item Sideways moves, stochastic choices, and random restarts increase robustness while retaining a single-state search model.
+    \item Simulated annealing accepts controlled temporary regressions so that the search can escape local traps.
+    \item Beam search and genetic algorithms maintain populations, using diversity to explore multiple regions at once.
+    \item Next lecture: \textbf{Constraint Satisfaction Problems}.
   \end{itemize}
+
+  \begin{keyidea}
+    Local search succeeds by sacrificing systematic path exploration in exchange for memory efficiency, graded optimization, and controlled exploration.
+  \end{keyidea}
 \end{frame}
 
 \end{document}

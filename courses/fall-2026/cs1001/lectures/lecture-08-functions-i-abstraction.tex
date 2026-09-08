@@ -1,12 +1,46 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-08/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-08/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-08/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\newcommand{\lectureplaceholder}[2][1.75in]{%
+  \fbox{%
+    \parbox[c][#1][c]{0.94\linewidth}{%
+      \centering
+      \small\textbf{Image Placeholder}\\[0.08in]
+      \scriptsize #2
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{8}
-\lecturetitle{Functions I -- Abstraction}
-\lecturedate{September 11, 2026}
-\courseunit{4. Function Fundamentals}
+\lecturetitle{Functions I --- Abstraction}
+\lecturedate{Fall 2026}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
@@ -14,41 +48,692 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Functions I -- Abstraction
-    \item Placeholder for announcements and context.
+    \item Reconnect expressions and assignment with a data-first execution model.
+    \item Use trace tables to make changing name-to-value bindings explicit.
+    \item Recognize repeated calculations as opportunities for abstraction.
+    \item Define functions as named, parameterized computations.
+    \item Distinguish definitions, calls, parameters, and arguments precisely.
+    \item Perform a first lightweight trace of a simple function call.
   \end{itemize}
+
+  \begin{keyidea}
+    Today we move from \emph{writing a calculation} to \emph{naming a reusable calculation}.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: From Data to Program State}
+
+\begin{frame}{Start with the Data}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Programs operate on values: integers, floating-point values, strings, Booleans, and other data.
+        \item Expressions inspect or combine existing values to produce new values.
+        \item Assignment associates a name with the value produced by an expression.
+      \end{itemize}
+
+      \begin{block}{Example}
+        \texttt{length = 3}\\
+        \texttt{width = 4}\\
+        \texttt{area = length * width}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: data values flowing through an expression into a new binding.
+      \lectureimage[2.55in]{data-first-model.png}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{Assignment Evaluates First, Then Binds}
+  \begin{block}{Statement}
+    \centering
+    \Large\texttt{area = length * width}
+  \end{block}
+
+  \begin{enumerate}
+    \item Retrieve the values currently associated with \texttt{length} and \texttt{width}.
+    \item Evaluate \texttt{length * width}.
+    \item Produce one resulting value.
+    \item Bind the name \texttt{area} to that value.
+  \end{enumerate}
+
+  \begin{exampleblockcp}
+    If \texttt{length -> 3} and \texttt{width -> 4}, then the right-hand side evaluates to \texttt{12}, after which \texttt{area -> 12}.
+  \end{exampleblockcp}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Trace Tables Make State Changes Explicit}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|l|c|l}
+      \textbf{Step} & \textbf{Statement} & \textbf{Result} & \textbf{Bindings afterward} \\\hline
+      1 & \texttt{x = 4} & \texttt{4} & \texttt{x -> 4} \\
+      2 & \texttt{y = x + 2} & \texttt{6} & \texttt{x -> 4, y -> 6} \\
+      3 & \texttt{x = y * 3} & \texttt{18} & \texttt{x -> 18, y -> 6}
+    \end{tabular}
+  \end{center}
+
+  \begin{cpdefinition}
+    A \textbf{trace table} records selected execution steps and the program state resulting from each step.
+  \end{cpdefinition}
+
+  \begin{keyidea}
+    Tracing is prediction: determine the next value and state \emph{before} asking Python to confirm it.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Practice: Trace a Short Sequence}
+  \begin{block}{Program}
+    \texttt{a = 5}\\
+    \texttt{b = a + 3}\\
+    \texttt{c = b * 2}\\
+    \texttt{a = c - 4}
+  \end{block}
+
+  \begin{activity}
+    Construct a four-row trace table. For each statement, record the right-hand-side value and all bindings after the statement executes.
+  \end{activity}
+
+  \begin{block}{Checkpoint}
+    At the end, what are the values associated with \texttt{a}, \texttt{b}, and \texttt{c}? Which binding changed after it had already been created?
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\sectionframe{Part 2: Repetition Creates the Need for Abstraction}
+
+\begin{frame}{Three Cubes Repeat the Same Computational Structure}
+  \begin{block}{Repeated calculations}
+    \texttt{volume1 = length1 * width1 * height1}\\[0.08in]
+    \texttt{volume2 = length2 * width2 * height2}\\[0.08in]
+    \texttt{volume3 = length3 * width3 * height3}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item The variable names differ because each cube has different data.
+    \item The multiplication pattern is identical.
+    \item Copying the formula preserves correctness only if every copy remains consistent.
   \end{itemize}
+
+  \begin{activity}
+    Circle the syntactic structure that is identical across all three statements. Underline the data that varies.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Scaling Repetition Is a Design Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item For 100 cubes, copying the same formula 100 times is technically possible.
+        \item But repetition increases maintenance cost and the opportunity for inconsistent edits.
+        \item More importantly, the program fails to express that all 100 calculations are instances of the \emph{same idea}.
+      \end{itemize}
+
+      \begin{alertblock}{Design signal}
+        When only the data changes while the computational rule remains fixed, the repeated rule is a candidate for abstraction.
+      \end{alertblock}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      % Intended visual: many cubes feeding the same volume formula.
+      \lectureimage[2.65in]{many-cubes-one-rule.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Separate What Varies from What Remains Fixed}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Varies between cases}
+        \centering
+        \texttt{length}\\
+        \texttt{width}\\
+        \texttt{height}
+      \end{block}
+      \begin{itemize}
+        \item These are the input data.
+        \item Each cube supplies different values.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Remains invariant}
+        \centering
+        \texttt{length * width * height}
+      \end{block}
+      \begin{itemize}
+        \item This is the computational rule.
+        \item Every cube uses the same rule.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Abstraction Names the Common Structure}
+  \begin{cpdefinition}
+    \textbf{Abstraction} identifies a common computational idea and gives it an interface that can be reused without rewriting the underlying computation.
+  \end{cpdefinition}
+
+  \begin{block}{From repeated formula to named computation}
+    \centering
+    \texttt{length * width * height}
+    \qquad$\Longrightarrow$\qquad
+    \texttt{volume(length, width, height)}
+  \end{block}
+
+  \begin{keyidea}
+    Good abstraction is not merely shorter code: it makes the program's conceptual structure explicit.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{An Abstraction Has an Interface and an Implementation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Interface}
+        \begin{itemize}
+          \item function name
+          \item required inputs
+          \item conceptual result
+        \end{itemize}
+      \end{block}
+      \begin{exampleblockcp}
+        \texttt{volume(length, width, height)}
+      \end{exampleblockcp}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Implementation}
+        \begin{itemize}
+          \item statements inside the function
+          \item expressions used to compute the result
+        \end{itemize}
+      \end{block}
+      \begin{exampleblockcp}
+        \texttt{length * width * height}
+      \end{exampleblockcp}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The interface answers ``how do I use it?''; the implementation answers ``how is it computed?''
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Functions as Parameterized Computations}
+
+\begin{frame}{A Function Is a Named, Parameterized Computation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{cpdefinition}
+        A \textbf{function} is a named computation whose parameters represent input values that may vary from one invocation to another.
+      \end{cpdefinition}
+
+      \begin{block}{Python}
+        \texttt{def volume(length, width, height):}\\
+        \hspace*{1em}\texttt{return length * width * height}
+      \end{block}
+
+      \begin{itemize}
+        \item \texttt{volume} names the abstraction.
+        \item The three parameters represent the varying dimensions.
+        \item The body encodes the common rule.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: three inputs entering a function box and one result leaving.
+      \lectureimage[2.70in]{function-abstraction.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Mathematical Functions Provide a Useful Starting Analogy}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Mathematics}
+        \centering
+        $f(x) = x^2$\\[0.12in]
+        $f(3) = 9$
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Python}
+        \texttt{def square(x):}\\
+        \hspace*{1em}\texttt{return x * x}\\[0.12in]
+        \texttt{square(3)}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{itemize}
+    \item A symbolic input stands for values supplied later.
+    \item The same rule can be applied to many concrete inputs.
+    \item Python functions additionally have execution semantics that we will formalize in Lecture 9.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Anatomy of a Python Function Definition}
+  \begin{block}{Definition}
+    \centering
+    \Large\texttt{def volume(length, width, height):}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l}
+      \textbf{Component} & \textbf{Role} \\\hline
+      \texttt{def} & begins a function definition \\
+      \texttt{volume} & function name \\
+      \texttt{length, width, height} & parameter names \\
+      \texttt{:} & begins the indented function body
+    \end{tabular}
+  \end{center}
+
+  \begin{alertblock}{Syntax versus semantics}
+    The syntax tells Python how the function is written; the abstraction tells the programmer what computation the function represents.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{The Function Body Encodes the Reusable Rule}
+  \begin{block}{Definition}
+    \texttt{def volume(length, width, height):}\\
+    \hspace*{1em}\texttt{result = length * width * height}\\
+    \hspace*{1em}\texttt{return result}
+  \end{block}
+
+  \begin{itemize}
+    \item Indentation determines which statements belong to the function body.
+    \item The body may contain multiple statements, not merely one expression.
+    \item The body uses parameter names rather than hard-coded values so that the computation generalizes.
+  \end{itemize}
+
+  \begin{exampleblockcp}
+    For today, read \texttt{return result} as indicating the function's computed result. Lecture 9 will formalize the execution semantics of \texttt{return}.
+  \end{exampleblockcp}
+\end{frame}
+
+\begin{frame}{Parameters Name the Roles of the Inputs}
+  \begin{block}{Definition}
+    \texttt{def rectangle\_area(width, height):}\\
+    \hspace*{1em}\texttt{return width * height}
+  \end{block}
+
+  \begin{itemize}
+    \item A parameter is a name used by the function definition to describe one input position.
+    \item Parameter names should communicate the semantic role of the supplied value.
+    \item Parameters are placeholders for values that will be supplied when the function is called.
+  \end{itemize}
+
+  \begin{keyidea}
+    Parameters belong to the abstraction's interface: they state what information the computation requires.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Function Call Applies the Abstraction to Concrete Data}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Definition}
+        \texttt{def volume(length, width, height):}\\
+        \hspace*{1em}\texttt{return length * width * height}
+      \end{block}
+      \begin{block}{Call}
+        \centering
+        \Large\texttt{volume(2, 3, 4)}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.44\textwidth}
+      % Intended visual: one stored function definition with multiple arrows from call sites.
+      \lectureimage[2.42in]{definition-versus-call.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Definition creates the reusable rule; a call supplies concrete data to one use of that rule.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{One Definition Supports Many Calls}
+  \begin{block}{Function}
+    \texttt{def volume(length, width, height):}\\
+    \hspace*{1em}\texttt{return length * width * height}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|c}
+      \textbf{Call} & \textbf{Conceptual result} \\\hline
+      \texttt{volume(3, 4, 5)} & \texttt{60} \\
+      \texttt{volume(6, 7, 8)} & \texttt{336} \\
+      \texttt{volume(2, 3, 4)} & \texttt{24}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Reuse comes from keeping the computation fixed while supplying different input values.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Parameters, Arguments, and Calls}
+
+\begin{frame}{Parameters and Arguments Are Not Synonyms}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Parameters}
+        \texttt{def volume(length, width, height):}
+      \end{block}
+      \begin{itemize}
+        \item Names appearing in the definition.
+        \item Describe the function's input positions.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Arguments}
+        \texttt{volume(2, 3, 4)}
+      \end{block}
+      \begin{itemize}
+        \item Expressions appearing at the call site.
+        \item Supply data for a particular invocation.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Terminology}
+    Parameter: definition-side input name. Argument: call-side expression.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Positional Arguments Correspond by Position}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Definition}
+        \texttt{def difference(first, second):}\\
+        \hspace*{1em}\texttt{return first - second}
+      \end{block}
+
+      \begin{block}{Call}
+        \texttt{difference(10, 4)}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Correspondence}
+        first argument \texttt{10} $\rightarrow$ \texttt{first}\\[0.10in]
+        second argument \texttt{4} $\rightarrow$ \texttt{second}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    For positional arguments, position determines which parameter receives which input value.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Changing Argument Order Can Change the Meaning}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{First call}
+        \texttt{difference(10, 4)}\\[0.08in]
+        \texttt{first -> 10}\\
+        \texttt{second -> 4}\\[0.08in]
+        result: \texttt{6}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Reversed call}
+        \texttt{difference(4, 10)}\\[0.08in]
+        \texttt{first -> 4}\\
+        \texttt{second -> 10}\\[0.08in]
+        result: \texttt{-6}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Do not infer correspondence from names}
+    Python does not inspect whether a caller's variable name resembles a parameter name when using positional arguments.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Caller Names and Parameter Names Can Differ Completely}
+  \begin{block}{Function}
+    \texttt{def rectangle\_area(width, height):}\\
+    \hspace*{1em}\texttt{return width * height}
+  \end{block}
+
+  \begin{block}{Caller}
+    \texttt{w = 5}\\
+    \texttt{h = 3}\\
+    \texttt{result = rectangle\_area(w, h)}
+  \end{block}
+
+  \begin{center}
+    \texttt{w -> 5 -> width}
+    \qquad
+    \texttt{h -> 3 -> height}
+  \end{center}
+
+  \begin{keyidea}
+    The caller's names identify data in the caller; parameter names identify input roles inside the function abstraction.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: A First Function-Call Trace}
+
+\begin{frame}{A Simple Call Extends the Data-Flow Model}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Program}
+        \texttt{def double(n):}\\
+        \hspace*{1em}\texttt{result = n * 2}\\
+        \hspace*{1em}\texttt{return result}\\[0.12in]
+        \texttt{x = 4}\\
+        \texttt{answer = double(x)}
+      \end{block}
+
+      \begin{itemize}
+        \item Before the call, \texttt{x -> 4}.
+        \item The call uses the current value represented by \texttt{x}.
+        \item For this invocation, that value corresponds to parameter \texttt{n}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: x -> 4 -> n -> computation -> result -> answer.
+      \lectureimage[2.75in]{simple-call-data-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The Parameter Represents the Supplied Input Value}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Caller}
+        \texttt{x -> 4}
+      \end{block}
+      \begin{center}
+        \Large $\downarrow$ value supplied
+      \end{center}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Function invocation}
+        \texttt{n -> 4}
+      \end{block}
+      \begin{center}
+        \texttt{result = n * 2}\\
+        \texttt{result -> 8}
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The important invariant is the value \texttt{4}; \texttt{x} and \texttt{n} are different names used in different roles.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{First Manual Function Trace}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{l|l}
+      \textbf{Stage} & \textbf{Relevant bindings / values} \\\hline
+      Before call & \texttt{x -> 4} \\
+      Input correspondence & \texttt{n -> 4} \\
+      Body calculation & \texttt{result -> 8} \\
+      After computation & \texttt{answer -> 8, x -> 4}
+    \end{tabular}
+  \end{center}
+
+  \begin{itemize}
+    \item This trace intentionally suppresses detailed call mechanics.
+    \item It is sufficient to track how input data enters the abstraction and how the resulting value is used by the caller.
+  \end{itemize}
+
+  \begin{alertblock}{Next lecture}
+    We will replace this simplified trace with the precise execution model for argument evaluation, local bindings, \texttt{return}, and resuming the caller.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Before and After: The Abstraction Clarifies Intent}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Repeated calculations}
+        \texttt{v1 = l1 * w1 * h1}\\
+        \texttt{v2 = l2 * w2 * h2}\\
+        \texttt{v3 = l3 * w3 * h3}
+      \end{block}
+      \begin{itemize}
+        \item The common idea is implicit.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Abstracted computation}
+        \texttt{v1 = volume(l1, w1, h1)}\\
+        \texttt{v2 = volume(l2, w2, h2)}\\
+        \texttt{v3 = volume(l3, w3, h3)}
+      \end{block}
+      \begin{itemize}
+        \item The operation \texttt{volume} is explicit.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Abstraction improves code by naming the concept, not merely by reducing character count.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Practice: Design the Abstraction Before Writing the Function}
+  \begin{block}{Repeated computation}
+    A program repeatedly computes the cost of purchasing some quantity of an item using\\[0.08in]
+    \centering
+    \texttt{price * quantity}
+  \end{block}
+
+  \begin{activity}
+    Determine: (1) a descriptive function name, (2) the parameters, (3) the computation that remains invariant, and (4) two example calls with different data.
+  \end{activity}
+
+  \begin{block}{Design target}
+    Your function interface should make the calculation understandable before the reader inspects its body.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Practice: Read a Function from Its Interface}
+  \begin{block}{Definition}
+    \texttt{def miles\_to\_kilometers(miles):}\\
+    \hspace*{1em}\texttt{return miles * 1.60934}
+  \end{block}
+
+  \begin{activity}
+    Without tracing every operation, answer: What data does this function require? What conceptual transformation does it represent? What would \texttt{miles\_to\_kilometers(10)} mean?
+  \end{activity}
+
+  \begin{exampleblockcp}
+    Then switch perspectives and identify the parameter name, argument value, and computation used by the implementation.
+  \end{exampleblockcp}
+\end{frame}
+
+\sectionframe{Part 6: The Mental Model Going Forward}
+
+\begin{frame}{The Prediction-First Workflow}
+  \begin{center}
+    \Large
+    Predict
+    $\longrightarrow$
+    Trace
+    $\longrightarrow$
+    Execute
+    $\longrightarrow$
+    Compare
+  \end{center}
+
+  \vspace{0.18in}
+
+  \begin{itemize}
+    \item \textbf{Predict:} state what values and bindings you expect.
+    \item \textbf{Trace:} justify the prediction one evaluation step at a time.
+    \item \textbf{Execute:} use Python or the debugger as an observation tool.
+    \item \textbf{Compare:} revise the mental model if observation disagrees with prediction.
+  \end{itemize}
+
+  \begin{keyidea}
+    The debugger is most useful after you have a prediction to test.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{What We Are Intentionally Deferring}
+  \begin{itemize}
+    \item The exact runtime sequence when a function call begins and ends.
+    \item The precise semantics of \texttt{return} as part of expression evaluation.
+    \item Local execution environments and the lifetime of local bindings.
+    \item Functions calling other functions and nested function-call expressions.
+    \item Scope, multiple active calls, and the call stack.
+  \end{itemize}
+
+  \begin{block}{Why defer these?}
+    First establish the abstraction: a named computation applied to input data. Then study the execution machinery that makes the abstraction work.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Bridge to Lecture 9}
+  \begin{block}{Today}
+    \centering
+    \texttt{answer = double(x)}
+  \end{block}
+
+  \begin{itemize}
+    \item We can already identify the abstraction, argument, parameter, and expected result.
+    \item We have not yet fully explained what Python does between encountering the call and binding \texttt{answer}.
+  \end{itemize}
+
+  \begin{activity}
+    What sequence of events must occur for \texttt{double(x)} to produce a value that assignment can bind to \texttt{answer}?
+  \end{activity}
+
+  \begin{keyidea}
+    Lecture 9 answers that question by treating a value-returning function call as an expression with precise execution semantics.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item Expressions evaluate to values; assignment binds names to resulting values.
+    \item Trace tables expose how those bindings change as statements execute.
+    \item Repeated computational structure is a signal that an abstraction may be useful.
+    \item A function names a reusable computation; parameters represent input roles that may vary.
+    \item Defining a function and calling a function are distinct operations.
+    \item Parameters appear in definitions; arguments appear at call sites and supply concrete data.
+    \item A first function trace follows values from caller data into parameterized computation and back to the caller's result.
+  \end{itemize}
+
+  \begin{keyidea}
+    Mental model: \textbf{data $\rightarrow$ expressions $\rightarrow$ bindings $\rightarrow$ abstraction $\rightarrow$ reusable computation}.
+  \end{keyidea}
 \end{frame}
 
 \end{document}
