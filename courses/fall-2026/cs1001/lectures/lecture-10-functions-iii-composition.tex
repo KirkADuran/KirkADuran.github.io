@@ -82,7 +82,7 @@
 
     \begin{column}{0.40\textwidth}
       % Intended visual: square_perimeter calling double while the outer call remains active.
-      \lectureimage[2.75in]{nested-call-overview.png}
+      \lectureimage[2.75in]{slide4.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -177,7 +177,7 @@
 
     \begin{column}{0.43\textwidth}
       % Intended visual: stack shrinking from double -> square_perimeter -> initial code.
-      \lectureimage[2.65in]{call-stack-unwind.png}
+      \lectureimage[2.65in]{slide8.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -208,7 +208,7 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{The Same Spelling Can Refer to Different Bindings}
+\begin{frame}[shrink=3]{The Same Spelling Can Refer to Different Bindings}
   \begin{block}{Program fragment}
     \texttt{x = 10}\\[0.06in]
     \texttt{def compute(value):}\\
@@ -292,7 +292,7 @@
 
     \begin{column}{0.40\textwidth}
       % Intended visual: IDE call-stack panel with three frames and separate variable panes.
-      \lectureimage[2.70in]{debugger-frame-selection.png}
+      \lectureimage[2.70in]{slide14.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -553,7 +553,7 @@
 
     \begin{column}{0.40\textwidth}
       % Intended visual: data-flow graph for magnitude(3,4) with square and sqrt nodes.
-      \lectureimage[2.85in]{magnitude-data-flow.png}
+      \lectureimage[2.85in]{slide30.png}
     \end{column}
   \end{columns}
 \end{frame}
@@ -686,7 +686,7 @@
   \end{activity}
 \end{frame}
 
-\begin{frame}{Takeaways}
+\begin{frame}[shrink=12]{Takeaways}
   \begin{itemize}
     \item A function may begin another call before it has finished; unfinished callers remain active.
     \item The call stack records active calls, while each call has its own runtime execution environment.
