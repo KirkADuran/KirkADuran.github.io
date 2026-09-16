@@ -1,54 +1,860 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\usepackage{tikz}
+
+\graphicspath{{../assets/lecture-10/}}
+
+% If an image file is not yet available, skip the visual slot.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-10/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{}%
+}
+
+% Explicit placeholder for visuals/examples that will be added later.
+\newcommand{\lectureplaceholder}[2][2.35in]{%
+  \begin{center}
+    \fbox{%
+      \begin{minipage}[c][#1][c]{0.90\linewidth}
+        \centering
+        \small\textit{#2}
+      \end{minipage}%
+    }
+  \end{center}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
-\lecturenumber{10}
-\lecturetitle{Adversarial Search I -- game trees, minimax, expectimax}
-\lecturedate{September 16, 2026}
-\courseunit{Course sequence}
+\lecturenumber{8}
+\lecturetitle{Adversarial Games: Minimax and Expectimax}
+\lecturedate{September 15, 2026}
+\courseunit{Search and Problem Solving}
 
 \begin{document}
 
+% -----------------------------------------------------------------------------
+% Source slide 1 -> New slide 1
+% -----------------------------------------------------------------------------
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Adversarial Search I -- game trees, minimax, expectimax
-    \item Placeholder for announcements and context.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Source slide 2 -> New slide 2
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Today: Reasoning Against Another Agent}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      Early AI treated game playing as a clean test of machine reasoning.
+      \begin{itemize}
+        \item The rules are explicit and the state is observable.
+        \item An agent must reason about possible futures before acting.
+        \item The environment contains another decision maker with conflicting goals.
+        \item Good decisions depend on predicting how that opponent will respond.
+      \end{itemize}
+      \begin{block}{Central question}
+        How should an agent choose an action when the outcome depends on both its own move and the response of another agent?
+      \end{block}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \lectureimage[2.55in]{slide2.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Adversarial search extends ordinary search by explicitly modeling the choices of other agents.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Source slide 3 -> New slide 3
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Chess as a Test of Intelligence}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Chess has long been associated with foresight, planning, and strategic reasoning.
+      \begin{itemize}
+        \item A position admits many legal continuations.
+        \item A strong move can only be judged relative to the opponent's best reply.
+        \item Success requires looking ahead through alternating choices.
+      \end{itemize}
+      \begin{block}{Historical motivation}
+        Early chess-playing machines helped turn the question ``Can machines think?'' into a concrete computational problem.
+      \end{block}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureimage[2.65in]{slide3.png}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Source slide 4 -> New slide 4
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Early Computer Chess}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Early work on computer chess established many of the ideas still used in game-playing AI.
+      \begin{itemize}
+        \item In the 1950s and 1960s, researchers including Alan Turing and Mac Hack explored machine chess.
+        \item By the 1970s and 1980s, programs could defeat many amateur players.
+        \item The central computational challenge was not learning the rules, but searching enough plausible futures.
+      \end{itemize}
+      \begin{keyidea}
+        Game-playing strength depends heavily on how efficiently the agent searches and evaluates future states.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.65in]{slide4.png}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+% -----------------------------------------------------------------------------
+% Source slide 5 -> New slide 5
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Deep Blue: First Match}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      In 1996, IBM's Deep Blue played a match against world champion Garry Kasparov.
+      \begin{itemize}
+        \item Deep Blue won the first game of the match.
+        \item Kasparov recovered and won the full match $4$--$2$.
+        \item The event demonstrated that large-scale search could compete with elite human play in individual games.
+      \end{itemize}
+      \begin{block}{What mattered computationally?}
+        Deep Blue could examine enormous numbers of candidate continuations and evaluate their strategic consequences.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.65in]{slide5.png}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+% -----------------------------------------------------------------------------
+% Source slide 6 -> New slide 6
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Deep Blue: Rematch}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      In the 1997 rematch, Deep Blue defeated Kasparov in a full match under tournament conditions.
+      \begin{itemize}
+        \item The system relied on specialized hardware and aggressive search.
+        \item It evaluated extremely large numbers of chess positions per second.
+        \item Its strength came from combining search depth with position evaluation.
+      \end{itemize}
+      \begin{block}{Transition}
+        To understand systems like Deep Blue, we first need a formal model of games and a rule for backing values through a game tree.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.65in]{slide6.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Games as Search Problems}
+
+% -----------------------------------------------------------------------------
+% Source slide 7 -> New slide 7
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{The Classical Adversarial-Game Model}
+  We begin with a deliberately restricted class of games.
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Two players take turns.
+        \item The game is zero-sum: one player's gain is the other's loss.
+        \item The state is fully observable.
+        \item Actions have deterministic outcomes.
+        \item Players act sequentially rather than simultaneously.
+      \end{itemize}
+      \begin{block}{Examples}
+        Tic-tac-toe, checkers, chess, and Go fit much of this model at the rules level.
+      \end{block}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureimage[2.45in]{slide7.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Minimax is most naturally introduced for deterministic, turn-taking, zero-sum, perfect-information games.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 8 -> New slide 8
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Formalizing a Game}
+  \begin{cpdefinition}
+    A deterministic turn-taking game can be described by an initial state, a player-to-move function, legal actions, a transition model, a terminal test, and terminal utilities.
+  \end{cpdefinition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\textwidth}
+      \begin{itemize}
+        \item $S_0$: initial game state.
+        \item $\mathrm{TO\_MOVE}(s)$: player whose turn it is in state $s$.
+        \item $\mathrm{ACTIONS}(s)$: legal actions available in $s$.
+        \item $\mathrm{RESULT}(s,a)$: state reached after action $a$.
+        \item $\mathrm{IS\_TERMINAL}(s)$: whether the game has ended.
+        \item $\mathrm{UTILITY}(s,p)$: payoff to player $p$ in terminal state $s$.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \lectureimage[2.35in]{slide8.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 9 -> New slide 9
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Game Trees and Ply}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      A \textbf{ply} is one move by one player.
+      \begin{itemize}
+        \item Nodes represent game states.
+        \item Edges represent legal actions.
+        \item Levels alternate between the players.
+        \item Leaves are terminal states or states where search is intentionally stopped.
+        \item Utilities at terminal states describe the final outcome.
+      \end{itemize}
+      \begin{block}{Perspective}
+        In a two-player zero-sum game, we usually measure every terminal value from MAX's perspective.
+      \end{block}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureimage[2.65in]{slide9.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 10 -> New slide 10
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Utility: What Counts as a Good Outcome?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      For a simple zero-sum game, terminal outcomes can be encoded with a scalar utility.
+      \begin{itemize}
+        \item MAX win: $+1$.
+        \item Draw: $0$.
+        \item MAX loss: $-1$.
+      \end{itemize}
+      \begin{block}{Connect Four example}
+        A terminal utility function can inspect the winner and return $+1$, $0$, or $-1$ from MAX's perspective.
+      \end{block}
+      \begin{keyidea}
+        Search does not choose moves directly from labels such as ``win'' or ``loss''; it chooses by comparing utility values.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.60in]{slide10.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 11 -> New slide 11
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Why Ordinary Search Is Not Enough}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Classical search assumes the environment does not deliberately interfere with the plan.
+      \begin{itemize}
+        \item In a game, the next state is partly determined by another agent.
+        \item A plan that succeeds against one response may fail against another.
+        \item The opponent is not merely an obstacle; it is a decision maker with its own objective.
+      \end{itemize}
+      \begin{block}{Questions we must model}
+        Will the opponent choose its strongest move? Will it behave randomly? Is some uncertainty outside either player's control?
+      \end{block}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureimage[2.55in]{slide11.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 12 -> New slide 12
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Decision Nodes: MAX, MIN, and Chance}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      Different node types represent different causes of the next state.
+      \begin{itemize}
+        \item \textbf{MAX node}: our agent chooses an action.
+        \item \textbf{MIN node}: an adversarial opponent chooses an action.
+        \item \textbf{Chance node}: an outcome is sampled according to a probability distribution.
+      \end{itemize}
+      \begin{block}{Three backup rules}
+        Maximum, minimum, and expectation are three different ways to summarize the values of child states.
+      \end{block}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureimage[2.55in]{slide12.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    The structure of the environment determines how values should be propagated upward through the tree.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 13 -> New slide 13
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Tic-Tac-Toe as a Game Tree}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Suppose MAX plays X and moves first.
+      \begin{itemize}
+        \item From the empty board, MAX has nine legal moves.
+        \item After each X move, MIN chooses an O move.
+        \item Play alternates until a win, loss, or draw occurs.
+        \item Terminal boards receive utilities such as $+1$, $0$, and $-1$.
+      \end{itemize}
+      \begin{block}{Tree interpretation}
+        Each complete root-to-leaf path is one possible play sequence; internal values summarize what rational play implies from that state.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.70in]{slide13.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Minimax}
+
+% -----------------------------------------------------------------------------
+% Source slide 14 -> New slide 14
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Minimax}
+  \begin{cpdefinition}
+    \textbf{Minimax} assigns a value to each game state assuming MAX chooses actions that maximize utility and MIN chooses actions that minimize MAX's utility.
+  \end{cpdefinition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item MAX nodes choose the child with the largest value.
+        \item MIN nodes choose the child with the smallest value.
+        \item Terminal states supply the base-case utilities.
+        \item Values are backed up recursively from leaves toward the root.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureimage[2.50in]{slide14.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Minimax asks: which move gives MAX the best outcome that can still be guaranteed against an optimal opponent?
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 15 -> New slide 15
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Backing Up Minimax Values}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      For a state $s$:
+      \[
+        V(s)=
+        \begin{cases}
+          \mathrm{UTILITY}(s), & \text{if $s$ is terminal},\\
+          \max\limits_{a\in \mathrm{ACTIONS}(s)} V(\mathrm{RESULT}(s,a)), & \text{if MAX moves},\\
+          \min\limits_{a\in \mathrm{ACTIONS}(s)} V(\mathrm{RESULT}(s,a)), & \text{if MIN moves}.
+        \end{cases}
+      \]
+      \begin{itemize}
+        \item MIN assumes MAX will exploit every weakness.
+        \item MAX assumes MIN will choose the most damaging reply.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \lectureimage[2.45in]{slide15.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 16 -> New slide 16
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Worked Example: A Two-Ply Minimax Tree}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      Consider a root MAX node with three legal actions.
+      \begin{itemize}
+        \item Each action leads to a MIN node.
+        \item Each MIN node has several terminal children.
+        \item MIN first selects the smallest child value in each subtree.
+        \item MAX then chooses the largest of those backed-up values.
+      \end{itemize}
+      \begin{block}{In-class calculation}
+        Fill in the MIN values first, then determine the action selected at the root.
+      \end{block}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureimage[2.70in]{slide16.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    The root value is the utility MAX can force when both players choose optimally.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 17 -> New slide 17
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{The Minimax Search Algorithm}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\textwidth}
+      \begin{block}{Recursive structure}
+      \ttfamily\scriptsize
+      MINIMAX(state):\\[0.03in]
+      \quad if TERMINAL(state):\\
+      \qquad return UTILITY(state)\\[0.03in]
+      \quad if TO\_MOVE(state) = MAX:\\
+      \qquad value $\leftarrow -\infty$\\
+      \qquad for action in ACTIONS(state):\\
+      \qquad\quad value $\leftarrow \max$(value, MINIMAX(RESULT(state,action)))\\
+      \qquad return value\\[0.03in]
+      \quad else:\\
+      \qquad value $\leftarrow +\infty$\\
+      \qquad for action in ACTIONS(state):\\
+      \qquad\quad value $\leftarrow \min$(value, MINIMAX(RESULT(state,action)))\\
+      \qquad return value
+      \end{block}
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \begin{itemize}
+        \item Depth-first recursion explores the game tree.
+        \item Terminal utilities provide the base case.
+        \item Internal nodes aggregate child values by max or min.
+      \end{itemize}
+      \lectureplaceholder[1.55in]{Code/example placeholder: Python implementation using a GameState interface.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 18 -> New slide 18
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Minimax Properties}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Correctness}
+        \begin{itemize}
+          \item Complete for finite game trees.
+          \item Optimal against an optimal opponent.
+        \end{itemize}
+      \end{block}
+      \begin{block}{Time}
+        With branching factor $b$ and depth $m$:
+        \[
+          O(b^m).
+        \]
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Space}
+        Depth-first recursive implementations require memory proportional to the search depth plus generated successors.
+      \end{block}
+      \begin{block}{Practical consequence}
+        The exponential number of nodes, not the minimax backup itself, is the central computational bottleneck.
+      \end{block}
+      \lectureplaceholder[1.20in]{Visual placeholder: small game tree annotated with $b$ and $m$.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Exact minimax is conceptually simple but quickly becomes infeasible as the game tree grows.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 19 -> New slide 19
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Historical Roots: Minimax and Game Theory}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{John von Neumann}
+        The minimax theorem established a foundation for rational play in two-player zero-sum games.
+      \end{block}
+      \begin{itemize}
+        \item Formalized adversarial utility.
+        \item Motivated worst-case decision making.
+        \item Connected strategic choice to mathematical game theory.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Beyond zero-sum games}
+        Later game theory, including Nash equilibrium, studies settings in which utilities are not exact opposites and stable strategic outcomes can involve multiple agents.
+      \end{block}
+      \lectureimage[1.75in]{slide19.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Beyond Two-Player Zero-Sum Games}
+
+% -----------------------------------------------------------------------------
+% Source slide 20 -> New slide 20
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Non-Zero-Sum Games}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      In non-zero-sum games, players' utilities are not exact negatives of one another.
+      \begin{itemize}
+        \item Terminal states may return a utility vector such as $(u_A,u_B)$.
+        \item Both players can benefit from some outcomes.
+        \item One player's improvement need not imply an equal loss for another.
+      \end{itemize}
+      \begin{block}{Consequence}
+        A single scalar ``MAX utility'' is no longer sufficient to describe every player's preference.
+      \end{block}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureimage[2.60in]{slide20.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 21 -> New slide 21
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Cooperation in Non-Zero-Sum Games}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      When utilities are not exact opposites, cooperation can be rational.
+      \begin{itemize}
+        \item A joint action may improve the payoff of both players.
+        \item Competition and cooperation can coexist in the same game.
+        \item Strategy depends on each player's own utility, not on a universal win/loss score.
+      \end{itemize}
+      \begin{block}{Illustration}
+        A cooperative outcome such as $(1000,1000)$ may dominate an aggressive outcome such as $(1000,0)$ for one participant without being zero-sum.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide21.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 22 -> New slide 22
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Extending Search to Multiple Players}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      With three or more players, utilities naturally become vectors.
+      \begin{itemize}
+        \item Example terminal utility: $(u_A,u_B,u_C)$.
+        \item Each player evaluates outcomes according to its own component.
+        \item The player to move chooses the successor that maximizes its own utility component.
+      \end{itemize}
+      \begin{block}{Generalization}
+        This is often called \textbf{max$^n$}: each node backs up the utility vector of the child preferred by the current player.
+      \end{block}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.65in]{slide22.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 23 -> New slide 23
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Choosing Moves in Multiplayer Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Suppose player C chooses between terminal vectors $(1,2,6)$ and $(4,2,3)$.
+      \begin{itemize}
+        \item C compares the third component: $6$ versus $3$.
+        \item C therefore chooses $(1,2,6)$.
+        \item The entire vector is then backed up to C's parent.
+      \end{itemize}
+      \begin{block}{Important distinction}
+        Each player maximizes a different component of the same backed-up vector.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide23.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 24 -> New slide 24
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alliances and Emergent Cooperation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Multiplayer games can produce strategic behavior that does not appear in strict two-player minimax.
+      \begin{itemize}
+        \item Two weak players may both prefer to attack a stronger third player.
+        \item Their actions can align even without explicit coordination.
+        \item Apparent cooperation may emerge from individual utility maximization.
+      \end{itemize}
+      \begin{block}{Game-tree explanation}
+        If attacking the stronger player improves each participant's own payoff, both can independently choose the same strategic direction.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide24.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Expectimax and Chance}
+
+% -----------------------------------------------------------------------------
+% Source slide 25 -> New slide 25
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{When the Next Move Is Not Adversarial}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Minimax assumption}
+        \begin{itemize}
+          \item The other agent chooses deliberately.
+          \item It selects the action that minimizes our utility.
+          \item We plan against its strongest response.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Stochastic assumption}
+        \begin{itemize}
+          \item The next outcome may be random or noisy.
+          \item Different outcomes occur with known or modeled probabilities.
+          \item We should optimize expected utility rather than worst-case utility.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \begin{center}
+    \lectureimage[1.45in]{slide25.png}
+  \end{center}
+  \begin{keyidea}
+    Minimax uses a minimum backup for an adversary; expectimax uses an expectation backup for chance.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 26 -> New slide 26
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Expectimax}
+  \begin{cpdefinition}
+    \textbf{Expectimax} evaluates decision trees containing MAX nodes and chance nodes by maximizing at decision nodes and taking probability-weighted averages at chance nodes.
+  \end{cpdefinition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{itemize}
+        \item At a MAX node: choose the child with maximum value.
+        \item At a chance node: compute the expected value of the children.
+      \end{itemize}
+      If chance node $s$ has outcomes $s_1,\ldots,s_k$ with probabilities $p_1,\ldots,p_k$:
+      \[
+        V(s)=\sum_{i=1}^{k} p_i V(s_i).
+      \]
+      \begin{block}{Expectiminimax}
+        Trees that contain MAX, MIN, \emph{and} chance nodes combine all three backup rules.
+      \end{block}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureimage[2.20in]{slide26.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 27 -> New slide 27
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Worked Example: Expected Utility Backup}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Suppose a chance node has two equally likely outcomes with backed-up values $3$ and $2$.
+      \[
+        V(\text{chance})=0.5(3)+0.5(2)=2.5.
+      \]
+      \begin{itemize}
+        \item The chance node does not select either child.
+        \item It represents the average utility induced by the probability model.
+        \item A MAX parent compares this expected value against the expected values of alternative actions.
+      \end{itemize}
+      \begin{block}{In-class extension}
+        Change the probabilities to $0.8$ and $0.2$. Does MAX's preferred root action change?
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.65in]{slide27.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 28 -> New slide 28
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Adversarial Search in Popular Culture: WarGames}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \emph{WarGames} (1983) dramatizes a computer reasoning about competitive strategic outcomes.
+      \begin{itemize}
+        \item The film treats games as models of strategic interaction.
+        \item The famous conclusion is that some adversarial settings have no desirable winning continuation.
+        \item This provides a useful discussion point: utility design determines what the search regards as a successful outcome.
+      \end{itemize}
+      \begin{block}{Discussion prompt}
+        If every terminal outcome has catastrophic utility, what should a rational decision procedure prefer?
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide28.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 29 -> New slide 29
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{What If Every Branch Is Bad?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Search still behaves rationally when all outcomes are undesirable.
+      \begin{itemize}
+        \item Minimax selects the action with the best worst-case utility.
+        \item Expectimax selects the action with the highest expected utility.
+        \item Neither algorithm requires the existence of a positive or ``winning'' terminal state.
+      \end{itemize}
+      \begin{block}{Important consequence}
+        A rational search agent may choose the least harmful outcome rather than a true victory.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide29.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Utility defines preference, not success in an absolute sense.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 30 -> New slide 30
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Adversarial Search in Video Games}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Game-tree reasoning appears naturally in turn-based and tactical games.
+      \begin{itemize}
+        \item Strategy games: Civilization, XCOM.
+        \item Board-game adaptations: chess, checkers, Go.
+        \item Tactical combat: Fire Emblem, Advance Wars.
+      \end{itemize}
+      A game-playing agent can:
+      \begin{itemize}
+        \item generate candidate actions and counteractions;
+        \item evaluate future states;
+        \item back values toward the current state;
+        \item select the action with the strongest backed-up value.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.65in]{Visual placeholder: turn-based strategy screenshot plus a small game tree.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 31 -> New slide 31
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Chess Moves Become a Search Tree}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      From one chess position:
+      \begin{itemize}
+        \item enumerate candidate legal moves;
+        \item generate resulting positions;
+        \item alternate the side to move;
+        \item continue recursively.
+      \end{itemize}
+      \begin{block}{Branching}
+        Each additional ply multiplies the number of positions that may need to be considered.
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lectureplaceholder[2.70in]{Example placeholder: chessboard with two candidate moves beside the corresponding first levels of a search tree.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 32 -> New slide 32
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Chess Trees Are Too Large for Terminal Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Full minimax assumes that search eventually reaches terminal outcomes.
+      \begin{itemize}
+        \item In chess, the game tree is far too large to search to completion from typical positions.
+        \item Practical systems therefore stop at a limited depth.
+        \item Nonterminal frontier states must be scored by an \textbf{evaluation function} rather than a true terminal utility.
+      \end{itemize}
+      \begin{block}{Evaluation idea}
+        Estimate position quality using features such as material, king safety, mobility, or positional structure.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.60in]{Example placeholder: chess position with a heuristic evaluation score and a depth-limited tree.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Practical adversarial search replaces unreachable terminal utilities with heuristic estimates at a cutoff depth.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 33 -> New slide 33
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Deep Blue and the Cost of Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Deep Blue's strength depended on searching huge numbers of positions efficiently.
+      \begin{itemize}
+        \item Game trees grow exponentially with depth.
+        \item Much of the tree may be irrelevant to the final decision.
+        \item Searching deeper is valuable only if the computation can be focused effectively.
+      \end{itemize}
+      \begin{block}{Next question}
+        Can we avoid exploring branches that cannot possibly change the minimax decision?
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.60in]{Visual placeholder: Deep Blue image plus an exponentially expanding tree with several branches faded out.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 34 -> New slide 34
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Takeaways}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Adversarial search models environments in which another agent actively chooses actions that affect our outcome.
+    \item Minimax assumes a rational opponent and backs values up using alternating maximum and minimum operations.
+    \item Exact minimax is optimal for finite deterministic zero-sum games but requires exponential time in the search depth.
+    \item Multiplayer and non-zero-sum games require richer utility representations, often utility vectors.
+    \item Expectimax replaces an adversarial minimum with a probability-weighted expectation when uncertainty is stochastic rather than strategic.
+    \item Practical game-playing systems use depth limits and evaluation functions because real game trees are too large to solve exhaustively.
+    \item Next lecture: \textbf{Alpha--Beta Pruning}.
   \end{itemize}
+  \begin{keyidea}
+    Minimax plans against the strongest opponent response; expectimax plans against a distribution over uncertain outcomes.
+  \end{keyidea}
 \end{frame}
 
 \end{document}

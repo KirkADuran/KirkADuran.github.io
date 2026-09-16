@@ -1,54 +1,1198 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\usepackage{tikz}
+
+\graphicspath{{../assets/lecture-09/}}
+
+% If an image file is not yet available, skip the visual slot.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-09/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{}%
+}
+
+% Explicit placeholder for visuals/examples that will be added later.
+\newcommand{\lectureplaceholder}[2][2.35in]{%
+  \begin{center}
+    \fbox{%
+      \begin{minipage}[c][#1][c]{0.90\linewidth}
+        \centering
+        \small\textit{#2}
+      \end{minipage}%
+    }
+  \end{center}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
-\lecturenumber{11}
-\lecturetitle{Adversarial Search II -- alpha-beta pruning, depth limits, evaluation functions}
-\lecturedate{September 18, 2026}
-\courseunit{Course sequence}
+\lecturenumber{9}
+\lecturetitle{Alpha--Beta Pruning and Depth-Limited Game Search}
+\lecturedate{September 17, 2026}
+\courseunit{Search and Problem Solving}
 
 \begin{document}
 
+% -----------------------------------------------------------------------------
+% Source slide 1 -> New slide 1
+% -----------------------------------------------------------------------------
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Adversarial Search II -- alpha-beta pruning, depth limits, evaluation functions
-    \item Placeholder for announcements and context.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Source slide 2 -> New slide 2
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Deep Blue: Search Is Powerful, but Expensive}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Deep Blue's success depended on searching enormous game trees, but exhaustive minimax is wasteful.
+      \begin{itemize}
+        \item Many legal moves are strategically irrelevant.
+        \item Some branches can be proven unable to change the final decision.
+        \item In chess, terminal states may be far beyond any practical search horizon.
+      \end{itemize}
+      \begin{block}{Two questions for this lecture}
+        Can we \textbf{avoid searching irrelevant branches}, and can we \textbf{stop before terminal states} without giving up useful decisions?
+      \end{block}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.55in]{Visual placeholder: Deep Blue / chess search tree with a small highlighted region and many faded branches.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Practical game playing combines exact pruning with controlled approximations of search depth.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\section{From Minimax to Pruning}
+
+% -----------------------------------------------------------------------------
+% Source slide 3 -> New slide 3
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Minimax Review: Start at the Leaves}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      Recall a depth-3 minimax tree with alternating MAX and MIN layers.
+      \begin{itemize}
+        \item Terminal utilities are measured from MAX's perspective.
+        \item MAX nodes choose the largest child value.
+        \item MIN nodes choose the smallest child value.
+        \item Values are propagated from leaves back toward the root.
+      \end{itemize}
+      \begin{block}{Example tree}
+        Leaf utilities, left to right: $-1,3,5,1,-6,-4,0,9$.
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.70in]{Example placeholder: full binary minimax tree before any leaf has been evaluated. Highlight the first leaf, $-1$.}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Source slide 4 -> New slide 4
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Minimax Review: First Leaf}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      The leftmost MAX node begins by evaluating its first child.
+      \begin{itemize}
+        \item First observed utility: $-1$.
+        \item MAX's current best value is therefore $-1$.
+        \item The sibling must still be inspected because it may be larger.
+      \end{itemize}
+      \begin{keyidea}
+        A partial search gives a bound on what a node can currently guarantee, but not necessarily its final minimax value.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lectureplaceholder[2.65in]{Example placeholder: same tree with leaf $-1$ revealed and the leftmost MAX node temporarily valued at $-1$.}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+% -----------------------------------------------------------------------------
+% Source slide 5 -> New slide 5
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Minimax Review: Finish the First MAX Node}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      The sibling leaf has utility $3$.
+      \[
+        \max(-1,3)=3.
+      \]
+      \begin{itemize}
+        \item The leftmost MAX node returns $3$ to its parent MIN node.
+        \item This establishes one candidate outcome for that MIN node.
+      \end{itemize}
+      \begin{block}{What MIN knows}
+        MIN can already force an outcome no greater than $3$ if it chooses this child.
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lectureplaceholder[2.65in]{Example placeholder: leaves $-1$ and $3$ revealed; their MAX parent labeled $3$.}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+% -----------------------------------------------------------------------------
+% Source slide 6 -> New slide 6
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Minimax Review: Finish the Left MIN Subtree}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      The second MAX child evaluates to
+      \[
+        \max(5,1)=5.
+      \]
+      The parent MIN node therefore returns
+      \[
+        \min(3,5)=3.
+      \]
+      \begin{itemize}
+        \item MAX would prefer the branch worth $5$.
+        \item MIN rejects it because the branch worth $3$ is better for MIN.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.65in]{Example placeholder: complete left half of tree, with MAX values $3$ and $5$, then MIN value $3$.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Minimax values encode what rational players can force, not what either player merely hopes will happen.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 7 -> New slide 7
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Minimax Review: Full Backed-Up Value}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      Completing the right subtree gives
+      \[
+        \max(-6,-4)=-4,\qquad \max(0,9)=9,
+      \]
+      and therefore
+      \[
+        \min(-4,9)=-4.
+      \]
+      At the root,
+      \[
+        \max(3,-4)=3.
+      \]
+      \begin{block}{Minimax decision}
+        MAX chooses the left action because it guarantees utility $3$ under optimal opposition.
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.70in]{Example placeholder: complete tree with internal values $3,5,-4,9$, MIN values $3,-4$, and root value $3$.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 8 -> New slide 8
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Why Full Minimax Becomes Impractical}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Even a few plies of chess create a rapidly expanding set of positions.
+      \begin{itemize}
+        \item Each legal move creates a new state.
+        \item The opponent then has many replies.
+        \item Alternating choices multiply the number of candidate continuations.
+        \item Most of those continuations will never occur in actual play.
+      \end{itemize}
+      \begin{block}{Search-tree growth}
+        With branching factor $b$ and depth $m$, exhaustive minimax examines $O(b^m)$ nodes.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.60in]{Visual placeholder: four successive chess positions showing one line of play while many alternatives branch away.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 9 -> New slide 9
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{The Cost of Looking Only Four Rounds Ahead}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      The source example expands a chess tree only a few rounds deep and already produces an enormous number of nodes.
+      \begin{itemize}
+        \item Brute-force minimax treats every legal continuation as potentially relevant.
+        \item Yet many branches are dominated by alternatives already discovered elsewhere.
+        \item If a branch cannot change the root decision, evaluating it is wasted work.
+      \end{itemize}
+      \begin{block}{Optimization target}
+        Preserve the exact minimax result while examining fewer nodes.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.70in]{Visual placeholder: wide chess minimax tree after four rounds; annotate the source example's roughly 206,000 explored nodes.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 10 -> New slide 10
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Pruning Intuition: A Branch Already Looks Too Good for MAX}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      Return to the same minimax tree.
+      \begin{itemize}
+        \item The first MAX child under the left MIN node has value $3$.
+        \item In the sibling MAX node, the first examined leaf has value $5$.
+        \item Therefore that MAX node will return at least $5$, regardless of its unseen sibling.
+      \end{itemize}
+      \begin{block}{Observation}
+        MIN already has a child worth $3$. Why would MIN ever choose a sibling guaranteed to be at least $5$?
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.70in]{Example placeholder: left MIN subtree with known child value $3$ and sibling MAX node currently known to be $\ge 5$; hide the remaining leaf.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 11 -> New slide 11
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Pruning Intuition: MIN Will Never Choose That Branch}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      MIN prefers smaller values.
+      \begin{itemize}
+        \item MIN can already choose the branch worth $3$.
+        \item The competing MAX branch is guaranteed to be at least $5$.
+        \item Its unseen child cannot make that branch better for MIN.
+      \end{itemize}
+      \begin{block}{Safe conclusion}
+        The remaining child of that MAX node can be ignored without changing the minimax value of the parent.
+      \end{block}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.70in]{Example placeholder: same tree with the unknown sibling visibly crossed out or faded; left MIN value remains $3$.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 12 -> New slide 12
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Pruning Intuition: The Symmetric Case}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      The same reasoning appears on the right side from MAX's perspective.
+      \begin{itemize}
+        \item The root already has a left action worth $3$.
+        \item Suppose the right MIN node discovers a child worth $-4$.
+        \item That MIN node can force a value no greater than $-4$.
+        \item MAX would never choose that right action over the known value $3$.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureplaceholder[2.70in]{Example placeholder: root known to have value at least $3$ from its left child; right MIN subtree known to be $\le -4$ with an unexplored sibling.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Once an ancestor already has a better alternative, some descendants become irrelevant to the final decision.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 13 -> New slide 13
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Pruning Preserves the Same Root Decision}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      We have now skipped two portions of the tree.
+      \begin{itemize}
+        \item The pruned leaves are not approximations.
+        \item Their exact values are unnecessary because they cannot affect the backed-up root value.
+        \item The root still evaluates to $3$.
+      \end{itemize}
+      \begin{block}{Goal achieved}
+        Search fewer nodes while returning exactly the same move as full minimax.
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.70in]{Example placeholder: completed root value $3$ with pruned leaves faded; emphasize identical decision to full minimax.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 14 -> New slide 14
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{How Much Can Pruning Save?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      In the source demonstration, alpha--beta search at depth $4$ explored only a tiny fraction of the positions examined by naive minimax.
+      \begin{itemize}
+        \item Minimax: roughly $206{,}000$ positions in the illustrated tree.
+        \item Alpha--beta: roughly $580$ positions in the illustrated comparison.
+        \item Reported search fraction: about $0.28\%$ of the brute-force total.
+      \end{itemize}
+      \begin{block}{Important qualification}
+        The savings depend strongly on the order in which moves are examined.
+      \end{block}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureplaceholder[2.70in]{Visual placeholder: side-by-side search trees labeled ``Minimax'' and ``Alpha--Beta,'' matching the source comparison.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Alpha--Beta Pruning}
+
+% -----------------------------------------------------------------------------
+% Source slide 15 -> New slide 15
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Pruning}
+  \begin{cpdefinition}
+    \textbf{Alpha--beta pruning} computes the same minimax value as exhaustive minimax while avoiding branches that cannot affect the final decision.
+  \end{cpdefinition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      The search maintains two bounds along the current path:
+      \begin{itemize}
+        \item $\alpha$: the best value MAX can guarantee so far.
+        \item $\beta$: the best value MIN can guarantee so far.
+      \end{itemize}
+      \begin{block}{Cutoff condition}
+        When $\alpha \ge \beta$, the remaining children of the current node cannot influence the final minimax choice and may be pruned.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.55in]{Visual placeholder: game tree with $\alpha$ and $\beta$ bounds along the path and scissors cutting an irrelevant subtree.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Alpha and beta summarize what the ancestors already know well enough to reject some unexplored alternatives.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 16 -> New slide 16
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Search Algorithm}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.60\textwidth}
+      \begin{block}{Recursive structure}
+      \ttfamily\scriptsize
+      ALPHA\_BETA(state, $\alpha$, $\beta$, maximizing)\\[0.02in]
+      \quad if TERMINAL(state): return UTILITY(state)\\[0.04in]
+      \quad if maximizing:\\
+      \qquad value $\leftarrow -\infty$\\
+      \qquad for action in ACTIONS(state):\\
+      \qquad\quad value $\leftarrow \max$(value, ALPHA\_BETA(RESULT(...), $\alpha$, $\beta$, false))\\
+      \qquad\quad $\alpha \leftarrow \max(\alpha,$ value$)$\\
+      \qquad\quad if $\alpha \ge \beta$: break\\
+      \qquad return value\\[0.04in]
+      \quad else:\\
+      \qquad value $\leftarrow +\infty$\\
+      \qquad for action in ACTIONS(state):\\
+      \qquad\quad value $\leftarrow \min$(value, ALPHA\_BETA(RESULT(...), $\alpha$, $\beta$, true))\\
+      \qquad\quad $\beta \leftarrow \min(\beta,$ value$)$\\
+      \qquad\quad if $\alpha \ge \beta$: break\\
+      \qquad return value
+      \end{block}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \begin{itemize}
+        \item Same recursive minimax structure.
+        \item Pass $\alpha$ and $\beta$ downward.
+        \item Update the relevant bound after each child.
+        \item Stop when the search window closes.
+      \end{itemize}
+      \lectureplaceholder[1.20in]{Code screenshot placeholder: Python alpha--beta implementation.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Worked Alpha--Beta Trace}
+
+% -----------------------------------------------------------------------------
+% Source slide 17 -> New slide 17
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Example: Initialize the Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      Start at the root MAX node with
+      \[
+        \alpha=-\infty,\qquad \beta=+\infty.
+      \]
+      These bounds are inherited by descendants until tighter information is discovered.
+      \begin{block}{First step}
+        Descend depth-first to the leftmost terminal leaf, whose utility is $-1$.
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lectureplaceholder[2.70in]{Trace placeholder: initial alpha--beta tree; show $\alpha=-\infty,\beta=+\infty$ at root and highlight leaf $-1$.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 18 -> New slide 18
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Example: Update $\alpha$ at MAX}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      At the leftmost MAX node, the first child returns $-1$.
+      \[
+        \alpha \leftarrow \max(-\infty,-1)=-1.
+      \]
+      \begin{itemize}
+        \item MAX can now guarantee at least $-1$ at this node.
+        \item The sibling is still relevant because it may improve MAX's value.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lectureplaceholder[2.70in]{Trace placeholder: leftmost MAX node annotated $\alpha=-1,\beta=+\infty$ after leaf $-1$.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 19 -> New slide 19
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Example: Finish the First MAX Node}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      The sibling leaf returns $3$.
+      \[
+        \alpha \leftarrow \max(-1,3)=3.
+      \]
+      The MAX node is now complete and returns $3$ to its parent MIN node.
+      \begin{block}{No cutoff yet}
+        $\alpha=3$ and $\beta=+\infty$, so the current window remains open.
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \lectureplaceholder[2.70in]{Trace placeholder: leaves $-1,3$ evaluated; first MAX node labeled value $3$ and $\alpha=3$.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 20 -> New slide 20
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Example: Update $\beta$ at MIN}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      The parent is a MIN node. Its first child returns $3$.
+      \[
+        \beta \leftarrow \min(+\infty,3)=3.
+      \]
+      \begin{itemize}
+        \item MIN can now guarantee a value no greater than $3$.
+        \item This $\beta=3$ bound is passed to the next MAX child.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \lectureplaceholder[2.70in]{Trace placeholder: left MIN node labeled $\alpha=-\infty,\beta=3$; move to its second MAX child.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 21 -> New slide 21
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Example: A Candidate Already Exceeds $\beta$}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      The second MAX child is searched under the window
+      \[
+        \alpha=-\infty,\qquad \beta=3.
+      \]
+      Its first leaf has value $5$, so
+      \[
+        \alpha \leftarrow 5.
+      \]
+      \begin{block}{Critical comparison}
+        Now $\alpha=5 \ge \beta=3$.
+      \end{block}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \lectureplaceholder[2.70in]{Trace placeholder: second MAX node with first leaf $5$ revealed; annotate $\alpha=5,\beta=3$.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 22 -> New slide 22
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Example: First Cutoff}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      Because $\alpha \ge \beta$, the remaining child is irrelevant.
+      \begin{itemize}
+        \item This MAX node is already worth at least $5$.
+        \item Its parent MIN node already has an alternative worth $3$.
+        \item MIN will never select a branch that cannot fall below $5$.
+      \end{itemize}
+      \begin{block}{Prune}
+        Do not evaluate the sibling leaf $1$.
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.70in]{Trace placeholder: show cutoff at $\alpha=5,\beta=3$ and cross out the unseen leaf $1$.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    The cutoff is justified by ancestor preferences, not by guessing the value of the pruned node.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 23 -> New slide 23
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Example: Return the Left Subtree Value}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      The left MIN node compares its children:
+      \begin{itemize}
+        \item first child: exactly $3$;
+        \item second child: known to be at least $5$.
+      \end{itemize}
+      Therefore MIN returns $3$.
+      \[
+        \min(3,\ge 5)=3.
+      \]
+      \begin{block}{At the root}
+        MAX updates its bound to $\alpha=3$.
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.70in]{Trace placeholder: left MIN subtree returns $3$; pruned leaf remains faded. Root now records $\alpha=3$.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 24 -> New slide 24
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Example: Search the Right MIN Subtree}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      The root enters its right MIN child with
+      \[
+        \alpha=3,\qquad \beta=+\infty.
+      \]
+      The first MAX grandchild evaluates leaves $-6$ and $-4$:
+      \[
+        \max(-6,-4)=-4.
+      \]
+      This value is returned to the right MIN node.
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.70in]{Trace placeholder: right MIN subtree active; first MAX child evaluates $-6,-4$ and returns $-4$ while root bound $\alpha=3$ is visible.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 25 -> New slide 25
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Example: Update $\beta$ to $-4$}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      At the right MIN node,
+      \[
+        \beta \leftarrow \min(+\infty,-4)=-4.
+      \]
+      But this subtree was entered with $\alpha=3$ from the root.
+      \begin{block}{Window closes}
+        $\alpha=3 \ge \beta=-4$.
+      \end{block}
+      MIN can already force $-4$, which is worse for MAX than the root's known alternative $3$.
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.70in]{Trace placeholder: right MIN node labeled $\alpha=3,\beta=-4$ after its first child returns $-4$.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 26 -> New slide 26
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Example: Second Cutoff and Final Decision}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      The rest of the right MIN subtree can be pruned.
+      \begin{itemize}
+        \item The unseen MAX child containing $0$ and $9$ is never evaluated.
+        \item The right root action is known to be no better than $-4$.
+        \item The root already has an action worth $3$.
+      \end{itemize}
+      \begin{block}{Final result}
+        Alpha--beta returns root value $3$, exactly matching full minimax.
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureplaceholder[2.70in]{Trace placeholder: final alpha--beta tree with both cutoffs visible and root value $3$.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 27 -> New slide 27
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{The Pruning Logic}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{At a MAX node}
+        \begin{itemize}
+          \item MAX searches for the highest value.
+          \item $\alpha$ tracks MAX's best guarantee so far.
+          \item If $\alpha \ge \beta$, an ancestor MIN node already has a better alternative.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{At a MIN node}
+        \begin{itemize}
+          \item MIN searches for the lowest value.
+          \item $\beta$ tracks MIN's best guarantee so far.
+          \item If $\beta \le \alpha$, an ancestor MAX node already has a better alternative.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \lectureplaceholder[1.25in]{Visual placeholder: compact annotated tree showing one MAX cutoff and one MIN cutoff.}
+  \begin{keyidea}
+    A cutoff occurs when the current branch falls outside the range of values that could still matter to an ancestor.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 28 -> New slide 28
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Alpha--Beta Properties}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|p{0.66\textwidth}}
+      \textbf{Property} & \textbf{Alpha--beta search} \\\hline
+      Complete & Yes, for finite game trees. \\
+      Optimal & Yes, under the same optimal-play assumptions as minimax. \\
+      Worst-case time & $O(b^m)$, the same asymptotic bound as minimax. \\
+      Best-case time & $O(b^{m/2})$ with near-perfect move ordering. \\
+      Space & $O(m)$ for depth-first recursive generation, ignoring stored move lists. \\
+    \end{tabular}
+  \end{center}
+  \begin{keyidea}
+    Alpha--beta improves efficiency without changing the minimax decision; move ordering determines how much pruning actually occurs.
+  \end{keyidea}
+\end{frame}
+
+\section{Depth Limits and Evaluation Functions}
+
+% -----------------------------------------------------------------------------
+% Source slide 29 -> New slide 29
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Pruning Is Not Enough}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Even after alpha--beta pruning, chess trees remain extremely deep.
+      \begin{itemize}
+        \item A game may require dozens of moves before reaching checkmate, resignation, or draw.
+        \item Some variations are much deeper than others.
+        \item Waiting for terminal utilities is therefore unrealistic under fixed time limits.
+      \end{itemize}
+      \begin{block}{New problem}
+        If search stops before the game ends, what value should be assigned to a nonterminal position?
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.60in]{Visual placeholder: Deep Blue / chessboard with an uneven deep tree extending far below the current search frontier.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 30 -> New slide 30
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Depth-Limited Minimax}
+  \begin{cpdefinition}
+    \textbf{Depth-limited minimax} stops search at a cutoff depth and evaluates the resulting nonterminal states with an evaluation function.
+  \end{cpdefinition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Replace the terminal-only base case with two possibilities:
+      \begin{itemize}
+        \item if the state is terminal, return its true utility;
+        \item if the cutoff condition is reached, return $\mathrm{EVAL}(s)$.
+      \end{itemize}
+      The returned estimates are then backed up through MAX and MIN exactly as before.
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.45in]{Visual placeholder: game tree truncated by a horizontal ``search horizon''; frontier nodes labeled with heuristic values.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Depth limiting trades exact terminal reasoning for a heuristic estimate of positions near the search horizon.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 31 -> New slide 31
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Depth Limits and Pruning Work Together}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      Practical game search usually combines both mechanisms.
+      \begin{itemize}
+        \item \textbf{Depth limit}: controls how far the tree may grow.
+        \item \textbf{Alpha--beta}: avoids searching branches within that horizon that cannot matter.
+        \item \textbf{Evaluation function}: estimates frontier states when terminal utilities are unavailable.
+      \end{itemize}
+      \begin{block}{Source comparison}
+        The lecture's depth-4 example reports alpha--beta examining about $0.28\%$ of the nodes shown for brute-force minimax.
+      \end{block}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureplaceholder[2.70in]{Visual placeholder: repeat source side-by-side minimax vs. alpha--beta depth-4 trees, now annotate the shared cutoff depth.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 32 -> New slide 32
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Depth-Limited Alpha--Beta Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.62\textwidth}
+      \begin{block}{Algorithmic structure}
+      \ttfamily\scriptsize
+      ALPHA\_BETA(state, depth, $\alpha$, $\beta$, maximizing)\\[0.02in]
+      \quad if TERMINAL(state): return UTILITY(state)\\
+      \quad if CUTOFF(state, depth): return EVAL(state)\\[0.04in]
+      \quad if maximizing:\\
+      \qquad value $\leftarrow -\infty$\\
+      \qquad for action in ACTIONS(state):\\
+      \qquad\quad value $\leftarrow \max$(value, ALPHA\_BETA(RESULT(...), depth$+1$, $\alpha$, $\beta$, false))\\
+      \qquad\quad $\alpha \leftarrow \max(\alpha,$ value$)$\\
+      \qquad\quad if $\alpha \ge \beta$: break\\
+      \qquad return value\\[0.04in]
+      \quad else: \emph{symmetrically minimize and update $\beta$}
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \begin{itemize}
+        \item Track current depth.
+        \item Stop at terminal or cutoff states.
+        \item Evaluate frontier states heuristically.
+        \item Preserve alpha--beta pruning above the frontier.
+      \end{itemize}
+      \lectureplaceholder[1.05in]{Code screenshot placeholder: depth-limited alpha--beta.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 33 -> New slide 33
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Evaluation Functions Replace Unreachable Utilities}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      When search stops before terminal states, the agent needs a proxy for true utility.
+      \begin{itemize}
+        \item The evaluation should correlate with the probability or quality of eventual outcomes.
+        \item Positive values should favor MAX; negative values should favor MIN.
+        \item Evaluation must be cheap enough to apply at many frontier nodes.
+      \end{itemize}
+      \begin{block}{Design objective}
+        Estimate the strategic value of a state using features available now, without solving the remainder of the game.
+      \end{block}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.55in]{Visual placeholder: Deep Blue examining a frontier of chess states, each assigned a heuristic score.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 34 -> New slide 34
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Chess Evaluation Functions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      A classical evaluation function combines weighted strategic features:
+      \[
+        \mathrm{EVAL}(s)=w_1f_1(s)+w_2f_2(s)+\cdots+w_nf_n(s).
+      \]
+      Typical features include
+      \begin{itemize}
+        \item material balance;
+        \item king safety;
+        \item pawn structure;
+        \item mobility and control of important squares;
+        \item piece activity and positional constraints.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.55in]{Example placeholder: chess position annotated with material, king-safety, pawn-structure, and mobility features.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    An evaluation function is useful only insofar as its features predict long-term game outcomes beyond the current search depth.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 35 -> New slide 35
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Connect Four: A Simple Heuristic Evaluation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      A Connect Four heuristic can score patterns that indicate progress toward a win.
+      \begin{itemize}
+        \item Large positive score for four in a row.
+        \item Smaller positive score for three in a row with an open cell.
+        \item Smaller still for two in a row with multiple open cells.
+        \item Apply corresponding negative values to dangerous opponent patterns.
+      \end{itemize}
+      \begin{block}{Example scoring sketch}
+        $+1000$ for four; $+100$ for an open three; $+10$ for an open two, with analogous penalties for the opponent.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.55in]{Example placeholder: Connect Four board with highlighted windows/patterns and a small scoring-function code excerpt.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Depth-Limit Failure Modes and Extensions}
+
+% -----------------------------------------------------------------------------
+% Source slide 36 -> New slide 36
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{The Horizon Effect}
+  \begin{cpdefinition}
+    The \textbf{horizon effect} occurs when important consequences lie just beyond the search cutoff, causing the evaluation function to misjudge the current position.
+  \end{cpdefinition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item A tactic may look favorable only because its refutation is one ply beyond the horizon.
+        \item An agent may delay an unavoidable loss until after the cutoff.
+        \item The frontier position appears stable even though a forcing sequence is imminent.
+      \end{itemize}
+      \begin{block}{Consequence}
+        A deeper fixed cutoff helps, but does not eliminate the problem; the tactical event can simply move beyond the new horizon.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.10in]{Visual placeholder: horizon line with a move that appears strong before the line but loses immediately beyond it.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 37 -> New slide 37
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Stable vs. Unstable Frontier Positions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Quiescent position}
+        A strategically stable position with no immediate forcing tactical sequence.
+        \begin{itemize}
+          \item no urgent captures;
+          \item no immediate checks;
+          \item no major promotions or exchanges pending.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Non-quiescent position}
+        An unstable position in which the evaluation may change sharply after a few forcing moves.
+        \begin{itemize}
+          \item tactical captures;
+          \item checks or threats;
+          \item promotions;
+          \item unresolved material swings.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Evaluation is most trustworthy when the cutoff occurs in a relatively stable position.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 38 -> New slide 38
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Quiescence Search}
+  \begin{cpdefinition}
+    \textbf{Quiescence search} selectively extends search beyond the nominal depth limit when the frontier position is tactically unstable.
+  \end{cpdefinition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Rather than considering every legal move, continue only through forcing moves such as
+      \begin{itemize}
+        \item captures;
+        \item checks;
+        \item promotions;
+        \item other domain-specific tactical actions.
+      \end{itemize}
+      Stop once a sufficiently stable state is reached and then apply the evaluation function.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.50in]{Visual placeholder: main alpha--beta tree ending at a horizon, with a few selectively extended tactical branches below it.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Quiescence search spends extra depth where the evaluation function is least reliable.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 39 -> New slide 39
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Singular Extensions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      A \textbf{singular extension} searches deeper along a line when one move appears substantially stronger than all alternatives.
+      \begin{itemize}
+        \item Trigger when the best move is clearly separated from the rest.
+        \item Allocate additional depth to that critical continuation.
+        \item Avoid spending equal depth on obviously inferior alternatives.
+      \end{itemize}
+      \begin{block}{Why it helps}
+        Some strategically decisive sequences are narrow rather than broad; selective depth can reveal their true consequences.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureplaceholder[2.55in]{Visual placeholder: tree with one brightly highlighted branch extended several plies deeper than its siblings.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 40 -> New slide 40
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Forward Pruning: Search Less by Taking Risk}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \textbf{Forward pruning} deliberately discards or reduces branches before their irrelevance is proven.
+      \begin{itemize}
+        \item Reduces search effort aggressively.
+        \item Can reach greater effective depth.
+        \item Sacrifices the minimax guarantee if a discarded move was actually important.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Examples from the source}
+        \begin{itemize}
+          \item Beam-style move selection.
+          \item ProbCut / probability-based pruning.
+          \item Late-move reductions (LMR).
+        \end{itemize}
+      \end{block}
+      \lectureplaceholder[1.20in]{Visual placeholder: only a few promising branches remain bright while others are intentionally discarded.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Alpha--beta pruning is exact; forward-pruning methods are selective approximations that trade certainty for speed.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 41 -> New slide 41
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Search vs. Lookup}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Opening knowledge}
+        Familiar early-game positions can be stored in opening books rather than rediscovered through search every game.
+      \end{block}
+      \begin{itemize}
+        \item curated or statistically derived lines;
+        \item immediate access to known strong moves;
+        \item saves computation for unfamiliar positions.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Endgame knowledge}
+        Small endgames can be solved exhaustively in advance and stored in tablebases.
+      \end{block}
+      \begin{itemize}
+        \item exact win/draw/loss information;
+        \item often exact distance-to-conversion information;
+        \item replace online search with direct lookup when applicable.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+  \lectureplaceholder[1.20in]{Visual placeholder: opening book on the left, endgame tablebase/database on the right, search in the middle.}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 42 -> New slide 42
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Iterative Deepening Under a Time Limit}
+  \begin{cpdefinition}
+    \textbf{Iterative deepening} repeatedly performs depth-limited search with increasing depth until the available time is exhausted.
+  \end{cpdefinition}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{enumerate}
+        \item Search to depth $1$.
+        \item Repeat at depths $2,3,\ldots$.
+        \item Stop when the time budget is nearly exhausted.
+        \item Return the best move from the deepest fully completed iteration.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{block}{Why repeat work?}
+        Earlier iterations improve move ordering for deeper alpha--beta searches and guarantee an anytime answer if computation must stop unexpectedly.
+      \end{block}
+      \lectureplaceholder[1.05in]{Visual placeholder: nested depth-1, depth-2, depth-3 search horizons around a chess clock.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Putting the Mechanisms Together}
+
+% -----------------------------------------------------------------------------
+% Source slide 43 -> New slide 43
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Deep Blue as a Search System}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      The source lecture uses Deep Blue to connect the mechanisms into one practical architecture:
+      \begin{itemize}
+        \item minimax-style adversarial reasoning;
+        \item alpha--beta pruning;
+        \item depth-limited search;
+        \item heuristic evaluation of nonterminal states;
+        \item quiescence search and selective extensions;
+        \item forward-pruning ideas;
+        \item opening books and endgame knowledge;
+        \item progressive / iterative deepening.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \lectureplaceholder[2.60in]{Visual placeholder: Deep Blue match photo plus a layered pipeline from search to pruning to evaluation to lookup.}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Strong game-playing systems are not one algorithm; they are carefully engineered combinations of exact search, heuristic evaluation, selective depth, and stored knowledge.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 44 -> New slide 44
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Two Modern Paths to Strong Chess AI}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Search-engine tradition}
+        Systems such as Stockfish build on highly optimized tree search.
+        \begin{itemize}
+          \item alpha--beta-style pruning;
+          \item transposition tables;
+          \item selective reductions and extensions;
+          \item strong evaluation functions;
+          \item opening and endgame knowledge.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Learning-centered tradition}
+        Systems such as AlphaZero combine learned value/policy models with Monte Carlo Tree Search.
+        \begin{itemize}
+          \item self-play learning;
+          \item learned state evaluation;
+          \item policy-guided search;
+          \item no classical alpha--beta requirement.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    The core problem remains selective lookahead: devote computation to the continuations most likely to matter.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 45 -> New slide 45
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Chess AI: Comparing Machine and Human Strength}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      The source slide compares top human ratings with contemporary engine ratings to emphasize the scale of modern chess-engine performance.
+      \begin{itemize}
+        \item Engine strength now substantially exceeds elite human play under standard engine-testing conditions.
+        \item Exact numerical rankings change over time and depend on the rating pool and hardware configuration.
+        \item For lecture use, the conceptual point is more durable than any one snapshot.
+      \end{itemize}
+      \begin{block}{Update placeholder}
+        Replace with a current human-vs.-engine rating snapshot before presenting if numerical rankings matter.
+      \end{block}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureplaceholder[2.55in]{Visual placeholder: current top-human rating list beside a current computer-chess engine rating list.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 46 -> New slide 46
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Real Games Violate the Idealized Model}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Assumptions so far}
+        \begin{itemize}
+          \item opponent plays optimally;
+          \item legal actions are known;
+          \item state is fully observable;
+          \item action outcomes are deterministic;
+          \item search can model the relevant future.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Complications in real games}
+        \begin{itemize}
+          \item opponents can be suboptimal or adaptive;
+          \item chance may affect outcomes;
+          \item information may be hidden;
+          \item exact outcomes may be probabilistic;
+          \item the full tree may be too large even for sophisticated pruning.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Alpha--beta is extremely effective for deterministic adversarial trees, but other game models require different search machinery.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Source slide 47 -> New slide 47
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=18]{Takeaways and Next Time}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Alpha--beta pruning returns the same move as minimax while skipping branches that cannot affect the decision.
+    \item $\alpha$ records MAX's best guarantee; $\beta$ records MIN's best guarantee; prune when $\alpha\ge\beta$.
+    \item Move ordering controls how much pruning occurs: the best case reduces effective search from $O(b^m)$ toward $O(b^{m/2})$.
+    \item Depth-limited search replaces unreachable terminal utilities with heuristic evaluation at a cutoff frontier.
+    \item Horizon effects motivate quiescence search and selective extensions near tactically unstable positions.
+    \item Iterative deepening provides time-bounded, anytime search while improving move ordering for alpha--beta.
+    \item Next lecture: \textbf{Monte Carlo Tree Search}.
   \end{itemize}
+  \begin{keyidea}
+    Practical adversarial search succeeds by deciding both \emph{which branches deserve exploration} and \emph{how deeply each branch should be explored}.
+  \end{keyidea}
 \end{frame}
 
 \end{document}
