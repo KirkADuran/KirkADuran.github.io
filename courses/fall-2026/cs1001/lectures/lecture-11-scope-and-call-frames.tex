@@ -1,12 +1,46 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-11/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-11/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-11/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\newcommand{\lectureplaceholder}[2][1.75in]{%
+  \fbox{%
+    \parbox[c][#1][c]{0.94\linewidth}{%
+      \centering
+      \small\textbf{Image Placeholder}\\[0.08in]
+      \scriptsize #2
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{11}
 \lecturetitle{Scope and Call Frames}
 \lecturedate{September 18, 2026}
-\courseunit{5. Scope and Conditional Control Flow}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
@@ -14,41 +48,652 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Scope and Call Frames
-    \item Placeholder for announcements and context.
+    \item Define \textbf{local}, \textbf{enclosing}, and \textbf{global} scopes precisely.
+    \item Separate lexical name resolution from runtime call-frame organization.
+    \item Trace nested functions and identify free-variable bindings.
+    \item Use \texttt{global} and \texttt{nonlocal} to change where assignment binds a name.
+    \item Bind arguments using position, keywords, and default parameter values.
+    \item Diagnose common scope and argument-binding errors by tracing program state.
   \end{itemize}
+
+  \begin{keyidea}
+    A name has meaning only relative to a scope, while a running function call has state only relative to its call frame.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: Scope and Name Resolution}
+
+\begin{frame}{Names Are Resolved Within Scopes}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{cpdefinition}
+        A \textbf{scope} is a region of program text in which a binding for a name is visible.
+      \end{cpdefinition}
+
+      \begin{itemize}
+        \item Assignment, parameters, imports, and function definitions can bind names.
+        \item Using a name requires Python to determine which visible binding the occurrence refers to.
+        \item The nearest applicable lexical binding is selected.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: nested lexical regions labeled local, enclosing, global, builtins.
+      \lectureimage[2.55in]{scope-resolution-layers.png}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{Local and Global Scope}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{cpdefinition}
+        A \textbf{local binding} is a name bound within a function body and belonging to that function's local scope.
+      \end{cpdefinition}
+
+      \begin{block}{Example}
+        \texttt{def f(x):}\\
+        \hspace*{0.20in}\texttt{y = x + 1}
+      \end{block}
+
+      Here \texttt{x} and \texttt{y} are local to \texttt{f}.
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{cpdefinition}
+        A \textbf{global binding} is a name bound at module level.
+      \end{cpdefinition}
+
+      \begin{block}{Example}
+        \texttt{tax\_rate = 0.075}\\[0.08in]
+        \texttt{def total(price):}\
+        \hspace*{0.20in}\texttt{return price * (1 + tax\_rate)}
+      \end{block}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{A Function May Read a Global Binding Without \texttt{global}}
+  \begin{block}{Program}
+    \texttt{rate = 2}\\[0.06in]
+    \texttt{def scale(value):}\\
+    \hspace*{0.20in}\texttt{return value * rate}\\[0.08in]
+    \texttt{answer = scale(5)}
   \end{block}
+
+  \begin{enumerate}
+    \item \texttt{value} is found in the local scope of \texttt{scale}.
+    \item \texttt{rate} has no local binding in \texttt{scale}.
+    \item Name resolution continues outward and finds global \texttt{rate -> 2}.
+    \item The function returns \texttt{10}.
+  \end{enumerate}
+
+  \begin{keyidea}
+    Reading a global name and rebinding a global name are different operations.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Assignment Inside a Function Normally Creates a Local Binding}
+  \begin{block}{Program}
+    \texttt{count = 10}\\[0.06in]
+    \texttt{def reset():}\\
+    \hspace*{0.20in}\texttt{count = 0}\\
+    \hspace*{0.20in}\texttt{return count}\\[0.08in]
+    \texttt{x = reset()}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Global binding}
+        \texttt{count -> 10}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{During \texttt{reset}}
+        local \texttt{count -> 0}\\
+        return \texttt{0}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  The module-level \texttt{count} remains \texttt{10}.
+\end{frame}
+
+\begin{frame}{Shadowing Creates a Different Binding with the Same Name}
+  \begin{cpdefinition}
+    \textbf{Shadowing} occurs when a nearer scope binds a name that also exists in an outer scope.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{price = 100}\\[0.06in]
+    \texttt{def discounted():}\\
+    \hspace*{0.20in}\texttt{price = 80}\\
+    \hspace*{0.20in}\texttt{return price}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Inside \texttt{discounted}, \texttt{price} resolves to the local binding \texttt{80}.
+    \item Outside the function, \texttt{price} still resolves to the global binding \texttt{100}.
+    \item Same spelling does not imply same binding.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{A Subtle Rule: Binding Anywhere Makes the Name Local}
+  \begin{block}{Program}
+    \texttt{x = 10}\\[0.06in]
+    \texttt{def f():}\\
+    \hspace*{0.20in}\texttt{print(x)}\\
+    \hspace*{0.20in}\texttt{x = 20}
+  \end{block}
+
+  \begin{alertblock}{Result}
+    Calling \texttt{f()} raises \texttt{UnboundLocalError}.
+  \end{alertblock}
+
+  \begin{itemize}
+    \item Because \texttt{x} is assigned somewhere in \texttt{f}, Python treats \texttt{x} as local throughout that function block.
+    \item The first \texttt{print(x)} therefore attempts to read the local \texttt{x} before that local binding has received a value.
+  \end{itemize}
+
+  \begin{keyidea}
+    Scope classification is not determined statement-by-statement during execution.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 2: Call Frames as Runtime State}
+
+\begin{frame}{A Call Frame Represents One Active Execution of a Function}
+  \begin{cpdefinition}
+    A \textbf{call frame} is the runtime execution state associated with one active function call.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      A useful CS 1001 model records:
+      \begin{itemize}
+        \item parameter bindings;
+        \item local-variable bindings;
+        \item the currently executing location;
+        \item the relationship to the caller.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Intended visual: one frame with parameters, locals, instruction location, caller link.
+      \lectureimage[2.55in]{call-frame-anatomy.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Frame Lifetime Follows Call Lifetime}
+  \begin{enumerate}
+    \item Evaluate the arguments at the call site.
+    \item Begin the call and initialize the frame's parameter bindings.
+    \item Execute the function body, adding or changing local bindings.
+    \item Evaluate a \texttt{return} expression or reach the end of the function.
+    \item End the active call; the caller resumes using the produced value.
+  \end{enumerate}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{During call}
+        frame exists\\
+        locals are inspectable
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+      \begin{block}{After return}
+        call is no longer active\\
+        its ordinary local environment is no longer active
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Two Calls to the Same Function Use Different Frames}
+  \begin{block}{Program}
+    \texttt{def increase(value):}\\
+    \hspace*{0.20in}\texttt{result = value + 1}\\
+    \hspace*{0.20in}\texttt{return result}\\[0.08in]
+    \texttt{a = increase(4)}\\
+    \texttt{b = increase(10)}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{First call}
+        \texttt{value -> 4}\\
+        \texttt{result -> 5}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Second call}
+        \texttt{value -> 10}\\
+        \texttt{result -> 11}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  The parameter name \texttt{value} is reused, but the two runtime bindings belong to different calls.
+\end{frame}
+
+\begin{frame}{Call Stack and Scope Answer Different Questions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Call stack}
+        Runtime structure.\\[0.08in]
+        \textbf{Question:} Which calls are active, and which caller resumes next?
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Lexical scope}
+        Program-text structure.\\[0.08in]
+        \textbf{Question:} Which binding does this occurrence of a name refer to?
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Important}
+    A caller's local variables do not automatically become visible to a callee merely because the caller's frame is beneath it on the call stack.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Trace a Call Frame, Not Just the Final Result}
+  \begin{block}{Program}
+    \texttt{def compute(a, b):}\\
+    \hspace*{0.20in}\texttt{total = a + b}\\
+    \hspace*{0.20in}\texttt{scaled = total * 2}\\
+    \hspace*{0.20in}\texttt{return scaled}\\[0.08in]
+    \texttt{answer = compute(3, 5)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Execution point} & \textbf{Local frame bindings} \\\hline
+      function entry & \texttt{a -> 3, b -> 5} \\
+      after \texttt{total = a + b} & \texttt{a -> 3, b -> 5, total -> 8} \\
+      after \texttt{scaled = total * 2} & add \texttt{scaled -> 16} \\
+      return & produce \texttt{16}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\sectionframe{Part 3: Nested Functions and Enclosing Scope}
+
+\begin{frame}{A Function Definition May Appear Inside Another Function}
+  \begin{block}{Example}
+    \texttt{def outer(value):}\\
+    \hspace*{0.20in}\texttt{def double(x):}\\
+    \hspace*{0.40in}\texttt{return x * 2}\\
+    \hspace*{0.20in}\texttt{return double(value)}
+  \end{block}
+
+  \begin{itemize}
+    \item Executing the inner \texttt{def} statement creates a function object and binds it to the local name \texttt{double}.
+    \item That binding belongs to the current call of \texttt{outer}.
+    \item The inner function can be called like any other function value while its binding is available.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Nested Functions Add an Enclosing Function Scope}
+  \begin{block}{Program}
+    \texttt{def outer(base):}\\
+    \hspace*{0.20in}\texttt{offset = 3}\\
+    \hspace*{0.20in}\texttt{def inner(x):}\\
+    \hspace*{0.40in}\texttt{return x + offset}\\
+    \hspace*{0.20in}\texttt{return inner(base)}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{x} is local to \texttt{inner}.
+    \item \texttt{offset} is not local to \texttt{inner}; it is a \textbf{free variable} there.
+    \item Python resolves \texttt{offset} in the nearest enclosing function scope where it is bound.
+  \end{itemize}
+
+  \begin{keyidea}
+    Lexical nesting, not the order of callers on the stack, determines enclosing-scope name resolution.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace a Nested Function Call}
+  \begin{block}{Call}
+    \centering
+    \Large\texttt{result = outer(5)}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{\texttt{outer} frame}
+        \texttt{base -> 5}\\
+        \texttt{offset -> 3}\\
+        \texttt{inner -> <function>}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{\texttt{inner} frame}
+        \texttt{x -> 5}\\
+        free \texttt{offset -> 3} from enclosing scope\\
+        return \texttt{8}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  Then \texttt{outer} returns \texttt{8}, so \texttt{result -> 8}.
+\end{frame}
+
+\begin{frame}{\texttt{nonlocal} Rebinds the Nearest Enclosing Function Binding}
+  \begin{block}{Program}
+    \texttt{def outer():}\\
+    \hspace*{0.20in}\texttt{count = 0}\\
+    \hspace*{0.20in}\texttt{def step():}\\
+    \hspace*{0.40in}\texttt{nonlocal count}\\
+    \hspace*{0.40in}\texttt{count = count + 1}\\
+    \hspace*{0.20in}\texttt{step()}\\
+    \hspace*{0.20in}\texttt{return count}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{nonlocal count} prevents assignment from creating a new local \texttt{count} in \texttt{step}.
+    \item The assignment targets the existing \texttt{count} in the nearest enclosing function scope.
+    \item \texttt{outer()} therefore returns \texttt{1}.
+  \end{itemize}
+\end{frame}
+
+\sectionframe{Part 4: The \texttt{global} Statement}
+
+\begin{frame}{\texttt{global} Changes the Binding Target of a Name}
+  \begin{block}{Program}
+    \texttt{count = 0}\\[0.06in]
+    \texttt{def increment():}\\
+    \hspace*{0.20in}\texttt{global count}\\
+    \hspace*{0.20in}\texttt{count = count + 1}
+  \end{block}
+
+  \begin{cpdefinition}
+    Within the current scope, \texttt{global name} declares that uses and assignments of \texttt{name} refer to the module-level global binding rather than to a new local binding.
+  \end{cpdefinition}
+
+  \begin{keyidea}
+    \texttt{global} is a lexical declaration about name resolution and assignment target selection; it does not copy a global value into the function. It must precede uses of that name in the same function block.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace a Global Rebinding}
+  \begin{block}{Program}
+    \texttt{score = 10}\\[0.06in]
+    \texttt{def add\_points(points):}\\
+    \hspace*{0.20in}\texttt{global score}\\
+    \hspace*{0.20in}\texttt{score = score + points}\\
+    \hspace*{0.20in}\texttt{return score}\\[0.08in]
+    \texttt{result = add\_points(5)}
+  \end{block}
+
+  \begin{enumerate}
+    \item Frame begins with local parameter \texttt{points -> 5}.
+    \item \texttt{score} resolves to global \texttt{10} because of the declaration.
+    \item Assignment rebinds global \texttt{score -> 15}.
+    \item The call returns \texttt{15}; then \texttt{result -> 15} globally.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Without \texttt{global}, the Same Code Is Not Equivalent}
+  \begin{block}{Problematic version}
+    \texttt{score = 10}\\[0.06in]
+    \texttt{def add\_points(points):}\\
+    \hspace*{0.20in}\texttt{score = score + points}\\
+    \hspace*{0.20in}\texttt{return score}
+  \end{block}
+
+  \begin{alertblock}{Why it fails}
+    The assignment makes \texttt{score} local to \texttt{add\_points}. The right-hand side then tries to read that local \texttt{score} before it has been bound, producing \texttt{UnboundLocalError}.
+  \end{alertblock}
+
+  \begin{keyidea}
+    Adding an assignment can change how every occurrence of that name is classified within the function block.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Local, \texttt{nonlocal}, and \texttt{global} Select Different Binding Targets}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l}
+      \textbf{Inside a function} & \textbf{Assignment target} & \textbf{Typical meaning} \\\hline
+      ordinary assignment & current local scope & create/rebind local name \\
+      \texttt{nonlocal x} & nearest enclosing function binding & rebind enclosing state \\
+      \texttt{global x} & module-level global binding & rebind global state
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    These declarations alter where a name is resolved for assignment; they do not change the right-hand-side evaluation rules. Prefer explicit parameters and return values when shared mutable state is unnecessary.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Parameter Binding Beyond Position}
+
+\begin{frame}{Positional Arguments Bind by Parameter Position}
+  \begin{block}{Definition and call}
+    \texttt{def rectangle(width, height):}\
+    \hspace*{0.20in}\texttt{return width * height}\\[0.08in]
+    \texttt{area = rectangle(5, 3)}
+  \end{block}
+
+  \begin{block}{Binding}
+    first argument \texttt{5 -> width}\\
+    second argument \texttt{3 -> height}
+  \end{block}
+
+  Position determines the correspondence; the caller's variable names, if any, are irrelevant after their values are evaluated.
+\end{frame}
+
+\begin{frame}{Keyword Arguments Bind by Parameter Name}
+  \begin{block}{Calls}
+    \texttt{rectangle(width=5, height=3)}\\
+    \texttt{rectangle(height=3, width=5)}
+  \end{block}
+
+  \begin{itemize}
+    \item A keyword argument explicitly identifies the parameter slot to fill.
+    \item Keyword argument order therefore does not determine parameter correspondence.
+    \item The argument expression is still evaluated to obtain a value before the call executes.
+  \end{itemize}
+
+  \begin{keyidea}
+    Positional binding answers ``which slot by order?''; keyword binding answers ``which slot by parameter name?''
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Positional and Keyword Arguments May Be Mixed}
+  \begin{block}{Definition}
+    \texttt{def describe(name, age, city):}\
+    \hspace*{0.20in}\texttt{return name, age, city}
+  \end{block}
+
+  \begin{block}{Valid call}
+    \texttt{describe("Ada", age=20, city="SLO")}
+  \end{block}
+
+  \begin{enumerate}
+    \item Positional argument \texttt{"Ada"} fills \texttt{name}.
+    \item Keyword \texttt{age=20} fills \texttt{age}.
+    \item Keyword \texttt{city="SLO"} fills \texttt{city}.
+  \end{enumerate}
+
+  In ordinary calls, explicit positional arguments precede explicit keyword arguments.
+
+  \begin{alertblock}{Binding must be unambiguous}
+    A parameter may not receive two values, and every required parameter must be filled. Duplicate, missing, or unknown arguments raise \texttt{TypeError}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Default Parameter Values Fill Omitted Slots}
+  \begin{block}{Definition}
+    \texttt{def power(base, exponent=2):}\
+    \hspace*{0.20in}\texttt{return base ** exponent}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{\texttt{power(5)}}
+        \texttt{base -> 5}\\
+        \texttt{exponent -> 2} from default\\
+        return \texttt{25}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+      \begin{block}{\texttt{power(5, exponent=3)}}
+        \texttt{base -> 5}\\
+        \texttt{exponent -> 3} from argument\\
+        return \texttt{125}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Default Expressions Are Evaluated When the Function Is Defined}
+  \begin{block}{Trace carefully}
+    \texttt{x = 10}\\
+    \texttt{def show(value=x):}\\
+    \hspace*{0.20in}\texttt{return value}\\[0.06in]
+    \texttt{x = 20}\\
+    \texttt{answer = show()}
+  \end{block}
+
+  \begin{enumerate}
+    \item When the \texttt{def} executes, the default expression \texttt{x} evaluates to \texttt{10}.
+    \item Rebinding global \texttt{x -> 20} does not recompute the stored default.
+    \item \texttt{show()} therefore binds \texttt{value -> 10}.
+  \end{enumerate}
+
+  \begin{alertblock}{Design consequence}
+    Mutable objects used as defaults are shared across calls that omit that argument; this is usually avoided in introductory code.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Python Supports Multiple Parameter Kinds}
+  \begin{block}{General form}
+    \centering
+    \texttt{def f(a, b, /, c, d=0, *, scale=1): ...}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Parameters} & \textbf{How arguments may be supplied} \\\hline
+      \texttt{a, b} before \texttt{/} & positional only \\
+      \texttt{c, d} & positional or keyword \\
+      \texttt{scale} after \texttt{*} & keyword only
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Most student-defined functions use positional-or-keyword parameters; \texttt{/} and \texttt{*} make an interface more explicit when needed.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: Integrated Tracing and Debugging}
+
+\begin{frame}{Integrated Trace: Global and Local Bindings with Keywords}
+  \begin{block}{Program}
+    \texttt{rate = 2}\\
+    \texttt{def transform(value, offset=1):}\\
+    \hspace*{0.20in}\texttt{scaled = value * rate}\\
+    \hspace*{0.20in}\texttt{return scaled + offset}\\[0.08in]
+    \texttt{answer = transform(offset=4, value=3)}
+  \end{block}
+
+  \begin{enumerate}
+    \item Keyword binding creates local \texttt{value -> 3}, \texttt{offset -> 4}.
+    \item Global lookup supplies \texttt{rate -> 2}.
+    \item Local assignment creates \texttt{scaled -> 6}.
+    \item Return expression evaluates \texttt{6 + 4 -> 10}.
+    \item The caller binds global \texttt{answer -> 10}.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Integrated Trace: Nested Function and Enclosing Binding}
+  \begin{block}{Program}
+    \texttt{def make\_total(base, tax=0.10):}\\
+    \hspace*{0.20in}\texttt{def add\_tax(amount):}\\
+    \hspace*{0.40in}\texttt{return amount * (1 + tax)}\\
+    \hspace*{0.20in}\texttt{return add\_tax(base)}\\[0.08in]
+    \texttt{result = make\_total(50, tax=0.20)}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Outer frame}
+        \texttt{base -> 50}\\
+        \texttt{tax -> 0.20}\\
+        \texttt{add\_tax -> <function>}
+      \end{block}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Inner frame}
+        \texttt{amount -> 50}\\
+        free \texttt{tax -> 0.20}\\
+        return \texttt{60.0}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Debugger Strategy: Inspect the Correct Frame}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      When stopped inside nested calls:
+      \begin{enumerate}
+        \item Identify the currently executing frame.
+        \item Inspect its parameter and local bindings.
+        \item Use the call stack to select an outer active frame when needed.
+        \item Keep lexical scope separate from the debugger's stack ordering.
+        \item Predict name resolution before relying on the debugger display.
+      \end{enumerate}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: debugger call-stack panel with two frames and separate locals panels.
+      \lectureimage[2.70in]{debugger-frame-selection.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Tracing Activity: Resolve Every Name Before Computing}
+  \begin{block}{Predict without running}
+    \texttt{x = 5}\\[0.04in]
+    \texttt{def outer(x, scale=2):}\\
+    \hspace*{0.20in}\texttt{offset = 3}\\
+    \hspace*{0.20in}\texttt{def inner(value):}\\
+    \hspace*{0.40in}\texttt{return value * scale + offset}\\
+    \hspace*{0.20in}\texttt{return inner(x)}\\[0.06in]
+    \texttt{answer = outer(scale=4, x=2)}
+  \end{block}
+
+  \begin{activity}
+    Draw the active frames during \texttt{inner}. For each occurrence of \texttt{x}, \texttt{scale}, \texttt{offset}, and \texttt{value}, identify its binding and scope. Then determine \texttt{answer}.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item \textbf{Scope} determines which binding a name occurrence can refer to; a \textbf{call frame} records runtime state for one active call.
+    \item Ordinary assignment inside a function creates or rebinds a local name unless \texttt{nonlocal} or \texttt{global} changes the binding target.
+    \item Nested functions may read names from lexically enclosing function scopes.
+    \item \texttt{global} permits rebinding module-level names, but it also introduces externally visible state changes that must be traced explicitly.
+    \item Function-call argument binding fills parameter slots using positional arguments, keyword arguments, and default values.
+    \item Accurate tracing separates three questions: \emph{Which frame is active? Which scope supplies this name? Which value is bound?}
+  \end{itemize}
+
+  \begin{keyidea}
+    The central discipline is to locate the binding first, then evaluate the expression.
+  \end{keyidea}
 \end{frame}
 
 \end{document}
