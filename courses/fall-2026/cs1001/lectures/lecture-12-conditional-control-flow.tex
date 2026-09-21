@@ -1,12 +1,36 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-12/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-12/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-12/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{12}
 \lecturetitle{Conditional Control Flow}
 \lecturedate{September 21, 2026}
-\courseunit{5. Scope and Conditional Control Flow}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
@@ -14,41 +38,699 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Conditional Control Flow
-    \item Placeholder for announcements and context.
+    \item Use Boolean expressions to choose whether statements execute.
+    \item Trace \texttt{if}, \texttt{if}/\texttt{else}, and \texttt{if}/\texttt{elif}/\texttt{else} statements.
+    \item Distinguish chained conditionals from nested conditionals.
+    \item Use \texttt{input()} to obtain user data and convert it to an appropriate type.
+    \item Apply Python's truth-value rules when conditions are not explicitly Boolean.
+    \item Use a predicate function call directly as a condition.
   \end{itemize}
+
+  \begin{keyidea}
+    Conditional control flow changes \emph{which statement executes next} according to the truth value of an expression.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: From Boolean Values to Control Flow}
+
+\begin{frame}{Sequential Execution Has Only One Path}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Sequential program}
+        \texttt{x = 4}\\
+        \texttt{y = x + 2}\\
+        \texttt{z = y * 3}
+      \end{block}
+
+      \begin{itemize}
+        \item Each statement executes after the preceding statement.
+        \item Tracing asks two questions: what is the current state, and what executes next?
+        \item Until now, the second question usually had one answer.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: a straight control-flow arrow through three statements.
+      \lectureimage[2.35in]{sequential-control-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A Conditional Introduces a Choice of Execution Paths}
+  \begin{cpdefinition}
+    A \textbf{conditional statement} selects among possible execution paths according to the truth value of a condition.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{temperature = 82}\\[0.06in]
+    \texttt{if temperature > 80:}\\
+    \hspace*{0.20in}\texttt{print("Warm day")}
+  \end{block}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item \texttt{temperature > 80} is evaluated before the body is selected.
+    \item The condition produces a truth value.
+    \item That result determines whether the indented statement executes.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{Reminder: Conditions Are Expressions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Comparison}
+        \texttt{age >= 18}\\[0.08in]
+        $\longrightarrow$ \texttt{True} or \texttt{False}
+      \end{block}
+
+      \begin{block}{Compound Boolean expression}
+        \texttt{age >= 18 and has\_id}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{itemize}
+        \item Arithmetic may be evaluated inside a condition.
+        \item Comparisons produce Boolean values.
+        \item \texttt{and}, \texttt{or}, and \texttt{not} combine or negate Boolean claims.
+        \item Parentheses may make grouping explicit.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The condition is evaluated using the same expression rules learned earlier; conditional control flow uses the resulting truth value.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Reminder: Python Also Uses Truthiness}
+  \begin{cpdefinition}
+    \textbf{Truthiness} is Python's rule for interpreting a value in a Boolean context.
+  \end{cpdefinition}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Common falsy values} & \textbf{Common truthy values} \\\hline
+      \texttt{False} & \texttt{True} \\
+      \texttt{0}, \texttt{0.0} & nonzero numbers \\
+      \texttt{""} & nonempty strings \\
+      \texttt{None} & most other ordinary values
+    \end{tabular}
+  \end{center}
+
+  \begin{block}{Useful diagnostic}
+    \centering
+    \texttt{bool(value)} explicitly shows the truth value Python would use.
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Tracing Now Requires State and Control}
+  \begin{block}{Program}
+    \texttt{x = 5}\\
+    \texttt{if x > 3:}\\
+    \hspace*{0.20in}\texttt{y = x + 1}\\
+    \texttt{z = x * 2}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.20}
+    \begin{tabular}{c|l|l}
+      \textbf{Step} & \textbf{Executed item} & \textbf{Bindings afterward} \\\hline
+      1 & \texttt{x = 5} & \texttt{x -> 5} \\
+      2 & evaluate \texttt{x > 3} & condition is \texttt{True} \\
+      3 & \texttt{y = x + 1} & \texttt{x -> 5, y -> 6} \\
+      4 & \texttt{z = x * 2} & \texttt{x -> 5, y -> 6, z -> 10}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    A trace must record not only values, but also which branch was selected.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 2: The \texttt{if} Statement}
+
+\begin{frame}{The Simplest Conditional Is \texttt{if}}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{General form}
+        \texttt{if condition:}\\
+        \hspace*{0.20in}\texttt{statement}\\
+        \hspace*{0.20in}\texttt{statement}
+      \end{block}
+
+      \begin{itemize}
+        \item Evaluate the condition.
+        \item If its truth value is true, execute the indented suite.
+        \item Otherwise, skip that suite.
+        \item Continue with the first statement after the conditional.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: decision diamond with true branch through body and false branch around it.
+      \lectureimage[2.55in]{if-control-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The Colon and Indentation Define the Conditional Suite}
+  \begin{cpdefinition}
+    A \textbf{suite} is the block of statements controlled by a compound statement such as \texttt{if}.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{if score >= 70:}\\
+    \hspace*{0.20in}\texttt{status = "passing"}\\
+    \hspace*{0.20in}\texttt{message = "Keep going"}\\
+    \texttt{print("Done")}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item The colon introduces the suite.
+    \item Both indented assignments belong to the \texttt{if}.
+    \item \texttt{print("Done")} is outside the conditional and executes afterward regardless of the branch result.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{A False Condition Skips the Entire Suite}
+  \begin{block}{Program}
+    \texttt{balance = 40}\\
+    \texttt{if balance >= 100:}\\
+    \hspace*{0.20in}\texttt{balance = balance - 100}\\
+    \hspace*{0.20in}\texttt{print("Purchase complete")}\\
+    \texttt{print(balance)}
+  \end{block}
+
+  \begin{enumerate}
+    \item \texttt{balance >= 100} evaluates as \texttt{40 >= 100 -> False}.
+    \item Neither indented statement executes.
+    \item Control continues at \texttt{print(balance)}.
+    \item The value of \texttt{balance} remains \texttt{40}.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{The Body May Contain Several Sequential Statements}
+  \begin{block}{Program}
+    \texttt{temperature = 95}\\
+    \texttt{if temperature > 90:}\\
+    \hspace*{0.20in}\texttt{message = "hot"}\\
+    \hspace*{0.20in}\texttt{water = 2}\\
+    \hspace*{0.20in}\texttt{print(message)}\\
+    \texttt{print("Finished")}
+  \end{block}
+
+  \begin{itemize}
+    \item The condition selects whether the \emph{entire} suite is entered.
+    \item Once selected, statements inside the suite execute sequentially unless another control-flow construct changes that order.
+    \item The first unindented statement marks the continuation point.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Trace Example: A Single \texttt{if}}
+  \begin{block}{Program}
+    \texttt{x = 6}\\
+    \texttt{y = 2}\\
+    \texttt{if x > y:}\\
+    \hspace*{0.20in}\texttt{x = x - y}\\
+    \hspace*{0.20in}\texttt{y = y + 1}\\
+    \texttt{result = x + y}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.14}
+    \begin{tabular}{c|l|l}
+      \textbf{Step} & \textbf{Action} & \textbf{State} \\\hline
+      1 & \texttt{x = 6} & \texttt{x -> 6} \\
+      2 & \texttt{y = 2} & \texttt{x -> 6, y -> 2} \\
+      3 & \texttt{x > y -> True} & branch selected \\
+      4 & \texttt{x = x - y} & \texttt{x -> 4, y -> 2} \\
+      5 & \texttt{y = y + 1} & \texttt{x -> 4, y -> 3} \\
+      6 & \texttt{result = x + y} & \texttt{result -> 7}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Prediction: Which Bindings Exist?}
+  \begin{block}{Program}
+    \texttt{points = 7}\\
+    \texttt{if points >= 10:}\\
+    \hspace*{0.20in}\texttt{bonus = 5}\\
+    \hspace*{0.20in}\texttt{points = points + bonus}\\
+    \texttt{final = points * 2}
+  \end{block}
+
+  \begin{activity}
+    Before running Python, determine:
+    \begin{enumerate}
+      \item whether the conditional suite executes;
+      \item whether \texttt{bonus} ever receives a binding;
+      \item the final values of \texttt{points} and \texttt{final}.
+    \end{enumerate}
+  \end{activity}
+
+  \begin{keyidea}
+    A statement that is skipped cannot create or update a binding.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Two-Way Selection with \texttt{if}/\texttt{else}}
+
+\begin{frame}{\texttt{if}/\texttt{else} Selects Exactly One of Two Suites}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{General form}
+        \texttt{if condition:}\\
+        \hspace*{0.20in}\texttt{true\_suite}\\
+        \texttt{else:}\\
+        \hspace*{0.20in}\texttt{false\_suite}
+      \end{block}
+
+      \begin{itemize}
+        \item A true condition selects the first suite.
+        \item A false condition selects the \texttt{else} suite.
+        \item The two suites are mutually exclusive for one execution of the statement.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: decision diamond with mutually exclusive true and false branches rejoining.
+      \lectureimage[2.55in]{if-else-control-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Both Branches Rejoin at the Continuation Point}
+  \begin{block}{Program}
+    \texttt{score = 84}\\
+    \texttt{if score >= 70:}\\
+    \hspace*{0.20in}\texttt{status = "pass"}\\
+    \texttt{else:}\\
+    \hspace*{0.20in}\texttt{status = "not pass"}\\
+    \texttt{print(status)}
+  \end{block}
+
+  \begin{itemize}
+    \item Exactly one assignment to \texttt{status} executes.
+    \item After the selected branch finishes, both paths continue at \texttt{print(status)}.
+    \item Designing both branches to establish the same required binding can simplify later code.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Trace Example: \texttt{if}/\texttt{else}}
+  \begin{block}{Program}
+    \texttt{x = 9}\\
+    \texttt{if x \% 2 == 0:}\\
+    \hspace*{0.20in}\texttt{kind = "even"}\\
+    \texttt{else:}\\
+    \hspace*{0.20in}\texttt{kind = "odd"}\\
+    \texttt{length = len(kind)}
+  \end{block}
+
+  \begin{enumerate}
+    \item \texttt{x \% 2 == 0 -> 1 == 0 -> False}.
+    \item The first suite is skipped.
+    \item The \texttt{else} suite binds \texttt{kind -> "odd"}.
+    \item \texttt{len(kind) -> 3}, so \texttt{length -> 3}.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Two Independent \texttt{if}s Are Not the Same as \texttt{if}/\texttt{else}}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Independent tests}
+        \texttt{if x > 0:}\\
+        \hspace*{0.16in}\texttt{print("positive")}\\
+        \texttt{if x < 10:}\\
+        \hspace*{0.16in}\texttt{print("small")}
+      \end{block}
+
+      Both tests are evaluated.
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Mutually exclusive alternatives}
+        \texttt{if x > 0:}\\
+        \hspace*{0.16in}\texttt{print("positive")}\\
+        \texttt{else:}\\
+        \hspace*{0.16in}\texttt{print("not positive")}
+      \end{block}
+
+      Exactly one suite is selected.
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Program structure expresses a logical relationship among alternatives; indentation is not merely visual formatting.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Chained Conditionals with \texttt{elif}}
+
+\begin{frame}{\texttt{elif} Represents Ordered Multi-Way Selection}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{General form}
+        \texttt{if condition1:}\\
+        \hspace*{0.18in}\texttt{suite1}\\
+        \texttt{elif condition2:}\\
+        \hspace*{0.18in}\texttt{suite2}\\
+        \texttt{elif condition3:}\\
+        \hspace*{0.18in}\texttt{suite3}\\
+        \texttt{else:}\\
+        \hspace*{0.18in}\texttt{default\_suite}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: ordered chain of decision diamonds, first true branch exits the chain.
+      \lectureimage[2.65in]{elif-chain-control-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Conditions in an \texttt{elif} Chain Are Tested Top to Bottom}
+  \begin{enumerate}
+    \item Evaluate the \texttt{if} condition.
+    \item If it is truthy, execute that suite and skip the remainder of the chain.
+    \item Otherwise, evaluate the first \texttt{elif} condition.
+    \item Continue until one condition is truthy.
+    \item If no preceding condition is truthy, execute \texttt{else} when present.
+  \end{enumerate}
+
+  \begin{keyidea}
+    An \texttt{elif} chain selects the suite associated with the \textbf{first truthy condition}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Order Matters When Conditions Overlap}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Correctly ordered thresholds}
+        \texttt{if score >= 90:}\\
+        \hspace*{0.16in}\texttt{grade = "A"}\\
+        \texttt{elif score >= 80:}\\
+        \hspace*{0.16in}\texttt{grade = "B"}\\
+        \texttt{elif score >= 70:}\\
+        \hspace*{0.16in}\texttt{grade = "C"}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Why order is semantic}
+        A score of \texttt{95} satisfies all three comparisons. The first true condition determines the selected branch.
+      \end{alertblock}
+
+      For threshold classifications, testing from the most restrictive threshold downward is often the intended structure.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A Final \texttt{else} Can Make the Classification Exhaustive}
+  \begin{block}{Example}
+    \texttt{temperature = 58}\\[0.06in]
+    \texttt{if temperature >= 90:}\\
+    \hspace*{0.20in}\texttt{category = "hot"}\\
+    \texttt{elif temperature >= 70:}\\
+    \hspace*{0.20in}\texttt{category = "warm"}\\
+    \texttt{elif temperature >= 50:}\\
+    \hspace*{0.20in}\texttt{category = "cool"}\\
+    \texttt{else:}\\
+    \hspace*{0.20in}\texttt{category = "cold"}
+  \end{block}
+
+  \begin{itemize}
+    \item Every numeric value reaches one branch.
+    \item \texttt{58} fails the first two tests and satisfies \texttt{temperature >= 50}.
+    \item The resulting binding is \texttt{category -> "cool"}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Trace Example: A Chained Conditional}
+  \begin{block}{Program}
+    \texttt{x = 12}\\
+    \texttt{if x < 0:}\\
+    \hspace*{0.20in}\texttt{label = "negative"}\\
+    \texttt{elif x == 0:}\\
+    \hspace*{0.20in}\texttt{label = "zero"}\\
+    \texttt{elif x < 10:}\\
+    \hspace*{0.20in}\texttt{label = "small positive"}\\
+    \texttt{else:}\\
+    \hspace*{0.20in}\texttt{label = "large positive"}
+  \end{block}
+
+  \begin{block}{Evaluation sequence}
+    \texttt{12 < 0 -> False} $\rightarrow$
+    \texttt{12 == 0 -> False} $\rightarrow$
+    \texttt{12 < 10 -> False} $\rightarrow$
+    \texttt{else}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Boundary Values Are the Best Tests for Chained Conditions}
+  \begin{activity}
+    For the grading chain below, predict the branch selected for scores \texttt{69}, \texttt{70}, \texttt{79}, \texttt{80}, \texttt{89}, and \texttt{90}.
+  \end{activity}
+
+  \begin{block}{Chain}
+    \texttt{if score >= 90:} \quad \texttt{grade = "A"}\\
+    \texttt{elif score >= 80:} \quad \texttt{grade = "B"}\\
+    \texttt{elif score >= 70:} \quad \texttt{grade = "C"}\\
+    \texttt{else:} \quad \texttt{grade = "not passing"}
+  \end{block}
+
+  \begin{keyidea}
+    Boundary cases expose mistakes involving \texttt{<} versus \texttt{<=}, ordering, and missing ranges.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Nested Conditionals}
+
+\begin{frame}{A Conditional Suite May Contain Another Conditional}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Example}
+        \texttt{has\_ticket = True}\\
+        \texttt{age = 15}\\[0.06in]
+        \texttt{if has\_ticket:}\\
+        \hspace*{0.18in}\texttt{if age >= 16:}\\
+        \hspace*{0.36in}\texttt{status = "admit"}\\
+        \hspace*{0.18in}\texttt{else:}\\
+        \hspace*{0.36in}\texttt{status = "age restricted"}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: one decision nested inside the true branch of another decision.
+      \lectureimage[2.55in]{nested-conditional-tree.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Nested and Chained Conditionals Represent Different Structures}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Chained}
+        \texttt{if A:}\\
+        \hspace*{0.16in}\texttt{...}\\
+        \texttt{elif B:}\\
+        \hspace*{0.16in}\texttt{...}
+      \end{block}
+
+      \texttt{B} is considered only when \texttt{A} is false.
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Nested}
+        \texttt{if A:}\\
+        \hspace*{0.16in}\texttt{if B:}\\
+        \hspace*{0.32in}\texttt{...}
+      \end{block}
+
+      \texttt{B} is considered only when \texttt{A} is true.
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Nesting expresses a dependency: reaching the inner decision depends on the outer path.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace Nested Conditionals from the Outside In}
+  \begin{block}{Program}
+    \texttt{x = 7}\\
+    \texttt{if x > 0:}\\
+    \hspace*{0.20in}\texttt{sign = "positive"}\\
+    \hspace*{0.20in}\texttt{if x \% 2 == 0:}\\
+    \hspace*{0.40in}\texttt{kind = "even"}\\
+    \hspace*{0.20in}\texttt{else:}\\
+    \hspace*{0.40in}\texttt{kind = "odd"}\\
+    \texttt{result = sign + " " + kind}
+  \end{block}
+
+  \begin{enumerate}
+    \item Evaluate outer condition: \texttt{7 > 0 -> True}.
+    \item Enter outer suite and bind \texttt{sign -> "positive"}.
+    \item Evaluate inner condition: \texttt{7 \% 2 == 0 -> False}.
+    \item Execute inner \texttt{else}: \texttt{kind -> "odd"}.
+    \item Continue after the outer conditional: \texttt{result -> "positive odd"}.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Choose the Structure That Matches the Logical Relationship}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{l|l}
+      \textbf{Relationship among tests} & \textbf{Typical structure} \\\hline
+      Perform something only when one claim is true & \texttt{if} \\
+      Choose between two alternatives & \texttt{if}/\texttt{else} \\
+      Choose the first matching case from an ordered set & \texttt{if}/\texttt{elif}/\texttt{else} \\
+      A second decision is meaningful only within one outer case & nested \texttt{if}
+    \end{tabular}
+  \end{center}
+
+  \begin{alertblock}{Design warning}
+    Do not introduce nesting merely because it is available. Nest only when the logical dependency requires it.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 6: User Input, Truthiness, and Predicate Conditions}
+
+\begin{frame}{\texttt{input()} Reads One Line of User Input as a String}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{cpdefinition}
+        The built-in \texttt{input(prompt)} function displays the prompt, waits for a line of keyboard input, and returns the entered text as a \texttt{str}.
+      \end{cpdefinition}
+
+      \begin{block}{Example}
+        \texttt{name = input("Name: ")}\\
+        \texttt{print(name)}
+      \end{block}
+
+      Typing \texttt{Ada} produces the value \texttt{"Ada"}.
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: keyboard input flowing through input() to a string value binding.
+      \lectureimage[2.55in]{input-string-data-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Numeric Input Must Be Converted Before Numeric Comparison}
+  \begin{block}{Two-step form}
+    \texttt{age\_text = input("Age: ")}\\
+    \texttt{age = int(age\_text)}\\
+    \texttt{if age >= 18:}\\
+    \hspace*{0.20in}\texttt{print("Adult")}
+  \end{block}
+
+  \begin{itemize}
+    \item If the user types \texttt{21}, \texttt{age\_text} is initially the string \texttt{"21"}.
+    \item \texttt{int(age\_text)} evaluates to the integer \texttt{21} when the text is a valid integer representation.
+    \item The comparison \texttt{age >= 18} is then a numeric comparison.
+  \end{itemize}
+
+  \begin{keyidea}
+    User input is data; choose an appropriate representation before applying operations to it.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace Example: Input Followed by a Conditional}
+  \begin{block}{Program}
+    \texttt{number\_text = input("Number: ")}\\
+    \texttt{number = int(number\_text)}\\
+    \texttt{if number > 0:}\\
+    \hspace*{0.20in}\texttt{label = "positive"}\\
+    \texttt{else:}\\
+    \hspace*{0.20in}\texttt{label = "not positive"}\\
+    \texttt{print(label)}
+  \end{block}
+
+  \begin{block}{Suppose the user enters \texttt{-3}}
+    \texttt{number\_text -> "-3"} $\rightarrow$
+    \texttt{number -> -3} $\rightarrow$
+    \texttt{-3 > 0 -> False} $\rightarrow$
+    \texttt{label -> "not positive"}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Truthiness Matters with User Input}
+  \begin{block}{Program}
+    \texttt{name = input("Name: ")}\\
+    \texttt{if name:}\\
+    \hspace*{0.20in}\texttt{message = "Hello, " + name}\\
+    \texttt{else:}\\
+    \hspace*{0.20in}\texttt{message = "No name entered"}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      User enters \texttt{Ada}:\\
+      \texttt{name -> "Ada"}\\
+      nonempty string $\rightarrow$ truthy
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      User presses Enter immediately:\\
+      \texttt{name -> ""}\\
+      empty string $\rightarrow$ falsy
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=4]{A Predicate Function Call Can Be Used Directly as a Condition}
+  \begin{cpdefinition}
+    A \textbf{predicate function} is a function whose result represents a Boolean claim about its argument or arguments.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{Example predicate}
+        \texttt{def is\_even(n):}\\
+        \hspace*{0.20in}\texttt{return n \% 2 == 0}
+      \end{block}
+
+      \begin{block}{Using the predicate}
+        \texttt{value = 14}\\
+        \texttt{if is\_even(value):}\\
+        \hspace*{0.20in}\texttt{print("even")}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.39\textwidth}
+      % Intended visual: value -> predicate call -> True -> selected branch.
+      \lectureimage[2.35in]{predicate-as-condition.png}
+    \end{column}
+  \end{columns}
+
+  The call \texttt{is\_even(value)} is an expression whose returned Boolean value becomes the condition result.
+\end{frame}
+
+\begin{frame}[shrink=4]{Integrated Trace: Input, Chaining, and a Predicate}
+  \begin{block}{Program}
+    \texttt{def is\_even(n):}\\
+    \hspace*{0.20in}\texttt{return n \% 2 == 0}\\[0.06in]
+    \texttt{text = input("Integer: ")}\\
+    \texttt{number = int(text)}\\
+    \texttt{if number < 0:}\\
+    \hspace*{0.20in}\texttt{category = "negative"}\\
+    \texttt{elif number == 0:}\\
+    \hspace*{0.20in}\texttt{category = "zero"}\\
+    \texttt{elif is\_even(number):}\\
+    \hspace*{0.20in}\texttt{category = "positive even"}\\
+    \texttt{else:}\\
+    \hspace*{0.20in}\texttt{category = "positive odd"}
+  \end{block}
+
+  \begin{activity}
+    Trace the program for user inputs \texttt{-4}, \texttt{0}, \texttt{8}, and \texttt{7}. For each run, record the conditions evaluated, the first selected branch, and the final binding of \texttt{category}.
+  \end{activity}
+
+  \begin{keyidea}
+    Trace conditionals by separating three questions: \textbf{what does the condition evaluate to, which path is selected, and how does that path change program state?}
+  \end{keyidea}
 \end{frame}
 
 \end{document}
