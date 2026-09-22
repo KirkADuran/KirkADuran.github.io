@@ -1,54 +1,907 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\usepackage{tikz}
+
+\graphicspath{{../assets/lecture-13/}}
+
+% If an image file is not yet available, skip the visual slot.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-13/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{}%
+}
+
+% Explicit placeholder for visuals/examples that will be added later.
+\newcommand{\lectureplaceholder}[2][2.35in]{%
+  \begin{center}
+    \fbox{%
+      \begin{minipage}[c][#1][c]{0.90\linewidth}
+        \centering
+        \small\textit{#2}
+      \end{minipage}%
+    }
+  \end{center}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{13}
-\lecturetitle{Propositional Logic -- knowledge-based agents, syntax, semantics, entailment}
+\lecturetitle{Propositional Logic: Logical Agents, Syntax, Semantics, and Entailment}
 \lecturedate{September 23, 2026}
-\courseunit{Course sequence}
+\courseunit{Logic and Knowledge Representation}
 
 \begin{document}
 
+% Estimated pacing: 50 minutes
+% Motivation + logical agents: 10 min
+% Historical context: 7 min
+% Propositional syntax: 12 min
+% Semantics + models: 11 min
+% Entailment: 8 min
+% Wrap / bridge: 2 min
+
+% -----------------------------------------------------------------------------
+% Slide 1
+% -----------------------------------------------------------------------------
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Propositional Logic -- knowledge-based agents, syntax, semantics, entailment
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{Why Logic in AI?}
+
+% -----------------------------------------------------------------------------
+% Slide 2
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{A Different Kind of AI Question}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      Imagine a warehouse robot approaching a charging bay.
+
+      \begin{block}{What the robot knows}
+        \[
+          \mathrm{BatteryLow}
+        \]
+        \[
+          \mathrm{SmokeDetected} \rightarrow \mathrm{BayUnsafe}
+        \]
+        \[
+          \mathrm{BatteryLow}\land\neg\mathrm{BayUnsafe}
+          \rightarrow \mathrm{EnterBay}
+        \]
+      \end{block}
+
+      The immediate question is not ``Which path is shortest?''
+
+      \begin{center}
+        \textbf{What conclusions are justified by what I know?}
+      \end{center}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.75in]{slide2.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Search reasons over possible actions. Logic reasons over what must be true given an agent's knowledge.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Slide 3
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{From Search Agents to Logical Agents}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Search-oriented agent}
+        \begin{enumerate}
+          \item Represent a state.
+          \item Generate successor states.
+          \item Evaluate paths or actions.
+          \item Choose an action.
+        \end{enumerate}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Logical agent}
+        \begin{enumerate}
+          \item Represent facts and rules.
+          \item Add observations to a knowledge base.
+          \item Infer consequences.
+          \item Act using those conclusions.
+        \end{enumerate}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \lectureimage[1.35in]{slide3.png}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Slide 4
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{The Knowledge-Based Agent Loop}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      A classical knowledge-based agent repeatedly updates and queries an explicit knowledge base.
+
+      \begin{enumerate}
+        \item \textbf{Perceive} something about the world.
+        \item \textbf{TELL} the knowledge base what was observed.
+        \item \textbf{ASK} what follows from the current knowledge.
+        \item Choose an action.
+        \item Record the action and repeat.
+      \end{enumerate}
+
+      \begin{block}{Two separate problems}
+        \textbf{Representation:} What can the agent say?\\[0.04in]
+        \textbf{Inference:} What can the agent conclude?
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.75in]{slide4.png}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+% -----------------------------------------------------------------------------
+% Slide 5
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{A Knowledge Base Stores More Than Raw Data}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      A database might store isolated facts:
+
+      \[
+        \mathrm{BatteryLow}
+      \]
+      \[
+        \mathrm{ChargerAvailable}
+      \]
+
+      A knowledge base may also store \textbf{rules connecting facts}:
+
+      \[
+        \mathrm{BatteryLow}\land\mathrm{ChargerAvailable}
+        \rightarrow \mathrm{ShouldCharge}
+      \]
+
+      The sentence \(\mathrm{ShouldCharge}\) does not need to be written explicitly if it can be derived.
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.55in]{slide5.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Inference turns explicit knowledge into implicit knowledge.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 6
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Explicit Knowledge vs. Implicit Knowledge}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Explicitly stored}
+        \[
+          P
+        \]
+        \[
+          P\rightarrow Q
+        \]
+      \end{block}
+
+      These sentences are directly present in the knowledge base.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Implicitly supported}
+        \[
+          Q
+        \]
+      \end{block}
+
+      The agent may be justified in accepting \(Q\), even if \(Q\) was never entered directly.
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A logical agent is valuable because it can derive consequences that were not explicitly enumerated in advance.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 7
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Unknown Is Not the Same as False}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      Suppose the knowledge base contains
+      \[
+        \mathrm{SmokeDetected}\rightarrow\mathrm{BayUnsafe}
+      \]
+      but contains no fact telling us whether smoke is currently detected.
+
+      Can the robot conclude
+      \[
+        \neg\mathrm{BayUnsafe}?
+      \]
+
+      \begin{alertblock}{No.}
+        ``The KB does not prove \(P\)'' is different from ``the KB proves \(\neg P\).''
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.55in]{slide7.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Historical Context: Symbolic AI}
+
+% -----------------------------------------------------------------------------
+% Slide 8
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Good Old-Fashioned AI: Make Knowledge Explicit}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Much early AI research treated intelligence as the manipulation of explicit symbolic representations.
+
+      \begin{itemize}
+        \item Facts were represented as symbols.
+        \item Rules specified how symbols could be transformed.
+        \item Reasoning produced new symbolic statements.
+        \item The internal reasoning process was often inspectable.
+      \end{itemize}
+
+      The later label \textbf{GOFAI}---``Good Old-Fashioned Artificial Intelligence''---is commonly used for this symbolic tradition.
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureimage[2.70in]{slide8.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The central wager was that intelligent behavior could emerge from explicit knowledge plus general reasoning procedures.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 9
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Logic Theorist: Reasoning as Computation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      Newell, Simon, and Shaw's \textit{Logic Theorist} in the 1950s demonstrated that a program could search for formal proofs in symbolic logic.
+
+      \begin{itemize}
+        \item The program represented mathematical statements symbolically.
+        \item It applied legal transformation rules.
+        \item It searched through possible proof steps.
+      \end{itemize}
+
+      Notice the recurring AI pattern:
+      \begin{center}
+        \textbf{representation + operators + search}
+      \end{center}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.65in]{slide9.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 10
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Expert Systems: Put the Knowledge in Rules}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      Later expert systems made the architecture especially explicit:
+
+      \begin{block}{Knowledge base}
+        Domain-specific facts and IF--THEN rules.
+      \end{block}
+
+      \begin{block}{Inference engine}
+        A more general mechanism that decides which rules apply and derives conclusions.
+      \end{block}
+
+      This separation is still conceptually important today: \textbf{what the system knows} is different from \textbf{how it reasons}.
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.65in]{slide10.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 11
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Why Symbolic AI Was Powerful---and Why It Was Hard}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Strengths}
+        \begin{itemize}
+          \item explicit, inspectable knowledge;
+          \item precise rules of reasoning;
+          \item strong performance in structured domains;
+          \item conclusions can often be explained as proofs.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Difficulties}
+        \begin{itemize}
+          \item knowledge engineering is expensive;
+          \item the real world is messy and incomplete;
+          \item rule sets can become large and brittle;
+          \item inference itself can become computationally expensive.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Symbolic AI did not disappear; logic remains one of the clearest ways to study representation, reasoning, and guarantees.
+  \end{keyidea}
+\end{frame}
+
+\section{Propositional Logic: The Language}
+
+% -----------------------------------------------------------------------------
+% Slide 12
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Propositional Logic: The Simplest Useful Logic}
+  \begin{cpdefinition}
+    A \textbf{proposition} is a statement that is either true or false.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      Examples:
+      \[
+        R = \text{``It is raining.''}
+      \]
+      \[
+        B = \text{``The battery is low.''}
+      \]
+      \[
+        U = \text{``The charging bay is unsafe.''}
+      \]
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      Propositional logic treats each atomic statement as a single indivisible symbol.
+
+      It does \textbf{not} yet represent objects, properties, variables, or quantifiers.
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Propositional logic is limited, but its simplicity makes the mechanics of logical reasoning very clear.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 13
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Atomic Symbols Need an Interpretation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      The symbol \(P\) has no meaning by itself.
+
+      We assign it an interpretation such as
+      \[
+        P = \text{``Package 17 has arrived.''}
+      \]
+
+      Another symbol might mean
+      \[
+        Q = \text{``Robot 2 is available.''}
+      \]
+
+      Logic manipulates the symbols, while the interpretation connects those symbols to a domain.
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureimage[2.50in]{slide13-interpretation.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 14
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Building Sentences with Logical Connectives}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|l|l}
+      \textbf{Symbol} & \textbf{Name} & \textbf{Example} \\\hline
+      $\neg$ & NOT / negation & $\neg P$ \\
+      $\land$ & AND / conjunction & $P\land Q$ \\
+      $\lor$ & OR / disjunction & $P\lor Q$ \\
+      $\rightarrow$ & implication & $P\rightarrow Q$ \\
+      $\leftrightarrow$ & biconditional & $P\leftrightarrow Q$ \\
+    \end{tabular}
+  \end{center}
+
+  \begin{block}{Example}
+    \[
+      \mathrm{BatteryLow}\land\neg\mathrm{BayUnsafe}
+      \rightarrow\mathrm{EnterBay}
+    \]
+  \end{block}
+
+  Complex sentences are built recursively from atomic propositions and connectives.
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 15
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Parentheses Matter}
+  Compare
+  \[
+    (P\lor Q)\land R
+  \]
+  with
+  \[
+    P\lor(Q\land R).
+  \]
+
+  These are different sentences and can have different truth values in the same world.
+
+  \begin{block}{Practical rule}
+    When in doubt, use parentheses. A logic expression should communicate its structure unambiguously to both the reader and the inference system.
+  \end{block}
+
+  \lectureimage[1.55in]{slide15.png}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 16
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{A Knowledge Base Is a Set of Sentences}
+  Suppose a delivery robot's KB contains
+
+  \[
+    B
+  \]
+  \[
+    B\rightarrow C
+  \]
+  \[
+    C\rightarrow M
+  \]
+
+  where
+  \begin{itemize}
+    \item \(B\): battery is low;
+    \item \(C\): robot should charge;
+    \item \(M\): robot should move toward the charger.
+  \end{itemize}
+
+  \begin{keyidea}
+    The knowledge base is not one fact; it is a collection of sentences whose consequences interact.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 17
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{What Does $P\rightarrow Q$ Actually Say?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      An implication
+      \[
+        P\rightarrow Q
+      \]
+      states that whenever \(P\) is true, \(Q\) must also be true.
+
+      The implication is violated only by a situation where
+      \[
+        P=\mathrm{true},\qquad Q=\mathrm{false}.
+      \]
+
+      Example:
+      \[
+        \mathrm{BatteryLow}\rightarrow\mathrm{ShouldCharge}.
+      \]
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.50in]{slide17.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 18
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Implication Is Not Causation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      The sentence
+      \[
+        \mathrm{Rain}\rightarrow\mathrm{WetGround}
+      \]
+      does \textbf{not} claim that rain is the only possible cause of wet ground.
+
+      Sprinklers might also make the ground wet.
+
+      Propositional implication expresses a truth constraint:
+      \begin{center}
+        \textit{if the antecedent holds, the consequent must hold.}
+      \end{center}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureimage[2.55in]{slide18.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Logical implication describes a relationship among truth values, not a physical mechanism.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 19
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Do Not Run the Rule Backward}
+  Suppose the KB contains
+  \[
+    \mathrm{Rain}\rightarrow\mathrm{WetGround}
+  \]
+  and we observe
+  \[
+    \mathrm{WetGround}.
+  \]
+
+  Can we conclude \(\mathrm{Rain}\)?
+
+  \begin{alertblock}{No.}
+    The implication only guarantees wet ground when rain occurs. It does not say wet ground can only be caused by rain.
+  \end{alertblock}
+
+  \begin{block}{Likewise}
+    From \(P\rightarrow Q\) and \(Q\), we cannot generally conclude \(P\).
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+% -----------------------------------------------------------------------------
+% Slide 20
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Quick Check: Which Sentences Say What We Mean?}
+  Let
+  \[
+    S=\text{``smoke is detected''},\qquad U=\text{``the bay is unsafe.''}
+  \]
+
+  Which sentence best represents
+  \begin{center}
+    ``If smoke is detected, then the bay is unsafe''?
+  \end{center}
+
+  \begin{enumerate}
+    \item $S\land U$
+    \item $S\rightarrow U$
+    \item $U\rightarrow S$
+    \item $S\leftrightarrow U$
+  \end{enumerate}
+
+  \begin{block}{Answer}
+    \(S\rightarrow U\). The other formulas make stronger or simply different claims.
+  \end{block}
+\end{frame}
+
+\section{Semantics: What Do the Sentences Mean?}
+
+% -----------------------------------------------------------------------------
+% Slide 21
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Syntax vs. Semantics}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Syntax}
+        The legal structure of expressions.
+
+        \[
+          (P\land Q)\rightarrow R
+        \]
+
+        Syntax answers:
+        \begin{center}
+          \textit{Is this a well-formed sentence?}
+        \end{center}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Semantics}
+        The conditions under which a sentence is true or false.
+
+        Semantics answers:
+        \begin{center}
+          \textit{What would the world have to be like for this sentence to be true?}
+        \end{center}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Logic needs both a formal language and a precise account of what sentences mean.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 22
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{A Model Is One Possible World}
+  \begin{cpdefinition}
+    A \textbf{model} assigns a truth value to every proposition symbol under consideration.
+  \end{cpdefinition}
+
+  With two symbols \(P\) and \(Q\), one model might be
+  \[
+    P=\mathrm{true},\qquad Q=\mathrm{false}.
+  \]
+
+  Another model might be
+  \[
+    P=\mathrm{false},\qquad Q=\mathrm{false}.
+  \]
+
+  Each model represents one logically possible configuration of the world at the level of detail captured by those symbols.
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 23
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Models Grow Exponentially}
+  With \(n\) independent proposition symbols, there are
+  \[
+    2^n
+  \]
+  possible truth assignments.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|c}
+      \textbf{Symbols} & \textbf{Possible models} \\\hline
+      1 & 2 \\
+      2 & 4 \\
+      3 & 8 \\
+      10 & 1,024 \\
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Thinking in models gives logic a precise semantics. Next lecture, the number of models becomes a computational problem.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 24
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Satisfaction: Does a Model Make a Sentence True?}
+  Suppose model \(m\) assigns
+  \[
+    P=\mathrm{true},\qquad Q=\mathrm{false}.
+  \]
+
+  Then
+  \[
+    m\models P
+  \]
+  and
+  \[
+    m\models \neg Q.
+  \]
+
+  But
+  \[
+    m\not\models P\land Q.
+  \]
+
+  \begin{cpdefinition}
+    We write \(m\models\alpha\) when model \(m\) \textbf{satisfies} sentence \(\alpha\).
+  \end{cpdefinition}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 25
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{A Knowledge Base Rules Out Possible Worlds}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      Suppose
+      \[
+        KB=\{P,\;P\rightarrow Q\}.
+      \]
+
+      Any model in which \(P\) is false is incompatible with the first sentence.
+
+      Any model in which \(P\) is true and \(Q\) is false is incompatible with the second sentence.
+
+      The models that survive are exactly the worlds consistent with \textbf{all} sentences in the KB.
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.70in]{slide25.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Knowledge constrains the set of worlds the agent considers possible.
+  \end{keyidea}
+\end{frame}
+
+\section{Entailment: What Must Follow?}
+
+% -----------------------------------------------------------------------------
+% Slide 26
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Entailment}
+  \begin{cpdefinition}
+    \[
+      KB\models\alpha
+    \]
+    means that \(\alpha\) is true in \textbf{every model} in which the knowledge base is true.
+  \end{cpdefinition}
+
+  Read it as:
+  \begin{center}
+    ``The knowledge base \textbf{entails} \(\alpha\).''
+  \end{center}
+
+  Or more intuitively:
+  \begin{center}
+    \textbf{There is no world consistent with what I know in which \(\alpha\) is false.}
+  \end{center}
+
+  \begin{keyidea}
+    Entailment is about necessity relative to the knowledge base, not about whether a conclusion merely seems plausible.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 27
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Entailment as Model-Set Containment}
+  Let \(M(KB)\) be the set of models satisfying the knowledge base and \(M(\alpha)\) the set satisfying \(\alpha\).
+
+  Then
+  \[
+    KB\models\alpha
+  \]
+  exactly when
+  \[
+    M(KB)\subseteq M(\alpha).
+  \]
+
+  \lectureimage[2.10in]{slide27.png}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 28
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Example: Does the KB Entail the Conclusion?}
+  Consider
+  \[
+    KB=\{\mathrm{BatteryLow},\;
+    \mathrm{BatteryLow}\rightarrow\mathrm{ShouldCharge}\}.
+  \]
+
+  Query:
+  \[
+    \mathrm{ShouldCharge}?
+  \]
+
+  Ask the semantic question:
+  \begin{center}
+    Is there \textbf{any} model in which both KB sentences are true but \(\mathrm{ShouldCharge}\) is false?
+  \end{center}
+
+  There is not. Therefore
+  \[
+    KB\models\mathrm{ShouldCharge}.
+  \]
+
+  \begin{block}{Important}
+    Today we are describing \textbf{why} the entailment holds. Next lecture we turn that idea into an inference procedure.
+  \end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 29
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Non-Entailment Needs Only One Counterexample}
+  Suppose
+  \[
+    KB=\{\mathrm{WetGround}\}.
+  \]
+
+  Does
+  \[
+    KB\models\mathrm{Rain}
+  \]
+  hold?
+
+  No. A model with
+  \[
+    \mathrm{WetGround}=\mathrm{true},\qquad
+    \mathrm{Rain}=\mathrm{false}
+  \]
+  is perfectly consistent with the KB.
+
+  \begin{keyidea}
+    To show entailment, every KB-model must support the conclusion. To refute entailment, one countermodel is enough.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 30
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Classic Logical-Agent Example: Wumpus World}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      In the classic Wumpus World, an agent receives local percepts such as breezes and stenches but must reason about hidden hazards.
+
+      A rule might encode an idea like
+      \[
+        B_{1,1}\rightarrow(P_{1,2}\lor P_{2,1}),
+      \]
+      meaning a breeze at one square implies a pit in at least one neighboring square.
+
+      The agent's job is to combine percepts and rules to determine which locations are safe or dangerous.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.70in]{slide30.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A logical agent can reason about states of the world it has never directly observed.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 31
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{What We Have---and What We Still Need}
+  We now have the pieces needed to state a logical reasoning problem:
+
+  \begin{enumerate}
+    \item A formal language for writing sentences.
+    \item A knowledge base containing sentences.
+    \item Models that define what those sentences mean.
+    \item Entailment to define what conclusions logically follow.
+  \end{enumerate}
+
+  But there is still a practical question:
+
+  \begin{center}
+    \Large\textbf{How does the computer determine whether $KB\models\alpha$?}
+  \end{center}
+
+  \begin{block}{Next lecture: Propositional Inference}
+    Logical equivalence, truth tables, model checking, and inference procedures.
+  \end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 32
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Takeaways}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Knowledge-based agents explicitly represent facts and rules, then derive consequences through inference.
+    \item Propositional logic builds complex sentences from atomic true/false propositions and logical connectives.
+    \item \textbf{Syntax} determines legal sentence structure; \textbf{semantics} determines truth in a model.
+    \item A knowledge base constrains which possible worlds remain consistent with what the agent knows.
+    \item \(KB\models\alpha\) means \(\alpha\) is true in every model satisfying the knowledge base.
+    \item Entailment defines what logically follows; an inference algorithm tells us how to compute or prove it.
   \end{itemize}
+
+  \begin{keyidea}
+    Logic gives an AI agent an explicit language for knowledge and a precise standard for when a conclusion is justified.
+  \end{keyidea}
 \end{frame}
 
 \end{document}

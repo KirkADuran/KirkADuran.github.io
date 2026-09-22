@@ -1,12 +1,36 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-13/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-13/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-13/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{13}
 \lecturetitle{Tracing Conditionals and Return}
 \lecturedate{September 23, 2026}
-\courseunit{5. Scope and Conditional Control Flow}
+\courseunit{1. Computing and Program Execution}
 
 \begin{document}
 
@@ -14,40 +38,705 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Tracing Conditionals and Return
-    \item Placeholder for announcements and context.
+    \item Trace conditional control flow inside a function call.
+    \item Explain why a function may contain several \texttt{return} statements but one call follows only one return path.
+    \item Analyze chained and nested conditionals that return different values.
+    \item Use early returns to terminate a call as soon as its result is known.
+    \item Trace a function that calls a predicate function in its condition.
+    \item Identify fall-through paths, implicit \texttt{None}, and unreachable statements.
   \end{itemize}
+
+  \begin{keyidea}
+    A conditional chooses a path; \texttt{return} terminates the current function call and sends one value back to its caller.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: Conditional Paths Inside a Function Call}
+
+\begin{frame}{Two Control-Flow Mechanisms Now Interact}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item A conditional decides which suite executes next.
+        \item A function call establishes a local execution environment.
+        \item A \texttt{return} statement ends that call immediately.
+      \end{itemize}
+
+      \begin{block}{Example}
+        \texttt{def sign(x):}\\
+        \hspace*{0.20in}\texttt{if x < 0:}\\
+        \hspace*{0.40in}\texttt{return "negative"}\\
+        \hspace*{0.20in}\texttt{return "nonnegative"}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: function frame containing a branch with two exit arrows.
+      \lectureimage[2.55in]{conditional-return-control-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{\texttt{return} Is a Control-Flow Statement}
+  \begin{cpdefinition}
+    Executing \texttt{return expression} evaluates the expression, terminates the current function call, and makes the resulting value the value of that call.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{def absolute\_value(x):}\\
+    \hspace*{0.20in}\texttt{if x < 0:}\\
+    \hspace*{0.40in}\texttt{return -x}\\
+    \hspace*{0.20in}\texttt{return x}
+  \end{block}
+
+  \begin{keyidea}
+    \texttt{return} does not merely leave the current \texttt{if} suite; it ends the entire active function call.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Multiple \texttt{return} Statements Are Alternative Exit Points}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Source code}
+        \texttt{def classify(n):}\\
+        \hspace*{0.20in}\texttt{if n < 0:}\\
+        \hspace*{0.40in}\texttt{return "negative"}\\
+        \hspace*{0.20in}\texttt{if n == 0:}\\
+        \hspace*{0.40in}\texttt{return "zero"}\\
+        \hspace*{0.20in}\texttt{return "positive"}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{itemize}
+        \item The definition contains three syntactic \texttt{return} statements.
+        \item A particular call reaches at most one of them.
+        \item Once one executes, the remaining body is not evaluated during that call.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Trace Example: Conditional Return}
+  \begin{block}{Program}
+    \texttt{def sign(x):}\\
+    \hspace*{0.20in}\texttt{if x < 0:}\\
+    \hspace*{0.40in}\texttt{return -1}\\
+    \hspace*{0.20in}\texttt{return 1}\\[0.08in]
+    \texttt{result = sign(-4)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.18}
+    \begin{tabular}{c|l|l}
+      \textbf{Step} & \textbf{Execution} & \textbf{State / result} \\\hline
+      1 & call \texttt{sign(-4)} & \texttt{x -> -4} \\
+      2 & evaluate \texttt{x < 0} & \texttt{True} \\
+      3 & execute \texttt{return -1} & call produces \texttt{-1} \\
+      4 & resume caller & \texttt{result -> -1}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Statements After an Executed \texttt{return} Are Skipped}
+  \begin{block}{Program}
+    \texttt{def example(x):}\\
+    \hspace*{0.20in}\texttt{if x > 0:}\\
+    \hspace*{0.40in}\texttt{return x * 2}\\
+    \hspace*{0.40in}\texttt{print("unreachable on this path")}\\
+    \hspace*{0.20in}\texttt{return 0}
+  \end{block}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item For \texttt{x > 0}, the first \texttt{return} ends the call.
+    \item The following \texttt{print} cannot execute on that path.
+    \item For \texttt{x <= 0}, execution skips the suite and reaches \texttt{return 0}.
   \end{itemize}
+
+  \begin{alertblock}{Tracing rule}
+    After an executed \texttt{return}, immediately remove the active call from the trace and resume the caller.
+  \end{alertblock}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\sectionframe{Part 2: Chained Conditionals with Return Values}
+
+\begin{frame}{A Chained Conditional Can Select a Return Value}
+  \begin{block}{Example}
+    \texttt{def letter\_grade(score):}\\
+    \hspace*{0.20in}\texttt{if score >= 90:}\\
+    \hspace*{0.40in}\texttt{return "A"}\\
+    \hspace*{0.20in}\texttt{elif score >= 80:}\\
+    \hspace*{0.40in}\texttt{return "B"}\\
+    \hspace*{0.20in}\texttt{elif score >= 70:}\\
+    \hspace*{0.40in}\texttt{return "C"}\\
+    \hspace*{0.20in}\texttt{else:}\\
+    \hspace*{0.40in}\texttt{return "below C"}
+  \end{block}
+
+  \begin{keyidea}
+    The chain chooses one suite; that suite's \texttt{return} determines the value of the call.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Trace a Chained Return Top to Bottom}
+  \begin{block}{Call}
+    \centering
+    \Large\texttt{letter\_grade(84)}
+  \end{block}
+
+  \begin{enumerate}
+    \item Bind \texttt{score -> 84}.
+    \item Evaluate \texttt{score >= 90}: \texttt{False}.
+    \item Evaluate \texttt{score >= 80}: \texttt{True}.
+    \item Execute \texttt{return "B"}.
+    \item Terminate the call; the later tests are not evaluated.
+  \end{enumerate}
+
+  \begin{block}{Result}
+    \centering
+    \texttt{letter\_grade(84)} $\longrightarrow$ \texttt{"B"}
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Order Still Matters in a Chained Return}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Correct ordering}
+        \texttt{if score >= 90:}\\
+        \hspace*{0.20in}\texttt{return "A"}\\
+        \texttt{elif score >= 80:}\\
+        \hspace*{0.20in}\texttt{return "B"}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Incorrect ordering}
+        \texttt{if score >= 80:}\\
+        \hspace*{0.20in}\texttt{return "B"}\\
+        \texttt{elif score >= 90:}\\
+        \hspace*{0.20in}\texttt{return "A"}
+      \end{block}
+    \end{column}
+  \end{columns}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item A score of \texttt{95} satisfies both predicates.
+    \item An \texttt{elif} chain selects the first truthy branch.
+    \item Later branches cannot repair a classification already returned.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{An Exhaustive Chain Guarantees an Explicit Return}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Exhaustive}
+        \texttt{if n < 0:}\\
+        \hspace*{0.20in}\texttt{return "negative"}\\
+        \texttt{elif n == 0:}\\
+        \hspace*{0.20in}\texttt{return "zero"}\\
+        \texttt{else:}\\
+        \hspace*{0.20in}\texttt{return "positive"}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}
+        \item Every possible numeric input selects one branch.
+        \item Every selected branch contains a \texttt{return}.
+        \item Therefore every call reaches an explicit return value.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Independent \texttt{if}s with Early Returns Behave Differently}
+  \begin{block}{Example}
+    \texttt{def classify(n):}\\
+    \hspace*{0.20in}\texttt{if n < 0:}\\
+    \hspace*{0.40in}\texttt{return "negative"}\\
+    \hspace*{0.20in}\texttt{if n == 0:}\\
+    \hspace*{0.40in}\texttt{return "zero"}\\
+    \hspace*{0.20in}\texttt{return "positive"}
+  \end{block}
+
+  \begin{itemize}
+    \item If the first condition is false, execution continues to the second \texttt{if}.
+    \item If either early return executes, the later tests are never reached.
+    \item The final return handles the remaining path.
+  \end{itemize}
+
+  \begin{keyidea}
+    Early returns can make several independent tests behave like mutually exclusive exit paths.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Prediction: Which Return Executes?}
+  \begin{block}{Function}
+    \texttt{def shipping(weight):}\\
+    \hspace*{0.20in}\texttt{if weight <= 0:}\\
+    \hspace*{0.40in}\texttt{return "invalid"}\\
+    \hspace*{0.20in}\texttt{elif weight <= 5:}\\
+    \hspace*{0.40in}\texttt{return "standard"}\\
+    \hspace*{0.20in}\texttt{elif weight <= 20:}\\
+    \hspace*{0.40in}\texttt{return "heavy"}\\
+    \hspace*{0.20in}\texttt{return "oversize"}
+  \end{block}
+
+  \begin{activity}
+    Predict the returned value for \texttt{-2}, \texttt{5}, \texttt{12}, and \texttt{25}. For each call, identify exactly which conditions are evaluated.
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 3: Nested Conditionals and Early Returns}
+
+\begin{frame}{A Return Inside a Nested Conditional Ends the Whole Call}
+  \begin{block}{Example}
+    \texttt{def admission(age, has\_id):}\\
+    \hspace*{0.20in}\texttt{if age >= 18:}\\
+    \hspace*{0.40in}\texttt{if has\_id:}\\
+    \hspace*{0.60in}\texttt{return "admit"}\\
+    \hspace*{0.40in}\texttt{return "need id"}\\
+    \hspace*{0.20in}\texttt{return "underage"}
+  \end{block}
+
+  \begin{itemize}
+    \item The outer condition is evaluated first.
+    \item The inner condition is evaluated only when the outer condition is true.
+    \item Any executed \texttt{return} terminates \texttt{admission}, not merely the nearest conditional.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Trace Nested Returns from the Outside In}
+  \begin{block}{Call}
+    \centering
+    \Large\texttt{admission(21, False)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.18}
+    \begin{tabular}{c|l|l}
+      \textbf{Step} & \textbf{Evaluation} & \textbf{Outcome} \\\hline
+      1 & bind parameters & \texttt{age -> 21, has\_id -> False} \\
+      2 & \texttt{age >= 18} & \texttt{True} \\
+      3 & \texttt{has\_id} & \texttt{False} \\
+      4 & \texttt{return "need id"} & call terminates
+    \end{tabular}
+  \end{center}
+
+  \begin{block}{Returned value}
+    \centering
+    \texttt{"need id"}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Nested Structure Is Appropriate for Dependent Questions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{itemize}
+        \item Sometimes a second question is meaningful only after the first condition succeeds.
+        \item Nesting represents this dependency directly.
+        \item The inner condition is unreachable when the outer condition is false.
+      \end{itemize}
+
+      \begin{block}{Logical structure}
+        Is the account active?\\
+        \hspace*{0.20in}$\downarrow$ yes\\
+        Has the account completed verification?
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      % Intended visual: hierarchical decision tree with inner question only on true branch.
+      \lectureimage[2.45in]{nested-return-decision-tree.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Early Returns Can Reduce Unnecessary Nesting}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Nested form}
+        \texttt{if amount >= 0:}\\
+        \hspace*{0.20in}\texttt{if amount <= limit:}\\
+        \hspace*{0.40in}\texttt{return amount}\\
+        \hspace*{0.20in}\texttt{else:}\\
+        \hspace*{0.40in}\texttt{return limit}\\
+        \texttt{else:}\\
+        \hspace*{0.20in}\texttt{return 0}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Early-return form}
+        \texttt{if amount < 0:}\\
+        \hspace*{0.20in}\texttt{return 0}\\
+        \texttt{if amount > limit:}\\
+        \hspace*{0.20in}\texttt{return limit}\\
+        \texttt{return amount}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Equivalent behavior can sometimes be expressed with shallower control flow once invalid or exceptional cases return early.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Guard Clause Rejects a Case Before the Main Path}
+  \begin{cpdefinition}
+    A \textbf{guard clause} is an early conditional return that handles a case before the main computation continues.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{def ratio(total, count):}\\
+    \hspace*{0.20in}\texttt{if count == 0:}\\
+    \hspace*{0.40in}\texttt{return None}\\
+    \hspace*{0.20in}\texttt{result = total / count}\\
+    \hspace*{0.20in}\texttt{return result}
+  \end{block}
+
+  \begin{itemize}
+    \item The guard handles the invalid denominator.
+    \item The division is evaluated only on the remaining path.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Trace Example: Guard Clause}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Call A}
+        \texttt{ratio(10, 0)}\\[0.08in]
+        \texttt{count == 0} $\to$ \texttt{True}\\
+        \texttt{return None}\\[0.08in]
+        Division is never evaluated.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Call B}
+        \texttt{ratio(10, 2)}\\[0.08in]
+        \texttt{count == 0} $\to$ \texttt{False}\\
+        \texttt{result -> 5.0}\\
+        \texttt{return 5.0}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 4: Predicate Calls as Conditions}
+
+\begin{frame}{A Predicate Call Can Determine the Branch}
+  \begin{cpdefinition}
+    A \textbf{predicate function} returns a Boolean value representing a claim about its arguments.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{def is\_even(n):}\\
+    \hspace*{0.20in}\texttt{return n \% 2 == 0}\\[0.08in]
+    \texttt{def describe(n):}\\
+    \hspace*{0.20in}\texttt{if is\_even(n):}\\
+    \hspace*{0.40in}\texttt{return "even"}\\
+    \hspace*{0.20in}\texttt{return "odd"}
+  \end{block}
+
+  \begin{keyidea}
+    The predicate call must finish and produce a truth value before the surrounding \texttt{if} can select a branch.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace the Predicate Call Before the Conditional Branch}
+  \begin{block}{Call}
+    \centering
+    \Large\texttt{describe(7)}
+  \end{block}
+
+  \begin{enumerate}
+    \item Enter \texttt{describe}; bind \texttt{n -> 7}.
+    \item Evaluate the condition \texttt{is\_even(n)}.
+    \item Call \texttt{is\_even(7)}; its local \texttt{n -> 7}.
+    \item Evaluate \texttt{7 \% 2 == 0} $\to$ \texttt{False}.
+    \item Return \texttt{False} to \texttt{describe}.
+    \item The \texttt{if} condition is false; execute \texttt{return "odd"}.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{The Two Calls Have Separate Parameter Bindings}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{\texttt{describe} frame}
+        \texttt{n -> 7}\\[0.08in]
+        waiting for condition value while \texttt{is\_even} executes
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+      \begin{block}{\texttt{is\_even} frame}
+        \texttt{n -> 7}\\[0.08in]
+        evaluates predicate and returns \texttt{False}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Identical parameter names in separate active calls represent distinct bindings in distinct call frames.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Predicate Can Hide a More Detailed Test}
+  \begin{block}{Predicate}
+    \texttt{def is\_valid\_score(score):}\\
+    \hspace*{0.20in}\texttt{return score >= 0 and score <= 100}
+  \end{block}
+
+  \begin{block}{Classification function}
+    \texttt{def result\_label(score):}\\
+    \hspace*{0.20in}\texttt{if not is\_valid\_score(score):}\\
+    \hspace*{0.40in}\texttt{return "invalid"}\\
+    \hspace*{0.20in}\texttt{if score >= 70:}\\
+    \hspace*{0.40in}\texttt{return "passing"}\\
+    \hspace*{0.20in}\texttt{return "not passing"}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Trace Across the Predicate Boundary}
+  \begin{block}{Call: \texttt{result\_label(105)}}
+    \begin{enumerate}
+      \item \texttt{score -> 105} in \texttt{result\_label}.
+      \item Evaluate \texttt{is\_valid\_score(score)}.
+      \item Predicate returns \texttt{False}.
+      \item \texttt{not False} evaluates to \texttt{True}.
+      \item Execute \texttt{return "invalid"}.
+      \item No later condition in \texttt{result\_label} is evaluated.
+    \end{enumerate}
+  \end{block}
+
+  \begin{activity}
+    Repeat the trace for \texttt{result\_label(82)} and identify both returned values: first from the predicate, then from the classification function.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Predicate Results Participate in Ordinary Boolean Expressions}
+  \begin{block}{Example}
+    \texttt{if is\_valid\_score(score) and score >= 90:}\\
+    \hspace*{0.20in}\texttt{return "high valid score"}
+  \end{block}
+
+  \begin{itemize}
+    \item The predicate call is an expression whose value is Boolean.
+    \item The larger condition follows the ordinary rules for Boolean expressions.
+    \item To trace accurately, reduce function-call expressions to returned values before deciding the branch.
+  \end{itemize}
+
+  \begin{block}{Expression reduction}
+    \centering
+    \texttt{is\_valid\_score(95) and 95 >= 90}\\
+    $\longrightarrow$ \texttt{True and True}\\
+    $\longrightarrow$ \texttt{True}
+  \end{block}
+\end{frame}
+
+\sectionframe{Part 5: Fall-Through, Implicit Return, and Trace Errors}
+
+\begin{frame}{Not Every Conditional Function Returns on Every Path}
+  \begin{block}{Problematic definition}
+    \texttt{def category(n):}\\
+    \hspace*{0.20in}\texttt{if n > 0:}\\
+    \hspace*{0.40in}\texttt{return "positive"}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{category(5)} reaches the explicit return.
+    \item \texttt{category(0)} skips the suite and reaches the end of the function body.
+    \item Reaching the end without executing \texttt{return} produces \texttt{None}.
+  \end{itemize}
+
+  \begin{alertblock}{Tracing question}
+    For every possible path through a value-producing function, ask: \emph{where does this path return?}
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Trace Fall-Through Explicitly}
+  \begin{block}{Call}
+    \centering
+    \Large\texttt{answer = category(0)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.18}
+    \begin{tabular}{c|l|l}
+      \textbf{Step} & \textbf{Execution} & \textbf{Result} \\\hline
+      1 & enter \texttt{category} & \texttt{n -> 0} \\
+      2 & evaluate \texttt{n > 0} & \texttt{False} \\
+      3 & reach end of function & implicit \texttt{None} \\
+      4 & resume caller & \texttt{answer -> None}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{\texttt{print} Still Does Not Replace \texttt{return}}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Prints a classification}
+        \texttt{def classify(n):}\\
+        \hspace*{0.20in}\texttt{if n > 0:}\\
+        \hspace*{0.40in}\texttt{print("positive")}\\
+        \hspace*{0.20in}\texttt{else:}\\
+        \hspace*{0.40in}\texttt{print("nonpositive")}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Returns a classification}
+        \texttt{def classify(n):}\\
+        \hspace*{0.20in}\texttt{if n > 0:}\\
+        \hspace*{0.40in}\texttt{return "positive"}\\
+        \hspace*{0.20in}\texttt{else:}\\
+        \hspace*{0.40in}\texttt{return "nonpositive"}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Conditional output and conditional return values are different program behaviors.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Unreachable Code Can Be Path-Specific or Unconditional}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Path-specific}
+        \texttt{if x > 0:}\\
+        \hspace*{0.20in}\texttt{return x}\\
+        \hspace*{0.20in}\texttt{print("never here")}\\
+        \texttt{return 0}
+      \end{block}
+
+      The \texttt{print} is unreachable only after the true branch is selected.
+    \end{column}
+
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Unconditionally unreachable}
+        \texttt{return x}\\
+        \texttt{print("never")}
+      \end{block}
+
+      Once the first statement executes, no path reaches the second statement.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Common Tracing Error: Continuing After Return}
+  \begin{block}{Program}
+    \texttt{def fee(age):}\\
+    \hspace*{0.20in}\texttt{if age < 5:}\\
+    \hspace*{0.40in}\texttt{return 0}\\
+    \hspace*{0.20in}\texttt{if age < 18:}\\
+    \hspace*{0.40in}\texttt{return 8}\\
+    \hspace*{0.20in}\texttt{return 12}
+  \end{block}
+
+  \begin{activity}
+    Trace \texttt{fee(3)}. Which conditions are actually evaluated? Then trace \texttt{fee(10)} and \texttt{fee(25)}.
+  \end{activity}
+
+  \begin{alertblock}{Rule}
+    Never continue tracing the body of a call after one of its \texttt{return} statements has executed.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 6: Integrated Tracing}
+
+\begin{frame}{Integrated Trace: Chaining Inside a Function}
+  \begin{block}{Program}
+    \texttt{def shipping\_cost(weight):}\\
+    \hspace*{0.20in}\texttt{if weight <= 0:}\\
+    \hspace*{0.40in}\texttt{return None}\\
+    \hspace*{0.20in}\texttt{elif weight <= 5:}\\
+    \hspace*{0.40in}\texttt{return 6.0}\\
+    \hspace*{0.20in}\texttt{elif weight <= 20:}\\
+    \hspace*{0.40in}\texttt{return 12.0}\\
+    \hspace*{0.20in}\texttt{return 20.0}\\[0.08in]
+    \texttt{cost = shipping\_cost(14)}
+  \end{block}
+
+  \begin{activity}
+    Produce the complete trace: parameter binding, every evaluated condition, selected branch, returned value, and final caller binding.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Integrated Trace: Predicate Call in the Condition}
+  \begin{block}{Program}
+    \texttt{def is\_adult(age):}\\
+    \hspace*{0.20in}\texttt{return age >= 18}\\[0.06in]
+    \texttt{def ticket\_price(age):}\\
+    \hspace*{0.20in}\texttt{if is\_adult(age):}\\
+    \hspace*{0.40in}\texttt{return 15}\\
+    \hspace*{0.20in}\texttt{return 10}\\[0.06in]
+    \texttt{price = ticket\_price(16)}
+  \end{block}
+
+  \begin{itemize}
+    \item Trace both active call frames when \texttt{is\_adult} executes.
+    \item Record the predicate's returned value separately from \texttt{ticket\_price}'s returned value.
+    \item Finish by recording the caller binding for \texttt{price}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[shrink=4]{Integrated Trace: Nested Conditionals with Multiple Returns}
+  \begin{block}{Program}
+    \texttt{def access\_level(active, admin, verified):}\\
+    \hspace*{0.20in}\texttt{if active:}\\
+    \hspace*{0.40in}\texttt{if admin:}\\
+    \hspace*{0.60in}\texttt{return "administrator"}\\
+    \hspace*{0.40in}\texttt{elif verified:}\\
+    \hspace*{0.60in}\texttt{return "member"}\\
+    \hspace*{0.40in}\texttt{else:}\\
+    \hspace*{0.60in}\texttt{return "limited"}\\
+    \hspace*{0.20in}\texttt{return "inactive"}
+  \end{block}
+
+  \begin{activity}
+    Trace the conditions and return path for \texttt{access\_level(True, False, True)} and \texttt{access\_level(False, True, True)}. Do not evaluate conditions that execution never reaches.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{A Reliable Manual Tracing Procedure}
+  \begin{enumerate}
+    \item Enter the function and record parameter bindings.
+    \item Execute statements in order.
+    \item When a condition is reached, evaluate its expression completely.
+    \item Follow only the selected branch.
+    \item If a function call appears inside the condition, trace that call to its returned value first.
+    \item When \texttt{return} executes, evaluate its expression and terminate the current call immediately.
+    \item Resume the caller using the returned value.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Final Prediction}
+  \begin{block}{Program}
+    \texttt{def in\_range(x):}\\
+    \hspace*{0.20in}\texttt{return x >= 0 and x <= 10}\\[0.06in]
+    \texttt{def transform(x):}\\
+    \hspace*{0.20in}\texttt{if not in\_range(x):}\\
+    \hspace*{0.40in}\texttt{return None}\\
+    \hspace*{0.20in}\texttt{if x < 5:}\\
+    \hspace*{0.40in}\texttt{return x * 2}\\
+    \hspace*{0.20in}\texttt{return x + 10}
+  \end{block}
+
+  \begin{activity}
+    Without running Python, determine \texttt{transform(-2)}, \texttt{transform(4)}, and \texttt{transform(8)}. For each call, list the exact sequence of function calls, conditions, and returns.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item A conditional selects an execution path; \texttt{return} terminates the active function call.
+    \item Several \texttt{return} statements represent alternative exits, not several results from one call.
+    \item Chained conditionals select the first applicable return path; nested conditionals represent dependent decisions.
+    \item Early returns and guard clauses can simplify control flow when a result is already known.
+    \item Predicate calls must be evaluated to Boolean values before their surrounding conditions can be resolved.
+    \item A complete trace records parameter bindings, evaluated conditions, selected branches, return values, and the caller's resumed state.
   \end{itemize}
 \end{frame}
 
