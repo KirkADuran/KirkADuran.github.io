@@ -1,54 +1,693 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\usepackage{tikz}
+
+\graphicspath{{../assets/lecture-14/}}
+
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-14/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{}%
+}
+
+\newcommand{\lectureplaceholder}[2][2.35in]{%
+  \begin{center}
+    \fbox{%
+      \begin{minipage}[c][#1][c]{0.90\linewidth}
+        \centering
+        \small\textit{#2}
+      \end{minipage}%
+    }
+  \end{center}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{14}
-\lecturetitle{Propositional Inference -- logical equivalence, truth tables, inference}
+\lecturetitle{Propositional Inference: Logical Equivalence, Truth Tables, and Model Checking}
 \lecturedate{September 28, 2026}
-\courseunit{Course sequence}
+\courseunit{Logic and Knowledge Representation}
 
 \begin{document}
 
+% Estimated pacing: 50 minutes
+% Entailment review + semantic categories: 7 min
+% Truth tables + equivalence: 13 min
+% Model checking worked example: 12 min
+% Inference rules + soundness/completeness: 10 min
+% Unsatisfiability bridge to resolution: 6 min
+% Wrap: 2 min
+
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Propositional Inference -- logical equivalence, truth tables, inference
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{From Entailment to Inference}
+
+\begin{frame}[shrink=12]{Last Time: What Does Entailment Mean?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      A knowledge base constrains the set of worlds the agent considers possible.
+
+      \[
+        KB \models \alpha
+      \]
+
+      means that \textbf{every model satisfying the knowledge base also satisfies $\alpha$}.
+
+      \begin{block}{The missing piece}
+        The definition tells us what entailment \emph{means}, but not yet how an agent can decide it computationally.
+      \end{block}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.70in]{slide2.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Today we turn the semantic definition of entailment into an inference procedure.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}[shrink=12]{The Logical Agent Has a Query}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Suppose a delivery robot knows
+      \[
+        B \rightarrow C
+      \]
+      \[
+        B
+      \]
+
+      where $B$ means ``battery is low'' and $C$ means ``robot should charge.''
+
+      The agent asks:
+      \[
+        KB \models C\; ?
+      \]
+
+      We need a procedure that either confirms the query or finds a counterexample world.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.70in]{slide3.png}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}[shrink=12]{Entailment Is a Universal Claim}
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item $KB\models\alpha$ says something about \textbf{every} model satisfying $KB$.
+    \item To prove entailment semantically, all $KB$-models must make $\alpha$ true.
+    \item To disprove entailment, one countermodel is enough.
   \end{itemize}
+
+  \begin{keyidea}
+    Entailment is ``for all surviving worlds''; non-entailment needs only one surviving world where the query is false.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}[shrink=12]{Countermodels: The Fastest Way to Break a Claim}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Consider the claim
+      \[
+        P\lor Q \models P.
+      \]
+
+      Try the model
+      \[
+        P=\mathrm{False},\qquad Q=\mathrm{True}.
+      \]
+
+      Then $P\lor Q$ is true while $P$ is false.
+
+      \begin{block}{Conclusion}
+        That single model disproves the entailment.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.45in]{slide5.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=12]{Three Useful Semantic Categories}
+  \begin{description}
+    \item[Tautology:] a sentence true in every model.
+    \item[Contradiction:] a sentence false in every model.
+    \item[Satisfiable:] a sentence true in at least one model.
+  \end{description}
+
+  \begin{block}{Important distinction}
+    A sentence can be satisfiable without being a tautology.
   \end{block}
+
+  \begin{keyidea}
+    These are properties of a sentence across its possible models.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\section{Truth Tables and Logical Equivalence}
+
+\begin{frame}[shrink=12]{Truth Tables Enumerate Possible Worlds}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|c}
+      \textbf{$P$} & \textbf{$Q$} \\\hline
+      T & T \\
+      T & F \\
+      F & T \\
+      F & F
+    \end{tabular}
+  \end{center}
+
+  With two proposition symbols there are
+  \[
+    2^2=4
+  \]
+  complete models.
+\end{frame}
+
+\begin{frame}[shrink=12]{Truth Tables Give the Meaning of Connectives}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|c|c|c|c}
+      $P$ & $Q$ & $\neg P$ & $P\land Q$ & $P\lor Q$ \\\hline
+      T & T & F & T & T \\
+      T & F & F & F & T \\
+      F & T & T & F & T \\
+      F & F & T & F & F
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    A truth table is a complete semantic specification of a propositional connective.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{Implication Revisited}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{c|c|c}
+      $P$ & $Q$ & $P\rightarrow Q$ \\\hline
+      T & T & T \\
+      T & F & F \\
+      F & T & T \\
+      F & F & T
+    \end{tabular}
+  \end{center}
+
+  $P\rightarrow Q$ is false only when $P$ is true and $Q$ is false.
+
+  \begin{keyidea}
+    Implication is a constraint: the forbidden world is $P=T, Q=F$.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{Biconditional Means ``Same Truth Value''}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{c|c|c}
+      $P$ & $Q$ & $P\leftrightarrow Q$ \\\hline
+      T & T & T \\
+      T & F & F \\
+      F & T & F \\
+      F & F & T
+    \end{tabular}
+  \end{center}
+
+  $P\leftrightarrow Q$ is true exactly when $P$ and $Q$ agree.
+\end{frame}
+
+\begin{frame}[shrink=12]{Logical Equivalence}
+  \begin{cpdefinition}
+    Two sentences are \textbf{logically equivalent} when they have the same truth value in every model.
+  \end{cpdefinition}
+
+  We write
+  \[
+    \alpha \equiv \beta.
+  \]
+
+  Equivalence allows us to replace one expression with another without changing its meaning.
+
+  \begin{keyidea}
+    Logical equivalence is semantic sameness, not merely visual similarity.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{Example: Eliminate an Implication}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|c|c|c}
+      $P$ & $Q$ & $P\rightarrow Q$ & $\neg P\lor Q$ \\\hline
+      T & T & T & T \\
+      T & F & F & F \\
+      F & T & T & T \\
+      F & F & T & T
+    \end{tabular}
+  \end{center}
+
+  The final two columns match in every row, so
+  \[
+    P\rightarrow Q \equiv \neg P\lor Q.
+  \]
+\end{frame}
+
+\begin{frame}[shrink=12]{De Morgan's Laws}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \[
+        \neg(P\land Q) \equiv \neg P\lor\neg Q
+      \]
+
+      \[
+        \neg(P\lor Q) \equiv \neg P\land\neg Q
+      \]
+
+      Negating a conjunction changes AND to OR; negating a disjunction changes OR to AND.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide13.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=12]{Other Equivalences Worth Knowing}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Double negation: $\neg\neg P\equiv P$.
+    \item Commutativity: $P\land Q\equiv Q\land P$ and $P\lor Q\equiv Q\lor P$.
+    \item Associativity lets repeated ANDs or ORs regroup.
+    \item Distributivity lets AND and OR move across one another.
+    \item Biconditional:
+      \[
+        P\leftrightarrow Q \equiv (P\rightarrow Q)\land(Q\rightarrow P).
+      \]
   \end{itemize}
+
+  \begin{keyidea}
+    These identities become tools for automated rewriting next lecture.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{Why Equivalence Matters to an AI System}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Different-looking sentences can encode exactly the same information.
+        \item A reasoning system can rewrite expressions into forms that are easier to process.
+        \item A valid rewrite must preserve the set of satisfying models.
+        \item Next lecture, we exploit this idea with normal forms.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide15.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Truth-Table Model Checking}
+
+\begin{frame}[shrink=12]{Model Checking: Use the Definition Directly}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      To test $KB\models\alpha$:
+      \begin{enumerate}
+        \item Enumerate all possible models.
+        \item Ignore models where $KB$ is false.
+        \item Inspect $\alpha$ in every model where $KB$ is true.
+        \item If $\alpha$ is true in all of them, entailment holds.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.70in]{slide16.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=12]{Worked Example: Does the KB Entail $Q$?}
+  \begin{center}
+    \Large
+    \[
+      KB=(P\rightarrow Q)\land P
+    \]
+    \[
+      \text{Query: }Q
+    \]
+  \end{center}
+
+  We will evaluate the knowledge base and query across all four models for $P$ and $Q$.
+\end{frame}
+
+\begin{frame}[shrink=12]{Step 1: Enumerate the Models}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|c|c|c}
+      $P$ & $Q$ & $P\rightarrow Q$ & $KB=(P\rightarrow Q)\land P$ \\\hline
+      T & T & T & T \\
+      T & F & F & F \\
+      F & T & T & F \\
+      F & F & T & F
+    \end{tabular}
+  \end{center}
+
+  Only rows where the $KB$ column is true matter.
+\end{frame}
+
+\begin{frame}[shrink=12]{Step 2: Keep Only $KB$-Models}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      The knowledge base is true only in the model
+      \[
+        P=T,\qquad Q=T.
+      \]
+
+      Every other model violates at least one sentence in the knowledge base.
+
+      The KB has narrowed four possible worlds down to one.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide19.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=12]{Step 3: Inspect the Query in Every $KB$-Model}
+  In the only surviving model, $Q$ is true.
+
+  There is no model where the knowledge base is true and $Q$ is false.
+
+  Therefore
+  \[
+    KB\models Q.
+  \]
+
+  \begin{keyidea}
+    The conclusion follows because the knowledge base leaves no possible world in which the query is false.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{A Non-Entailment Example}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Let
+      \[
+        KB=P\lor Q
+      \]
+      with query $P$.
+
+      The model
+      \[
+        P=F,\qquad Q=T
+      \]
+      satisfies the knowledge base but falsifies the query.
+
+      Therefore
+      \[
+        P\lor Q \not\models P.
+      \]
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.45in]{slide21.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=12]{Truth-Table Entailment as an Algorithm}
+  \begin{block}{TT-ENTAILS?$(KB,\alpha)$}
+    \ttfamily\small
+    for every complete truth assignment $m$:\\[0.04in]
+    \quad if $m$ satisfies $KB$:\\
+    \qquad if $m$ does not satisfy $\alpha$: return false\\[0.04in]
+    return true
+  \end{block}
+
+  \begin{keyidea}
+    This is exhaustive model checking: search all possible worlds for a countermodel.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{The Cost: $2^n$ Models}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      With $n$ proposition symbols, there are
+      \[
+        2^n
+      \]
+      complete truth assignments.
+
+      \begin{itemize}
+        \item $10$ symbols $\rightarrow 1{,}024$ models.
+        \item $20$ symbols $\rightarrow 1{,}048{,}576$ models.
+        \item $30$ symbols $\rightarrow$ more than one billion models.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.60in]{slide23.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The semantics are simple; exhaustive inference scales badly.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{This Is Another Search Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item \textbf{State:} a partial or complete truth assignment.
+        \item \textbf{Branching choice:} assign the next proposition true or false.
+        \item \textbf{Target counterexample:} a model satisfying $KB$ and falsifying the query.
+        \item Truth-table checking explores the complete binary assignment tree.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.60in]{slide24.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A recurring AI theme: reasoning can often be understood as search over a structured space.
+  \end{keyidea}
+\end{frame}
+
+\section{Inference Procedures}
+
+\begin{frame}[shrink=12]{Entailment vs. Inference}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Semantic relation}
+        \[
+          KB\models\alpha
+        \]
+        $\alpha$ is true in every model of $KB$.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Syntactic derivation}
+        \[
+          KB\vdash_i\alpha
+        \]
+        Inference procedure $i$ derives $\alpha$ from $KB$.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Do not confuse ``it follows'' with ``this particular procedure found it.''
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{Inference Rules: Reason Without Enumerating Every World}
+  An inference rule licenses a new sentence from existing sentences.
+
+  \begin{block}{Example: Modus Ponens}
+    \[
+      \frac{P\qquad P\rightarrow Q}{Q}
+    \]
+  \end{block}
+
+  This is a syntactic operation, but we want it to preserve semantic truth.
+
+  \lectureimage[1.35in]{slide26.png}
+\end{frame}
+
+\begin{frame}[shrink=12]{Modus Ponens Is Sound}
+  \[
+    P
+  \]
+  \[
+    P\rightarrow Q
+  \]
+  \[
+    \therefore Q
+  \]
+
+  If both premises are true, there is no model in which the conclusion is false.
+
+  \begin{keyidea}
+    Modus Ponens never manufactures a false conclusion from true premises.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{A Tempting but Invalid Rule}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Suppose
+      \[
+        P\rightarrow Q
+      \]
+      and
+      \[
+        Q.
+      \]
+
+      Can we conclude $P$? \textbf{No.}
+
+      Wet ground does not imply rain; a sprinkler may also explain it.
+
+      This is the fallacy of \textbf{affirming the consequent}.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.45in]{slide28.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=12]{Soundness}
+  \begin{cpdefinition}
+    An inference procedure is \textbf{sound} if every sentence it derives is actually entailed.
+  \end{cpdefinition}
+
+  \[
+    KB\vdash_i\alpha \quad\Rightarrow\quad KB\models\alpha
+  \]
+
+  A sound procedure may fail to find some truths, but it will not derive unsupported conclusions.
+
+  \begin{keyidea}
+    Soundness protects correctness.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{Completeness}
+  \begin{cpdefinition}
+    An inference procedure is \textbf{complete} if it can derive every entailed sentence.
+  \end{cpdefinition}
+
+  \[
+    KB\models\alpha \quad\Rightarrow\quad KB\vdash_i\alpha
+  \]
+
+  A complete procedure cannot permanently miss a conclusion that really follows.
+
+  \begin{keyidea}
+    Completeness protects coverage.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{Truth-Table Model Checking Is Sound and Complete}
+  \begin{itemize}
+    \item It checks the semantic definition directly.
+    \item If it says ``entailed,'' there is no countermodel.
+    \item If entailment holds, exhaustive enumeration will confirm it.
+    \item The problem is not correctness---it is cost.
+  \end{itemize}
+
+  \begin{keyidea}
+    We now have a correct baseline algorithm. The next problem is doing less work.
+  \end{keyidea}
+\end{frame}
+
+\section{Entailment as Unsatisfiability}
+
+\begin{frame}[shrink=12]{Satisfiability Gives Us Another View of Entailment}
+  $KB\models\alpha$ exactly when there is no model satisfying $KB$ while $\alpha$ is false.
+
+  That means
+  \[
+    KB\land\neg\alpha
+  \]
+  must be unsatisfiable.
+
+  Therefore
+  \[
+    \boxed{KB\models\alpha \iff KB\land\neg\alpha\text{ is unsatisfiable}.}
+  \]
+
+  \begin{keyidea}
+    To prove $\alpha$, assume $\neg\alpha$ and show that no consistent world remains.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=12]{Example: Turn Entailment into a Contradiction Test}
+  Want to prove
+  \[
+    \{P,\;P\rightarrow Q\}\models Q.
+  \]
+
+  Add the negation of the query:
+  \[
+    \neg Q.
+  \]
+
+  Now ask whether
+  \[
+    P\land(P\rightarrow Q)\land\neg Q
+  \]
+  can be satisfied.
+
+  It cannot: $P$ and $P\rightarrow Q$ force $Q$, while $\neg Q$ forces $Q$ to be false.
+\end{frame}
+
+\begin{frame}[shrink=12]{Why This Reformulation Matters}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Truth tables prove entailment by checking all possible worlds.
+        \item Unsatisfiability reframes the same problem as deriving an inconsistency.
+        \item Perhaps we can manipulate sentences directly instead of explicitly enumerating every model.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide34.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=12]{Next: Automated Logical Inference}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Next lecture we will
+      \begin{itemize}
+        \item convert sentences into a standardized form;
+        \item use resolution to derive contradictions mechanically;
+        \item exploit Horn-clause structure;
+        \item compare forward and backward chaining.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide35.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=12]{Takeaways}
+  \begin{itemize}
+    \item Truth tables enumerate models and can decide propositional entailment.
+    \item Logical equivalence means identical truth values in every model.
+    \item A single countermodel disproves entailment.
+    \item Soundness protects correctness; completeness protects coverage.
+    \item $KB\models\alpha$ iff $KB\land\neg\alpha$ is unsatisfiable.
+    \item Next lecture: reason by manipulating sentences rather than enumerating worlds.
+  \end{itemize}
+
+  \begin{keyidea}
+    Semantic inference gives us a correct baseline; automated proof procedures aim to keep the guarantees while doing less work.
+  \end{keyidea}
 \end{frame}
 
 \end{document}
