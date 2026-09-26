@@ -1,12 +1,46 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-14/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-14/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-14/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\newcommand{\lectureplaceholder}[2][1.75in]{%
+  \fbox{%
+    \parbox[c][#1][c]{0.94\linewidth}{%
+      \centering
+      \small\textbf{Image Placeholder}\\[0.08in]
+      \scriptsize #2
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{14}
-\lecturetitle{Function Design}
-\lecturedate{September 28, 2026}
-\courseunit{6. Program Design and Testing}
+\lecturetitle{Testing Functions}
+\lecturedate{Fall 2026}
+\courseunit{2. Function Development and Verification}
 
 \begin{document}
 
@@ -14,41 +48,627 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Function Design
-    \item Placeholder for announcements and context.
+    \item Distinguish executing a function from testing whether its behavior is correct.
+    \item Increase testing capacity from manual inspection to executable assertions.
+    \item Introduce Python's \texttt{unittest} framework for organizing repeatable tests.
+    \item Move from notebook-style work in Colab to a file-based project in GitHub Codespaces.
+    \item Separate implementation code from test code and import functions across Python files.
+    \item Use common test assertions for primitive values: integers, floats, strings, Booleans, and \texttt{None}.
   \end{itemize}
+
+  \begin{keyidea}
+    A test states an expected behavior in executable form and compares that expectation with the program's actual behavior.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: From Running Code to Testing Behavior}
+
+\begin{frame}[shrink=4]{A Program Can Run and Still Be Wrong}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Function}
+        \texttt{def square(x: int) -> int:}\\
+        \hspace*{0.20in}\texttt{return x + x}
+      \end{block}
+
+      \begin{itemize}
+        \item The function is syntactically valid.
+        \item Calling \texttt{square(4)} completes without an exception.
+        \item The returned value is \texttt{8}, but the required result is \texttt{16}.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: successful execution path ending at an incorrect numeric result.
+      \lectureimage[2.55in]{runs-but-wrong.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Successful execution is evidence that the program ran, not evidence that the program is correct.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Simplest Test Is Manual Observation}
+  \begin{block}{A first testing strategy}
+    \texttt{print(square(2))}\\
+    \texttt{print(square(4))}\\
+    \texttt{print(square(-3))}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Program produces}
+        \texttt{4}\\
+        \texttt{16}\\
+        \texttt{9}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Human responsibility}
+        Decide whether each observed value matches the expected value.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Manual testing uses useful inputs, but correctness is still checked by the programmer rather than by the program.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Test Cases Pair Inputs with Expected Behavior}
+  \begin{cpdefinition}
+    A \textbf{test case} specifies a particular situation to evaluate, including the input values and the behavior expected from the program.
+  \end{cpdefinition}
+
+  \begin{block}{Example predicate}
+    \texttt{def is\_adult(age: int) -> bool:}\quad \texttt{return age >= 18}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.28}
+    \begin{tabular}{c|c|l}
+      \textbf{Input} & \textbf{Expected} & \textbf{Purpose} \\\hline
+      \texttt{17} & \texttt{False} & immediately below the boundary \\
+      \texttt{18} & \texttt{True} & exactly at the boundary \\
+      \texttt{19} & \texttt{True} & immediately above the boundary
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Expected results come from the specification, and inputs should represent distinct behavior rather than merely different values.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Testing Capacity Is Limited by Human Inspection}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Inspecting two outputs manually is easy.
+        \item Inspecting twenty outputs is tedious.
+        \item Rechecking those outputs after every code change repeats the same work.
+        \item A scalable testing process should make the \emph{expected result} executable as well.
+      \end{itemize}
+
+      \begin{block}{Goal}
+        Replace ``look at the output and decide'' with ``run a check that decides automatically.''
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.42\textwidth}
+      % Intended visual: manual inspection loop expanding from 2 cases to many cases.
+      \lectureimage[2.55in]{manual-testing-scale.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 2: Executable Checks with \texttt{assert}}
+
+\begin{frame}{The \texttt{assert} Statement Encodes an Expectation}
+  \begin{cpdefinition}
+    An \textbf{assertion} evaluates a condition that the programmer expects to be truthy. If the condition is false, Python raises \texttt{AssertionError}.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{assert square(4) == 16}
+  \end{block}
+
+  \begin{block}{Evaluation model}
+    \centering
+    \texttt{square(4)} $\rightarrow$ \texttt{16} $\rightarrow$ \texttt{16 == 16} $\rightarrow$ \texttt{True}
+  \end{block}
+
+  \begin{keyidea}
+    The assertion does not compute the expected answer for us; it checks an expectation we explicitly supplied.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Assertions Distinguish Satisfied and Violated Expectations}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Passing assertion}
+        \texttt{assert square(4) == 16}\\[0.06in]
+        condition $\rightarrow$ \texttt{True}\\
+        execution continues
+      \end{block}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Failing assertion}
+        \texttt{assert square(4) == 15}\\[0.06in]
+        condition $\rightarrow$ \texttt{False}\\
+        raises \texttt{AssertionError}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Successful assertions are intentionally quiet; a failed assertion interrupts normal execution and identifies an unmet expectation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Assertions Can Express Boolean Expectations Directly}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Predicate}
+        \texttt{def is\_even(n: int) -> bool:}\\
+        \hspace*{0.20in}\texttt{return n \% 2 == 0}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Tests}
+        \texttt{assert is\_even(4)}\\[0.08in]
+        \texttt{assert not is\_even(5)}
+      \end{block}
+    \end{column}
+  \end{columns}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item For a Boolean-returning function, the function call itself can serve as the assertion condition.
+    \item Use \texttt{not} when the specified behavior is false.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Plain \texttt{assert} Is a Lightweight Development Check}
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item Assertions are convenient for quick executable checks while developing code.
+    \item They are part of normal Python syntax rather than a test-reporting framework.
+    \item Python can omit \texttt{assert} statements when execution is explicitly optimized with \texttt{-O}.
+  \end{itemize}
+
+  \begin{alertblock}{Technical consequence}
+    Do not use \texttt{assert} as the mechanism for validating essential external input or enforcing requirements that must always execute.
+  \end{alertblock}
+
+  \begin{keyidea}
+    We will now move from individual assertions to a framework designed specifically to organize and report tests.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: From Colab to a File-Based Project}
+
+\begin{frame}{From Colab Prototypes to a Codespaces Project}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{block}{Colab}
+        Fast execution of notebook cells; excellent for demonstrations, tracing, and small experiments.
+      \end{block}
+      \begin{block}{GitHub Codespaces}
+        A repository-backed development environment with a file explorer, editor, terminal, source control, and development tooling.
+      \end{block}
+      \begin{keyidea}
+        The conceptual change is from ``execute cells'' to ``work with a project containing files.''
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: notebook cells transitioning into a VS Code project workspace.
+      \lectureimage[2.85in]{colab-to-codespaces.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A Python Source File Is a Module}
+  \begin{cpdefinition}
+    A Python \textbf{module} is a unit of Python code that can define functions, variables, and other statements. A \texttt{.py} source file can be imported as a module.
+  \end{cpdefinition}
+
+  \begin{block}{\texttt{temperature.py}}
+    \texttt{def fahrenheit\_to\_celsius(f: float) -> float:}\\
+    \hspace*{0.20in}\texttt{return (f - 32) * 5 / 9}
+  \end{block}
+
+  \begin{itemize}
+    \item The file has a name on disk: \texttt{temperature.py}.
+    \item The importable module name is \texttt{temperature} when the file is found on Python's import path.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Separate Implementation and Tests, Then Connect Them with Import}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Project structure}
+        \texttt{temperature-project/}\\
+        \hspace*{0.18in}\texttt{temperature.py}\\
+        \hspace*{0.18in}\texttt{test\_temperature.py}
+      \end{block}
+      \begin{itemize}
+        \item Implementation code remains focused on program behavior.
+        \item Test code remains focused on expected behavior.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Inside \texttt{test\_temperature.py}}
+        \texttt{from temperature import}\\
+        \hspace*{0.18in}\texttt{fahrenheit\_to\_celsius}
+      \end{block}
+      \begin{itemize}
+        \item Python loads the module and binds the imported function name in the test module.
+        \item The test file can then call the function normally.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Python Files Can Be Run from the Terminal}
+  \begin{block}{Run a source file}
+    \texttt{python temperature.py}
+  \end{block}
+
+  \begin{block}{Run tests with the standard-library test runner}
+    \texttt{python -m unittest -v test\_temperature}
+  \end{block}
+
+  \begin{itemize}
+    \item Running a source file executes its top-level Python statements.
+    \item \texttt{-m unittest} executes the \texttt{unittest} module as a program.
+    \item \texttt{-v} requests more detailed test output.
+  \end{itemize}
+\end{frame}
+
+\sectionframe{Part 4: Structured Unit Testing with \texttt{unittest}}
+
+\begin{frame}{\texttt{unittest} Organizes Small, Repeatable Behavior Checks}
+  \begin{cpdefinition}
+    A \textbf{unit test} checks a small, isolated unit of program behavior against a specified expectation. For our current programs, the unit will usually be one function.
+  \end{cpdefinition}
+
+  \begin{itemize}
+    \item Python's standard library provides the \texttt{unittest} framework.
+    \item It organizes tests, executes them through a test runner, and reports failures.
+    \item Framework assertion methods compare actual behavior with expected behavior.
+  \end{itemize}
+
+  \begin{block}{Conceptual flow}
+    \centering
+    input $\rightarrow$ function $\rightarrow$ actual value $\leftrightarrow$ expected value $\rightarrow$ test result
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}[shrink=3]{A Minimal \texttt{unittest} File}
+  \begin{block}{\texttt{test\_temperature.py}}
+    \texttt{import unittest}\\
+    \texttt{from temperature import fahrenheit\_to\_celsius}\\[0.08in]
+    \texttt{class TestTemperature(unittest.TestCase):}\\
+    \hspace*{0.20in}\texttt{def test\_freezing(self):}\\
+    \hspace*{0.40in}\texttt{self.assertEqual(fahrenheit\_to\_celsius(32), 0)}\\[0.05in]
+    \hspace*{0.20in}\texttt{def test\_boiling(self):}\\
+    \hspace*{0.40in}\texttt{self.assertEqual(fahrenheit\_to\_celsius(212), 100)}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item The file imports both \texttt{unittest} and the function being tested.
+    \item Each \texttt{test\_...} method represents a test scenario.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Treat the Test Class as Framework Scaffolding for Now}
+  \begin{block}{Required structure}
+    \texttt{class TestTemperature(unittest.TestCase):}\\
+    \hspace*{0.20in}\texttt{def test\_freezing\_point(self):}\\
+    \hspace*{0.40in}\texttt{self.assertEqual(fahrenheit\_to\_celsius(32), 0)}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{class} introduces a construct we will study later; reproduce this framework structure for now.
+    \item \texttt{self} is required by the test-method structure; its object-oriented meaning comes later.
+    \item Test methods begin with \texttt{test}, which allows the test runner to recognize them.
+    \item Use descriptive test names such as \texttt{test\_freezing\_point}, not \texttt{test1}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{assertEqual} Checks Value Equality}
+  \begin{block}{General form}
+    \texttt{self.assertEqual(actual, expected)}
+  \end{block}
+
+  \begin{block}{Examples with primitive values}
+    \texttt{self.assertEqual(square(4), 16)}\\
+    \texttt{self.assertEqual(sign\_name(-2), "negative")}\\
+    \texttt{self.assertEqual(is\_even(8), True)}
+  \end{block}
+
+  \begin{keyidea}
+    For values such as integers, strings, and Booleans, \texttt{assertEqual} expresses the ordinary expectation that two values compare equal with \texttt{==}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Use \texttt{assertTrue} and \texttt{assertFalse} for Predicates}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Expected truth}
+        \texttt{self.assertTrue(is\_even(4))}\\
+        \texttt{self.assertTrue(is\_adult(21))}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Expected falsity}
+        \texttt{self.assertFalse(is\_even(5))}\\
+        \texttt{self.assertFalse(is\_adult(17))}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{itemize}
+    \item These methods test the truthiness or falsiness of the supplied expression.
+    \item They communicate intent clearly when the unit under test is a predicate function.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Equality, Identity, and \texttt{None}}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Value equality}
+        \texttt{self.assertEqual(a, b)}\\
+        checks \texttt{a == b}
+      \end{block}
+      \begin{itemize}
+        \item Use for ordinary integer, float, string, and Boolean value comparisons.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Identity}
+        \texttt{self.assertIs(a, b)}\\
+        checks \texttt{a is b}
+      \end{block}
+      \begin{block}{Dedicated \texttt{None} checks}
+        \texttt{self.assertIsNone(x)}\\
+        \texttt{self.assertIsNotNone(x)}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Do not confuse the relations}
+    Identity is not a substitute for ordinary value equality. At this stage, the most important identity-related case is testing for \texttt{None}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Floating-Point Results Often Need Approximate Comparison}
+  \begin{block}{Example function}
+    \texttt{def half(x: float) -> float:}\\
+    \hspace*{0.20in}\texttt{return x / 2}
+  \end{block}
+
+  \begin{block}{Approximate test}
+    \texttt{self.assertAlmostEqual(half(0.3), 0.15)}
+  \end{block}
+
+  \begin{itemize}
+    \item Binary floating-point cannot represent every decimal fraction exactly.
+    \item \texttt{assertAlmostEqual} compares floating-point results approximately rather than requiring exact decimal equality.
+  \end{itemize}
+
+  \begin{keyidea}
+    Choose the assertion that represents the mathematical property you actually intend to test.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Small Core of Assertions Covers Many Introductory Tests}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.38}
+    \begin{tabular}{l|l}
+      \textbf{Method} & \textbf{Checks} \\\hline
+      \texttt{assertEqual(a, b)} & \texttt{a == b} \\
+      \texttt{assertNotEqual(a, b)} & \texttt{a != b} \\
+      \texttt{assertTrue(x)} & \texttt{x} is truthy \\
+      \texttt{assertFalse(x)} & \texttt{x} is falsy \\
+      \texttt{assertIsNone(x)} & \texttt{x is None} \\
+      \texttt{assertIsNotNone(x)} & \texttt{x is not None} \\
+      \texttt{assertAlmostEqual(a, b)} & numeric values are approximately equal
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Specific assertions usually communicate intent better than reducing every expectation to a generic Boolean expression.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Designing and Interpreting Tests}
+
+\begin{frame}{Test Ordinary Cases and Boundary Cases Deliberately}
+  \begin{block}{Specification}
+    \texttt{shipping\_cost(weight)} returns \texttt{5.0} when \texttt{weight <= 10}; otherwise it returns \texttt{8.0}.
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|c|l}
+      \textbf{Input} & \textbf{Expected} & \textbf{Reason} \\\hline
+      \texttt{4.0} & \texttt{5.0} & ordinary first branch \\
+      \texttt{10.0} & \texttt{5.0} & exact decision boundary \\
+      \texttt{10.1} & \texttt{8.0} & immediately above boundary \\
+      \texttt{25.0} & \texttt{8.0} & ordinary second branch
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Conditional structure in the specification should influence the structure of the test suite.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Test Should Have One Clear Reason to Fail}
+  \begin{block}{More informative organization}
+    \texttt{def test\_boundary\_weight(self):}\\
+    \hspace*{0.20in}\texttt{self.assertEqual(shipping\_cost(10.0), 5.0)}
+  \end{block}
+
+  \begin{itemize}
+    \item A focused test name identifies the behavior being checked.
+    \item When that test fails, the name provides useful diagnostic context.
+    \item Closely related checks may share a test method, but avoid constructing one giant method that verifies unrelated behaviors.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Pass, Failure, and Error Mean Different Things}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.38}
+    \begin{tabular}{l|p{3.75in}}
+      \textbf{Result} & \textbf{Meaning} \\\hline
+      Pass & The test completed and its assertion expectations were satisfied. \\
+      Failure & The test completed far enough to evaluate an assertion, but the expectation was not satisfied. \\
+      Error & The test could not complete normally because an exception or setup problem interrupted it.
+    \end{tabular}
+  \end{center}
+
+  \begin{center}
+    \lectureimage[1.45in]{pass-failure-error.png}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Tests Should Be Independently Repeatable}
+  \begin{itemize}
+    \item A test should not depend on another test having executed first.
+    \item Running one test by itself should not change the expected result of another test.
+    \item Re-running the test suite after editing the implementation should produce a fresh evaluation of the same expectations.
+  \end{itemize}
+
+  \begin{block}{For our current primitive-value functions}
+    This is usually straightforward: call the function with explicit arguments and compare the returned value with a known expectation.
+  \end{block}
+\end{frame}
+
+\begin{frame}{The Test Runner Can Execute One File or Discover Tests}
+  \begin{block}{Run one test module}
+    \texttt{python -m unittest -v test\_temperature}
+  \end{block}
+
+  \begin{block}{Discover tests from the project directory}
+    \texttt{python -m unittest}
+  \end{block}
+
+  \begin{itemize}
+    \item Default discovery looks for importable test modules whose filenames match \texttt{test*.py}.
+    \item During development, running one relevant test file is often convenient; before considering a change complete, run the broader suite.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Passing Tests Provide Evidence, Not a Proof of Correctness}
+  \begin{itemize}
+    \item A passing test establishes that the implementation behaved as expected for that tested case.
+    \item A passing suite establishes that all represented expectations passed in that run.
+    \item Untested inputs or behaviors may still contain defects.
+  \end{itemize}
+
+  \begin{keyidea}
+    Testing increases confidence by sampling specified behavior systematically; it does not establish universal correctness for every possible execution.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: Integrated Testing Workflow}
+
+\begin{frame}[shrink=3]{Worked Example: Implementation File and Test File}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{\texttt{math\_tools.py}}
+        \texttt{def absolute\_difference(a: int, b: int) -> int:}\\
+        \hspace*{0.18in}\texttt{if a >= b:}\\
+        \hspace*{0.36in}\texttt{return a - b}\\
+        \hspace*{0.18in}\texttt{return b - a}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.48\textwidth}
+      \begin{block}{\texttt{test\_math\_tools.py}}
+        \texttt{import unittest}\\
+        \texttt{from math\_tools import absolute\_difference}\\[0.05in]
+        \texttt{class TestMathTools(unittest.TestCase):}\\
+        \hspace*{0.18in}\texttt{def test\_first\_larger(self):}\\
+        \hspace*{0.36in}\texttt{self.assertEqual(}\\
+        \hspace*{0.54in}\texttt{absolute\_difference(10, 4), 6)}\\
+        \hspace*{0.18in}\texttt{def test\_second\_larger(self):}\\
+        \hspace*{0.36in}\texttt{self.assertEqual(}\\
+        \hspace*{0.54in}\texttt{absolute\_difference(4, 10), 6)}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=2]{Worked Example: Different Primitive Return Types}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{String-returning function}
+        \texttt{self.assertEqual(sign\_name(-5),}\\
+        \hspace*{0.18in}\texttt{"negative")}\\
+        \texttt{self.assertEqual(sign\_name(0), "zero")}
+      \end{block}
+
+      \begin{block}{Boolean-returning function}
+        \texttt{self.assertTrue(}\\
+        \hspace*{0.18in}\texttt{is\_multiple\_of\_three(9))}\\
+        \texttt{self.assertFalse(}\\
+        \hspace*{0.18in}\texttt{is\_multiple\_of\_three(10))}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Float-returning function}
+        \texttt{self.assertAlmostEqual(celsius(32), 0.0)}\\
+        \texttt{self.assertAlmostEqual(}\\
+        \hspace*{0.18in}\texttt{celsius(212), 100.0)}
+      \end{block}
+
+      \begin{block}{No meaningful returned value}
+        \texttt{self.assertIsNone(result)}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The assertion method should match the semantic property of the result being tested.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Repeatable Testing Workflow}
+  \begin{enumerate}
+    \item Read the function specification.
+    \item Identify representative and boundary test cases.
+    \item Determine each expected result independently of the implementation.
+    \item Write the tests in a separate test module.
+    \item Import the function under test.
+    \item Run the test suite and read the report.
+    \item After any implementation change, run the relevant tests again.
+  \end{enumerate}
+
+  \begin{center}
+    \vspace{0.06in}
+    \lectureimage[1.55in]{testing-feedback-loop.png}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item Running a function and testing a function are different activities.
+    \item A test case combines known inputs with an independently determined expected result.
+    \item Plain \texttt{assert} turns a Boolean expectation into an executable check.
+    \item \texttt{unittest} organizes repeatable tests and reports passes, failures, and errors.
+    \item File-based development lets implementation and test modules remain separate and connected through imports.
+    \item Choose assertions that directly express the property being tested: equality, truth, \texttt{None}, or approximate numeric equality.
+  \end{itemize}
+
+  \begin{keyidea}
+    Next question: when a test fails, how do we inspect the program's execution systematically enough to determine why?
+  \end{keyidea}
 \end{frame}
 
 \end{document}

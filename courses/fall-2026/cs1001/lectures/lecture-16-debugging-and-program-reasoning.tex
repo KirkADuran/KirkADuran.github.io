@@ -1,12 +1,36 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-16/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-16/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-16/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{16}
-\lecturetitle{Debugging and Program Reasoning}
-\lecturedate{October 2, 2026}
-\courseunit{6. Program Design and Testing}
+\lecturetitle{The Function Design Process}
+\lecturedate{Fall 2026}
+\courseunit{2. Function Development and Verification}
 
 \begin{document}
 
@@ -14,41 +38,640 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Debugging and Program Reasoning
-    \item Placeholder for announcements and context.
+    \item Use a six-step process to move from a problem statement to a tested function.
+    \item Identify the input and output data before writing implementation code.
+    \item State the function's purpose precisely enough to determine expected behavior.
+    \item Write a typed function header that exposes the intended interface.
+    \item Derive tests from the specification before implementing the body.
+    \item Implement, run tests, inspect failures, and iterate until the behavior matches the specification.
   \end{itemize}
+
+  \begin{keyidea}
+    The function body is not the starting point. A disciplined design process determines what the function must do before deciding how it will do it.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: Why Use a Function Design Process?}
+
+\begin{frame}{Coding Immediately Often Mixes Several Problems Together}
+  \begin{block}{Prompt}
+    Write a function that determines whether a Fahrenheit temperature is freezing.
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Immediate coding}
+        \texttt{def freezing(temp):}\\
+        \hspace*{0.20in}\texttt{...}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Questions still unanswered}
+        What input type is expected?\\
+        What value should be returned?\\
+        Is exactly \texttt{32} freezing?\\
+        How will we verify the boundary?
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Implementation becomes easier when the data and expected behavior have already been made explicit.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Six-Step Function Design Process}
+  \begin{enumerate}
+    \item \textbf{Identify the data and types.}
+    \item \textbf{Write a one-line purpose statement.}
+    \item \textbf{Write the function header with type hints.}
+    \item \textbf{Write tests from the expected behavior.}
+    \item \textbf{Write the function body.}
+    \item \textbf{Run, inspect, and iterate.}
+  \end{enumerate}
+
+  \begin{center}
+    % Intended visual: six-stage pipeline from problem statement to verified function.
+    \lectureimage[1.65in]{function-design-process.png}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Specification Comes Before Implementation}
+  \begin{cpdefinition}
+    A \textbf{specification} describes the behavior a function is expected to provide: what data it accepts and what result it should produce.
+  \end{cpdefinition}
+
+  \begin{block}{Two different questions}
+    \textbf{Specification:} What should this function do?\\[0.08in]
+    \textbf{Implementation:} How will the function produce that behavior?
+  \end{block}
+
+  \begin{keyidea}
+    Tests should be derived from the specification. Otherwise a test may merely confirm what the current implementation already happens to do.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Running Example: Determine Whether a Temperature Is Freezing}
+  \begin{block}{Problem statement}
+    Design a function that accepts a temperature in degrees Fahrenheit and returns whether that temperature is at or below the freezing point of water.
+  \end{block}
+
+  \begin{block}{Do not implement yet}
+    We will deliberately postpone the function body until the input, output, purpose, interface, and tests are established.
+  \end{block}
+
+  \begin{activity}
+    Before continuing, identify the input data, its likely Python type, and the type of the result.
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 2: Step 1 --- Identify Data, Variables, and Types}
+
+\begin{frame}{Begin with the Data Crossing the Function Boundary}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Input}
+        Fahrenheit temperature\\[0.08in]
+        suggested name: \texttt{temperature}\\[0.08in]
+        expected type: \texttt{float}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Output}
+        whether the temperature is freezing\\[0.08in]
+        result type: \texttt{bool}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The input and output types describe the shape of the computation before any algorithm has been chosen.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Choose Names That Describe the Role of the Data}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Weak names}
+        \texttt{x}\\
+        \texttt{num}\\
+        \texttt{value}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{More informative names}
+        \texttt{temperature}\\
+        \texttt{weight}\\
+        \texttt{tax\_rate}
+      \end{block}
+    \end{column}
+  \end{columns}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item A parameter name should communicate the role of the argument supplied by the caller.
+    \item Good names reduce the amount of interpretation required when reading the function header and tests.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Type Hints Document Intended Data}
+  \begin{block}{Example annotations}
+    \texttt{temperature: float}\\
+    \texttt{count: int}\\
+    \texttt{name: str}\\
+    \texttt{eligible: bool}
+  \end{block}
+
+  \begin{alertblock}{Technical distinction}
+    Type hints are annotations. Ordinary Python execution does not generally reject a call merely because an argument disagrees with an annotation.
+  \end{alertblock}
+
+  \begin{keyidea}
+    In this course, type hints serve as explicit documentation of the interface and support reasoning about valid inputs and expected outputs.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Multiple Inputs Require Separate Roles}
+  \begin{block}{Problem}
+    Return the larger of two integers.
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l}
+      \textbf{Role} & \textbf{Name} & \textbf{Type} \\\hline
+      first candidate & \texttt{a} & \texttt{int} \\
+      second candidate & \texttt{b} & \texttt{int} \\
+      result & --- & \texttt{int}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Step 1 is complete when the data entering and leaving the function is sufficiently explicit to describe the interface.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Steps 2 and 3 --- Purpose and Function Header}
+
+\begin{frame}{Step 2: Write a One-Line Purpose Statement}
+  \begin{cpdefinition}
+    A \textbf{purpose statement} is a concise description of the behavior the function provides to its caller.
+  \end{cpdefinition}
+
+  \begin{block}{Running example}
+    Return \texttt{True} when \texttt{temperature} is at or below \texttt{32.0} degrees Fahrenheit; otherwise return \texttt{False}.
+  \end{block}
+
+  \begin{keyidea}
+    A useful purpose statement is specific enough that another person can derive expected outputs without reading the implementation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Purpose Statements Describe Behavior, Not Syntax}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{alertblock}{Too vague}
+        ``Checks the temperature.''
+      \end{alertblock}
+      \begin{alertblock}{Too implementation-specific}
+        ``Uses \texttt{<=} to compare the argument with 32.''
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{exampleblockcp}
+        ``Return whether a Fahrenheit temperature is at or below the freezing point of water.''
+      \end{exampleblockcp}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    State observable behavior. Leave implementation choices for Step 5.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Step 3: Derive the Function Header from the Data}
+  \begin{block}{Data from Step 1}
+    input: \texttt{temperature: float}\\
+    output: \texttt{bool}
+  \end{block}
+
+  \begin{block}{Function header}
+    \centering
+    \Large\texttt{def is\_freezing(temperature: float) -> bool:}
+  \end{block}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item The function name summarizes the operation.
+    \item The parameter names the incoming data.
+    \item The parameter annotation records the intended input type.
+    \item The return annotation records the intended result type.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{The Header Exposes the Function's Interface}
+  \begin{cpdefinition}
+    A function's \textbf{interface} is the information a caller needs in order to use the function correctly, without depending on its internal implementation.
+  \end{cpdefinition}
+
+  \begin{center}
+    % Intended visual: caller on left, typed function header in center, result on right; body hidden.
+    \lectureimage[1.15in]{function-interface-boundary.png}
+  \end{center}
+
+  \begin{keyidea}
+    The caller should be able to reason from the function's name, parameters, documented behavior, and returned result without tracing its body. Returning a different kind of result would violate that intended interface.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Checkpoint: Can the Behavior Be Predicted from the Design?}
+  \begin{block}{Current design}
+    \texttt{def is\_freezing(temperature: float) -> bool:}\\[0.08in]
+    Purpose: return whether the Fahrenheit temperature is at or below \texttt{32.0}.
+  \end{block}
+
+  \begin{activity}
+    Without writing a body, determine the expected results for \texttt{31.0}, \texttt{32.0}, and \texttt{33.0}. Explain which value is the boundary case.
+  \end{activity}
+
+  \begin{keyidea}
+    If expected results cannot be determined, the specification is not yet precise enough to support reliable testing.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Step 4 --- Write Tests Before the Body}
+
+\begin{frame}{Tests Translate the Specification into Executable Expectations}
+  \begin{block}{Specification}
+    Return whether \texttt{temperature} is at or below \texttt{32.0}.
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{c|c|l}
+      \textbf{Input} & \textbf{Expected result} & \textbf{Reason} \\\hline
+      \texttt{31.0} & \texttt{True} & below boundary \\
+      \texttt{32.0} & \texttt{True} & exactly at boundary \\
+      \texttt{33.0} & \texttt{False} & above boundary
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The expected values come from the purpose statement, not from executing the unfinished function.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Boundary Cases Are Determined by the Specification}
+  \begin{block}{Decision boundary}
+    \centering
+    \Large\texttt{temperature <= 32.0}
+  \end{block}
+
+  \begin{itemize}
+    \item A value below the boundary exercises one side of the decision.
+    \item The boundary value checks whether equality is included.
+    \item A value above the boundary exercises the opposite side.
+  \end{itemize}
+
+  \begin{center}
+    % Intended visual: number line highlighting 31, 32, and 33 around the boundary.
+    \lectureimage[1.65in]{boundary-test-cases.png}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Write the Test File Before Implementing the Body}
+  \begin{block}{\texttt{test\_temperature.py}}
+    \texttt{import unittest}\\
+    \texttt{from temperature import is\_freezing}\\[0.08in]
+    \texttt{class TestFreezing(unittest.TestCase):}\\
+    \hspace*{0.20in}\texttt{def test\_below(self):}\\
+    \hspace*{0.40in}\texttt{self.assertTrue(is\_freezing(31.0))}\\[0.05in]
+    \hspace*{0.20in}\texttt{def test\_boundary(self):}\\
+    \hspace*{0.40in}\texttt{self.assertTrue(is\_freezing(32.0))}\\[0.05in]
+    \hspace*{0.20in}\texttt{def test\_above(self):}\\
+    \hspace*{0.40in}\texttt{self.assertFalse(is\_freezing(33.0))}
+  \end{block}
+
+  \begin{keyidea}
+    Before the body is complete, failing tests are expected: they establish the behavior the implementation must eventually satisfy.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Separate Files Separate Responsibilities}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.44\textwidth}
+      \begin{block}{\texttt{temperature.py}}
+        Defines the behavior being implemented.
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{block}{\texttt{test\_temperature.py}}
+        Defines examples of expected behavior.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{center}
+    \texttt{from temperature import is\_freezing}
+  \end{center}
+
+  \begin{keyidea}
+    The implementation and its tests evolve together, but they serve different purposes and should remain conceptually distinct.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Test Should Explain What Behavior It Is Checking}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{alertblock}{Weak}
+        \texttt{def test1(self):}\\
+        \hspace*{0.20in}\texttt{...}
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{exampleblockcp}
+        \texttt{def test\_freezing\_point(self):}\\
+        \hspace*{0.20in}\texttt{self.assertTrue(}\\
+        \hspace*{0.40in}\texttt{is\_freezing(32.0))}
+      \end{exampleblockcp}
+    \end{column}
+  \end{columns}
+
+  \begin{itemize}
+    \item The test name should identify the behavior or case under examination.
+    \item A focused failure message is more informative than a large test containing unrelated expectations.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Tests Must Be Independent of the Implementation Strategy}
+  \begin{block}{Acceptable expectation}
+    \texttt{self.assertTrue(is\_freezing(32.0))}
+  \end{block}
+
+  \begin{alertblock}{Poor testing idea}
+    ``Verify that the function uses an \texttt{if} statement.''
+  \end{alertblock}
+
+  \begin{itemize}
+    \item The specification requires a Boolean result.
+    \item It does not require one particular arrangement of statements to obtain that result.
+  \end{itemize}
+
+  \begin{keyidea}
+    Test externally observable behavior unless the specification explicitly requires an implementation property.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Step 5 --- Write the Function Body}
+
+\begin{frame}{Only Now Do We Implement the Computation}
+  \begin{block}{Design already established}
+    \texttt{def is\_freezing(temperature: float) -> bool:}
+  \end{block}
+
+  \begin{block}{Implementation}
+    \texttt{def is\_freezing(temperature: float) -> bool:}\\
+    \hspace*{0.20in}\texttt{return temperature <= 32.0}
+  \end{block}
+
+  \begin{keyidea}
+    The implementation is short because most of the reasoning has already been expressed in the specification, interface, and tests.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Prefer the Simplest Body That Clearly Satisfies the Specification}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Direct predicate}
+        \texttt{def is\_freezing(t: float) -> bool:}\\
+        \hspace*{0.20in}\texttt{return t <= 32.0}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Equivalent conditional}
+        \texttt{def is\_freezing(t: float) -> bool:}\\
+        \hspace*{0.20in}\texttt{if t <= 32.0:}\\
+        \hspace*{0.40in}\texttt{return True}\\
+        \hspace*{0.20in}\texttt{return False}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Both implementations satisfy the same interface. Prefer the clearer expression of the underlying computation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Some Specifications Naturally Require Conditional Structure}
+  \begin{block}{Problem}
+    Return a shipping cost of \texttt{5.0} for packages weighing at most \texttt{10.0} pounds; otherwise return \texttt{8.0}.
+  \end{block}
+
+  \begin{block}{Implementation}
+    \texttt{def shipping\_cost(weight: float) -> float:}\\
+    \hspace*{0.20in}\texttt{if weight <= 10.0:}\\
+    \hspace*{0.40in}\texttt{return 5.0}\\
+    \hspace*{0.20in}\texttt{return 8.0}
+  \end{block}
+
+  \begin{keyidea}
+    The design process does not prescribe one body shape; the specification determines what behavior must be represented.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace the Body Against a Previously Chosen Test}
+  \begin{block}{Test case}
+    \texttt{shipping\_cost(10.0)} should return \texttt{5.0}.
+  \end{block}
+
+  \begin{enumerate}
+    \item Bind \texttt{weight} to \texttt{10.0}.
+    \item Evaluate \texttt{weight <= 10.0} $\rightarrow$ \texttt{True}.
+    \item Enter the selected branch.
+    \item Execute \texttt{return 5.0}.
+    \item Compare actual result \texttt{5.0} with expected result \texttt{5.0}.
+  \end{enumerate}
+
+  \begin{keyidea}
+    Tracing remains useful: tests tell us whether behavior matches; tracing explains how a particular result was produced.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Do Not Implement Only the Examples}
+  \begin{alertblock}{Incorrect implementation}
+    \texttt{def is\_freezing(t: float) -> bool:}\\
+    \hspace*{0.20in}\texttt{return t == 31.0 or t == 32.0}
+  \end{alertblock}
+
+  \begin{itemize}
+    \item This passes two known positive examples.
+    \item It does not implement the general rule in the specification.
+    \item For example, \texttt{is\_freezing(0.0)} would be incorrect.
+  \end{itemize}
+
+  \begin{keyidea}
+    Tests are examples of the specification; they are not a replacement for understanding the general behavior being specified.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: Step 6 --- Run, Inspect, and Iterate}
+
+\begin{frame}{Run the Test Suite After Implementing the Body}
+  \begin{center}
+    % Intended visual: test suite feeding implementation and producing pass/fail result.
+    \lectureimage[1.55in]{run-test-suite.png}
+  \end{center}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.44\textwidth}
+      \begin{block}{Green}
+        Current implementation satisfies the tested expectations.
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{block}{Red}
+        At least one expectation is not satisfied or a test cannot complete normally.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A Failure Creates a New Reasoning Problem}
+  \begin{block}{Suppose the body is}
+    \texttt{def is\_freezing(t: float) -> bool:}\\
+    \hspace*{0.20in}\texttt{return t < 32.0}
+  \end{block}
+
+  \begin{block}{Observed result}
+    \texttt{test\_below} passes.\\
+    \texttt{test\_boundary} fails.\\
+    \texttt{test\_above} passes.
+  \end{block}
+
+  \begin{activity}
+    What does this failure pattern tell you about the relationship between the implementation and the specification?
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Debug the First Meaningful Divergence}
+  \begin{enumerate}
+    \item Start from the failing boundary test.
+    \item Expected condition result for \texttt{32.0}: \texttt{True}.
+    \item Actual condition result for \texttt{32.0 < 32.0}: \texttt{False}.
+    \item The divergence occurs in the comparison operator.
+    \item Correct \texttt{<} to \texttt{<=}.
+    \item Run the complete test suite again.
+  \end{enumerate}
+
+  \begin{keyidea}
+    Lecture 15's debugging process is now embedded inside the larger function design process.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Iteration Can Improve Either Code or Specification}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Implementation problem}
+        The stated behavior is clear, but the body does not produce it.
+      \end{block}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Specification problem}
+        A reasonable input exposes behavior that the original statement never defined.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{block}{Example question}
+    What should \texttt{shipping\_cost(-2.0)} mean? The original specification may need to state whether negative weights are valid inputs.
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Passing Tests Should Remain as Regression Tests}
+  \begin{cpdefinition}
+    A \textbf{regression} occurs when a change causes behavior that previously worked to become incorrect.
+  \end{cpdefinition}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Keep existing tests when the implementation changes.
+    \item Add a new test when a newly discovered case should remain supported.
+    \item Run the whole test suite, not only the test related to the latest edit.
   \end{itemize}
+
+  \begin{keyidea}
+    A growing test suite preserves executable examples of behavior that future changes should continue to satisfy.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Complete Development Loop}
+  \begin{center}
+    % Intended visual: specification -> header -> tests -> red -> body -> green -> inspect/refine -> tests.
+    \lectureimage[2.75in]{design-test-iterate-loop.png}
+  \end{center}
+\end{frame}
+
+\begin{frame}[shrink=5]{Worked Example: Return the Larger of Two Integers}
+  \begin{enumerate}
+    \item \textbf{Data:} \texttt{a: int}, \texttt{b: int}; result \texttt{int}.
+    \item \textbf{Purpose:} return the larger of \texttt{a} and \texttt{b}; if they are equal, return that value.
+    \item \textbf{Header:} \texttt{def maximum(a: int, b: int) -> int:}
+    \item \textbf{Tests:}
+      \begin{itemize}
+        \item \texttt{maximum(5, 3)} $\rightarrow$ \texttt{5}
+        \item \texttt{maximum(3, 5)} $\rightarrow$ \texttt{5}
+        \item \texttt{maximum(5, 5)} $\rightarrow$ \texttt{5}
+      \end{itemize}
+    \item \textbf{Body:}
+      \texttt{if a >= b: return a}\quad otherwise \texttt{return b}
+    \item \textbf{Iterate:} run all three tests and inspect any mismatch.
+  \end{enumerate}
+
+  \begin{keyidea}
+    The equality case is deliberate: it tests the boundary between ``first is larger'' and ``second is larger.''
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=4]{Integrated Exercise: Design Before Coding}
+  \begin{block}{Problem}
+    Design \texttt{has\_minimum\_length(password: str) -> bool}, which returns whether \texttt{password} contains at least eight characters.
+  \end{block}
+
+  \begin{activity}
+    Before writing the body, produce:
+    \begin{enumerate}
+      \item the input and output data;
+      \item a one-line purpose statement;
+      \item the complete typed header;
+      \item three tests that examine the boundary;
+      \item only then, the simplest correct body.
+    \end{enumerate}
+  \end{activity}
+\end{frame}
+
+\begin{frame}{A Practical Checklist for New Functions}
+  \begin{enumerate}
+    \item What values enter the function, and what are their intended types?
+    \item What value must the function return?
+    \item Can the behavior be stated precisely in one sentence?
+    \item Does the function header reflect that data and behavior?
+    \item Which ordinary, boundary, and special cases follow from the specification?
+    \item Do the tests encode those expectations before the body is trusted?
+    \item Does the simplest clear implementation satisfy the tests?
+    \item After a correction, did the entire suite still pass?
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item Function design begins with data and behavior, not implementation syntax.
+    \item Type hints document the intended interface but are not, by themselves, runtime enforcement.
+    \item Purpose statements make expected behavior explicit enough to test.
+    \item Tests should be derived from the specification before implementation details influence expectations.
+    \item The body implements the general behavior; it should not merely memorize the examples in the test suite.
+    \item Red--green feedback and debugging turn failures into evidence for the next iteration.
+  \end{itemize}
+
+  \begin{keyidea}
+    Design, testing, implementation, and debugging are not separate habits. Together they form a repeatable process for producing functions whose behavior can be explained and verified.
+  \end{keyidea}
 \end{frame}
 
 \end{document}

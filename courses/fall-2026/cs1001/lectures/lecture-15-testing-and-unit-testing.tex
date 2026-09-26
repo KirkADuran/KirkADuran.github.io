@@ -1,12 +1,46 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-15/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-15/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-15/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\newcommand{\lectureplaceholder}[2][1.75in]{%
+  \fbox{%
+    \parbox[c][#1][c]{0.94\linewidth}{%
+      \centering
+      \small\textbf{Image Placeholder}\\[0.08in]
+      \scriptsize #2
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{15}
-\lecturetitle{Testing and Unit Testing}
-\lecturedate{September 30, 2026}
-\courseunit{6. Program Design and Testing}
+\lecturetitle{Debugging and Program Inspection}
+\lecturedate{Fall 2026}
+\courseunit{2. Function Development and Verification}
 
 \begin{document}
 
@@ -14,41 +48,678 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Testing and Unit Testing
-    \item Placeholder for announcements and context.
+    \item Distinguish testing from debugging: tests detect mismatches; debugging investigates their causes.
+    \item Use print statements as a simple tracing technique and identify where that technique stops scaling well.
+    \item Use the VS Code visual debugger to pause execution without inserting diagnostic output into the program.
+    \item Set breakpoints and inspect variables, expressions, and active call frames.
+    \item Control execution using Continue, Step Over, Step Into, and Step Out.
+    \item Use a hypothesis-driven process and a red--green cycle to make targeted corrections.
   \end{itemize}
+
+  \begin{keyidea}
+    Debugging is not random code editing. It is the systematic comparison of expected execution with observed execution in order to locate the first meaningful divergence.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: From a Failing Test to a Debugging Question}
+
+\begin{frame}{Testing and Debugging Answer Different Questions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Testing}
+        Does the observed behavior satisfy the expected behavior?
+      \end{block}
+
+      \begin{itemize}
+        \item supplies inputs;
+        \item states expectations;
+        \item reports pass, failure, or error.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Debugging}
+        Why did execution produce the observed behavior?
+      \end{block}
+
+      \begin{itemize}
+        \item inspects control flow;
+        \item inspects program state;
+        \item narrows the location of the defect.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A failed test is evidence of a mismatch. It does not, by itself, identify the statement that caused the mismatch.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Symptom Is Not Necessarily the Defect}
+  \begin{cpdefinition}
+    A \textbf{symptom} is an observable incorrect result or failure. A \textbf{defect} is a fault in the program that contributes to that incorrect behavior.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{def absolute\_difference(a: int, b: int) -> int:}\\
+    \hspace*{0.20in}\texttt{if a > b:}\\
+    \hspace*{0.40in}\texttt{return a - b}\\
+    \hspace*{0.20in}\texttt{return a + b}
+  \end{block}
+
+  \begin{block}{Observed symptom}
+    \texttt{absolute\_difference(4, 10)} returns \texttt{14}, but the expected value is \texttt{6}.
+  \end{block}
+
+  \begin{keyidea}
+    The incorrect returned value is where we notice the problem; the faulty expression occurs earlier in the execution path.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Debugging Is Evidence-Based Program Inspection}
+  \begin{cpdefinition}
+    \textbf{Debugging} is the process of locating and correcting the cause of observed incorrect program behavior.
+  \end{cpdefinition}
+
+  \begin{enumerate}
+    \item Reproduce a specific failure.
+    \item Predict what execution should do.
+    \item Observe what execution actually does.
+    \item Identify the earliest meaningful difference.
+    \item Correct the responsible code.
+    \item Run the tests again.
+  \end{enumerate}
+
+  \begin{keyidea}
+    The purpose of a debugging tool is to increase the quality of our observations; the programmer still supplies the reasoning.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Start from a Reproducible Case}
+  \begin{block}{Implementation}
+    \texttt{def absolute\_difference(a: int, b: int) -> int:}\\
+    \hspace*{0.20in}\texttt{if a > b:}\\
+    \hspace*{0.40in}\texttt{return a - b}\\
+    \hspace*{0.20in}\texttt{return a + b}
+  \end{block}
+
+  \begin{block}{Tests}
+    \texttt{assert absolute\_difference(10, 4) == 6}\quad \checkmark\\
+    \texttt{assert absolute\_difference(4, 10) == 6}\quad fails
+  \end{block}
+
+  \begin{activity}
+    Before inspecting the program, predict which conditional path the failing input should take and what expression should produce the final value.
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 2: Print Debugging}
+
+\begin{frame}{Print Statements Can Expose Intermediate State}
+  \begin{block}{Instrumented program}
+    \texttt{def final\_price(price: float, rate: float) -> float:}\\
+    \hspace*{0.20in}\texttt{subtotal = price}\\
+    \hspace*{0.20in}\texttt{print("subtotal:", subtotal)}\\
+    \hspace*{0.20in}\texttt{tax = subtotal * rate}\\
+    \hspace*{0.20in}\texttt{print("tax:", tax)}\\
+    \hspace*{0.20in}\texttt{total = subtotal - tax}\\
+    \hspace*{0.20in}\texttt{print("total:", total)}\\
+    \hspace*{0.20in}\texttt{return total}
+  \end{block}
+
+  \begin{keyidea}
+    Diagnostic prints turn selected internal values into visible output, allowing us to compare actual state with our predicted state.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Print Debugging Requires Source-Code Changes}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{itemize}
+        \item We must decide what to print before running the program.
+        \item Adding more observations requires editing the source again.
+        \item Diagnostic output can become mixed with the program's intended output.
+        \item Temporary prints can be forgotten after the defect is corrected.
+      \end{itemize}
+
+      \begin{block}{Important}
+        Print debugging is not inherently wrong. It is a useful technique with practical limits.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      % Intended visual: source code accumulating diagnostic print statements.
+      \lectureimage[2.65in]{print-debugging-clutter.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[shrink=4]{From Instrumenting the Program to Inspecting the Program}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Print debugging}
+        Modify code to emit observations during execution.
+      \end{block}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Visual debugger}
+        Pause execution and inspect runtime state through the development environment.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.12in}
+  \begin{center}
+    % Intended visual: print statements on left, paused debugger UI on right.
+    \lectureimage[1.85in]{prints-vs-debugger.png}
+  \end{center}
+\end{frame}
+
+\sectionframe{Part 3: The VS Code Visual Debugger}
+
+\begin{frame}[shrink=4]{A Debugger Executes the Program Under Observation}
+  \begin{cpdefinition}
+    A \textbf{debugger} is a development tool that can suspend a running program, expose runtime state, and provide controlled operations for resuming execution.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      While execution is paused, we can inspect:
+      \begin{itemize}
+        \item the current source location;
+        \item variable bindings;
+        \item active function calls;
+        \item selected expressions;
+        \item breakpoints controlling future pauses.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.41\textwidth}
+      % Intended visual: VS Code Run and Debug view with editor, Variables, Call Stack, and toolbar.
+      \lectureimage[2.25in]{vscode-debugger-overview.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A Breakpoint Requests a Controlled Pause}
+  \begin{cpdefinition}
+    A \textbf{breakpoint} marks a source location at which the debugger should suspend normal execution when that executable location is reached.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{def final\_price(price: float, rate: float) -> float:}\\
+    \hspace*{0.20in}\texttt{subtotal = price}\\
+    \hspace*{0.20in}\texttt{tax = subtotal * rate}\quad \textit{\small breakpoint}\\
+    \hspace*{0.20in}\texttt{total = subtotal + tax}\\
+    \hspace*{0.20in}\texttt{return total}
+  \end{block}
+
+  \begin{keyidea}
+    When execution pauses at the breakpoint, inspect the state that exists before advancing through the suspicious computation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Current Line Is a Control-Flow Location}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item The debugger highlights the source location at which execution is currently suspended.
+        \item The highlighted line identifies what is about to be executed or the current operation being stepped through, depending on the debugger state.
+        \item Variables shown in the debugger represent state at that pause point.
+      \end{itemize}
+
+      \begin{alertblock}{Tracing discipline}
+        Inspect state \emph{before} stepping, predict the effect of the next statement, then step and compare.
+      \end{alertblock}
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: highlighted current line with arrow and a breakpoint marker.
+      \lectureimage[2.60in]{breakpoint-current-line.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{The Variables View Shows Bindings in the Selected Frame}
+  \begin{block}{Paused inside a call}
+    \texttt{def final\_price(price: float, rate: float) -> float:}\\
+    \hspace*{0.20in}\texttt{subtotal = price}\\
+    \hspace*{0.20in}\texttt{tax = subtotal * rate}\\
+    \hspace*{0.20in}\texttt{total = subtotal + tax}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Name} & \textbf{Current value} \\\hline
+      \texttt{price} & \texttt{100.0} \\
+      \texttt{rate} & \texttt{0.08} \\
+      \texttt{subtotal} & \texttt{100.0} \\
+      \texttt{tax} & \texttt{8.0}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The Variables view is the debugger equivalent of the binding tables we have been constructing manually.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=4]{The Call Stack Shows Active Function Calls}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \begin{block}{Example execution}
+        \texttt{main code}\\
+        \hspace*{0.16in}$\downarrow$ \texttt{final\_price(...)}\\
+        \hspace*{0.32in}$\downarrow$ \texttt{compute\_tax(...)}
+      \end{block}
+
+      While \texttt{compute\_tax} is active, the earlier call to \texttt{final\_price} has not finished.
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+      % Intended visual: stack frames for compute_tax, final_price, and module code.
+      \lectureimage[2.20in]{call-stack-frames.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Selecting a different frame lets us inspect the bindings associated with that active call.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Watch Expressions Track Questions About State}
+  \begin{cpdefinition}
+    A \textbf{watch expression} is an expression the debugger reevaluates while execution is paused so the programmer can monitor its current value.
+  \end{cpdefinition}
+
+  \begin{block}{Examples}
+    \texttt{subtotal * rate}\\
+    \texttt{a > b}\\
+    \texttt{result == expected}
+  \end{block}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item Watches are useful when a derived value matters but is not stored in its own variable.
+    \item Prefer simple observation expressions while learning; a debugger is most useful when it does not change the state being investigated.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Step Over Executes the Current Line at the Current Abstraction Level}
+  \begin{block}{Paused here}
+    \texttt{tax = compute\_tax(subtotal, rate)}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Step Over}
+        Execute the line, including the call to \texttt{compute\_tax}, but do not pause on each statement inside that function.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Afterward}
+        Pause at the next statement in the current frame with \texttt{tax} now bound to the returned value.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Step Over is appropriate when the called function is not currently the object of investigation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Step Into Follows a Function Call}
+  \begin{block}{Paused here}
+    \texttt{tax = compute\_tax(subtotal, rate)}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Step Into}
+        Enter the called function and suspend execution inside its body.
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.46\textwidth}
+      \begin{block}{New frame}
+        Inspect parameter bindings and local variables belonging to the \texttt{compute\_tax} call.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Step Into crosses a function abstraction boundary so we can inspect the implementation of the call.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Four Core Execution Controls Serve Different Purposes}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|p{0.68\textwidth}}
+      \textbf{Action} & \textbf{Effect} \\\hline
+      Continue & Run until the next stopping event. \\
+      Step Over & Execute the current line without tracing into calls on that line. \\
+      Step Into & Follow a called function and inspect its execution. \\
+      Step Out & Finish the current function and pause in its caller.
+    \end{tabular}
+  \end{center}
+
+  \vspace{0.10in}
+  % Intended visual: VS Code debug toolbar labeled with the four execution controls.
+  \lectureimage[1.55in]{debug-step-actions.png}
+\end{frame}
+
+\sectionframe{Part 4: Debugging as a Controlled Trace}
+
+\begin{frame}{The Debugger Extends the Manual Trace Model}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Manual trace}
+        \begin{itemize}
+          \item current statement;
+          \item current bindings;
+          \item active frame;
+          \item predicted next state.
+        \end{itemize}
+      \end{block}
+    \end{column}
+
+    \begin{column}{0.45\textwidth}
+      \begin{block}{Debugger}
+        \begin{itemize}
+          \item highlighted source location;
+          \item Variables view;
+          \item Call Stack view;
+          \item controlled stepping.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The debugger does not replace tracing. It lets us compare our trace model with the actual execution state one step at a time.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=5]{Tracing Example: Find the First Incorrect State}
+  \begin{block}{Buggy function}
+    \texttt{def final\_price(price: float, rate: float) -> float:}\\
+    \hspace*{0.20in}\texttt{subtotal = price}\\
+    \hspace*{0.20in}\texttt{tax = subtotal * rate}\\
+    \hspace*{0.20in}\texttt{total = subtotal - tax}\\
+    \hspace*{0.20in}\texttt{return total}
+  \end{block}
+
+  For \texttt{final\_price(100.0, 0.08)}, suppose the specification expects \texttt{108.0}.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.20}
+    \begin{tabular}{l|l|l}
+      \textbf{Pause point} & \textbf{Expected state} & \textbf{Observed state} \\\hline
+      after \texttt{subtotal} & \texttt{subtotal = 100.0} & \texttt{100.0} \\
+      after \texttt{tax} & \texttt{tax = 8.0} & \texttt{8.0} \\
+      after \texttt{total} & \texttt{total = 108.0} & \texttt{92.0}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The first state divergence occurs when \texttt{total} is computed, sharply narrowing the defect location.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Place Breakpoints Near a Hypothesis, Not Everywhere}
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item A breakpoint before every line produces many pauses but little prioritization.
+    \item A useful breakpoint is placed near the earliest location where the failing behavior could plausibly emerge.
+    \item Begin before the suspicious computation so that the inputs to that computation can also be inspected.
   \end{itemize}
-\end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+  \begin{block}{Example hypothesis}
+    ``The tax amount is correct, but the final price is combining subtotal and tax incorrectly.''
+  \end{block}
+
+  \begin{block}{Breakpoint choice}
+    Pause on or immediately before \texttt{total = subtotal - tax}.
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Step Over When the Callee Is Not Suspect}
+  \begin{block}{Program}
+    \texttt{def compute\_tax(amount: float, rate: float) -> float:}\\
+    \hspace*{0.20in}\texttt{return amount * rate}\\[0.08in]
+    \texttt{def final\_price(price: float, rate: float) -> float:}\\
+    \hspace*{0.20in}\texttt{tax = compute\_tax(price, rate)}\\
+    \hspace*{0.20in}\texttt{return price - tax}
+  \end{block}
+
+  If previous tests already establish that \texttt{compute\_tax} behaves correctly, Step Over the call and inspect the returned value in \texttt{tax}.
+
+  \begin{keyidea}
+    Debugging is selective. Do not inspect an implementation merely because the debugger can enter it.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Step Into When the Returned Value Is Already Wrong}
+  \begin{block}{Suppose}
+    After stepping over \texttt{tax = compute\_tax(price, rate)}, the debugger shows \texttt{tax = -8.0} when \texttt{8.0} was expected.
+  \end{block}
+
+  \begin{enumerate}
+    \item Restart the failing case.
+    \item Pause before the call to \texttt{compute\_tax}.
+    \item Verify the argument values.
+    \item Step Into the call.
+    \item Trace the callee's parameter bindings and expression evaluation.
+  \end{enumerate}
+
+  \begin{keyidea}
+    Step Into is justified by evidence that the incorrect state exists at or before the function boundary.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Call Stack Answers ``How Did We Get Here?''}
+  \begin{block}{Paused inside \texttt{compute\_tax}}
+    \centering
+    \texttt{compute\_tax}\quad current frame\\
+    $\uparrow$\\
+    \texttt{final\_price}\quad caller\\
+    $\uparrow$\\
+    \texttt{test\_final\_price}\quad earlier caller
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Select \texttt{compute\_tax} to inspect its parameters and locals.
+    \item Select \texttt{final\_price} to inspect the still-active caller frame.
+    \item The call stack reconstructs the active chain of calls leading to the current location.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Conditionals Should Be Debugged by Following One Concrete Path}
+  \begin{block}{Buggy function}
+    \texttt{def shipping\_cost(weight: float) -> float:}\\
+    \hspace*{0.20in}\texttt{if weight < 10:}\\
+    \hspace*{0.40in}\texttt{return 5.0}\\
+    \hspace*{0.20in}\texttt{return 8.0}
+  \end{block}
+
+  Suppose the specification says packages weighing \emph{at most} 10 pounds cost \texttt{5.0}.
+
+  \begin{activity}
+    For the failing input \texttt{10.0}, identify the expected condition value, the observed condition value, and the first point where the execution path diverges.
+  \end{activity}
+
+  \begin{keyidea}
+    A conditional defect may produce the wrong branch even when every statement inside each branch is individually correct.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The First Divergence Principle Narrows the Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      When debugging a concrete failing case:
+      \begin{enumerate}
+        \item predict the next relevant state;
+        \item observe the actual state;
+        \item advance only far enough to compare again;
+        \item stop broadening the search once the first incorrect state is found.
+      \end{enumerate}
+
+      Later incorrect values may be consequences rather than independent defects.
+    \end{column}
+
+    \begin{column}{0.40\textwidth}
+      % Intended visual: two execution traces that match, then diverge at one statement.
+      \lectureimage[2.65in]{first-divergence.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 5: Red--Green Development}
+
+\begin{frame}{A Failing Test Gives Us the Red State}
+  \begin{block}{RED}
+    At least one test representing required behavior is currently failing.
+  \end{block}
+
+  \begin{itemize}
+    \item Red is not merely ``the code is bad.''
+    \item It identifies a specific observable behavior that the current implementation does not satisfy.
+    \item The failure gives us a reproducible case from which debugging can begin.
+  \end{itemize}
+
+  \begin{keyidea}
+    Do not erase the evidence by weakening the test simply to make it pass. First determine whether the test's expectation correctly represents the specification.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Debugging Should Produce a Targeted Change}
+  \begin{block}{Before}
+    \texttt{total = subtotal - tax}
+  \end{block}
+
+  \begin{block}{Evidence}
+    \texttt{subtotal = 100.0}, \texttt{tax = 8.0}, expected \texttt{total = 108.0}, observed \texttt{92.0}
+  \end{block}
+
+  \begin{block}{Targeted correction}
+    \texttt{total = subtotal + tax}
+  \end{block}
+
+  \begin{keyidea}
+    The edit should follow from the diagnosis. Random changes make it difficult to know which change affected the behavior and why.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Green Means the Relevant Tests Pass}
+  \begin{block}{GREEN}
+    The corrected implementation now satisfies the current test suite.
+  \end{block}
+
+  \begin{itemize}
+    \item First rerun the test that exposed the defect.
+    \item Then run the complete relevant test suite.
+    \item A local correction can accidentally change behavior elsewhere.
+  \end{itemize}
+
+  \begin{keyidea}
+    Re-running existing tests after a change checks for regressions: previously expected behavior that no longer works after the modification.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=4]{Red and Green Form a Development Feedback Loop}
+  \begin{center}
+    % Intended visual: RED failing test -> inspect/debug -> change code -> GREEN passing suite -> next behavior.
+    \lectureimage[1.85in]{red-green-cycle.png}
+  \end{center}
+
+  \begin{block}{Core loop}
+    \centering
+    failing expectation $\rightarrow$ inspect execution $\rightarrow$ targeted change $\rightarrow$ passing tests
+  \end{block}
+
+  \begin{keyidea}
+    The cycle is useful because each code change has immediate executable feedback about whether the expected behavior was restored.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: An Integrated Debugging Workflow}
+
+\begin{frame}{A Practical Debugging Procedure}
+  \begin{enumerate}
+    \item Run the tests and select one reproducible failure.
+    \item Read the expected and actual values carefully.
+    \item Predict the execution path for the failing input.
+    \item Form a specific hypothesis about where the first divergence may occur.
+    \item Set a breakpoint before that location.
+    \item Inspect state, then Step Over or Step Into deliberately.
+    \item Correct the defect supported by the evidence.
+    \item Rerun the failing test, then the full relevant suite.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[shrink=6]{Integrated Example: Debugging Across a Function Call}
+  \begin{block}{Implementation}
+    \texttt{def apply\_discount(price: float, rate: float) -> float:}\\
+    \hspace*{0.20in}\texttt{return price + price * rate}\\[0.05in]
+    \texttt{def sale\_price(price: float, rate: float) -> float:}\\
+    \hspace*{0.20in}\texttt{discounted = apply\_discount(price, rate)}\\
+    \hspace*{0.20in}\texttt{return discounted}
+  \end{block}
+
+  \begin{block}{Failing case}
+    \texttt{sale\_price(100.0, 0.20)} should return \texttt{80.0}, but returns \texttt{120.0}.
+  \end{block}
+
+  \begin{activity}
+    Where would you place the first breakpoint? Would you initially Step Over or Step Into \texttt{apply\_discount}? What observation would justify changing that decision?
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Common Debugging Mistakes}
+  \begin{itemize}
+    \item Editing several unrelated statements before rerunning the test.
+    \item Stepping through every line without a hypothesis about what information is needed.
+    \item Looking only at the final incorrect value rather than finding where state first became incorrect.
+    \item Stepping into every function call regardless of whether evidence implicates that function.
+    \item Fixing the one failing case but not rerunning the rest of the tests.
+    \item Leaving diagnostic code in place after it no longer serves a purpose.
+  \end{itemize}
+
+  \begin{keyidea}
+    Effective debugging reduces uncertainty systematically; ineffective debugging often creates more uncontrolled changes than evidence.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=6]{Final Trace: Locate the Defect Before Editing}
+  \begin{block}{Program}
+    \texttt{def is\_eligible(age: int) -> bool:}\\
+    \hspace*{0.20in}\texttt{return age > 18}\\[0.06in]
+    \texttt{def admission(age: int, has\_ticket: bool) -> str:}\\
+    \hspace*{0.20in}\texttt{if is\_eligible(age) and has\_ticket:}\\
+    \hspace*{0.40in}\texttt{return "admit"}\\
+    \hspace*{0.20in}\texttt{return "deny"}
+  \end{block}
+
+  Specification: age \texttt{18} is eligible when the person also has a ticket.
+
+  \begin{activity}
+    For \texttt{admission(18, True)}, identify: (1) the expected result, (2) the first useful breakpoint, (3) where Step Into becomes useful, and (4) the first observed state or expression that would differ from the specification.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item Tests identify reproducible mismatches between expected and actual behavior.
+    \item Print statements can reveal state, but visual debugging scales better when detailed runtime inspection is needed.
+    \item Breakpoints pause execution so variables, expressions, and active call frames can be inspected directly.
+    \item Continue, Step Over, Step Into, and Step Out intentionally control the level and amount of observation.
+    \item Debugging should seek the first meaningful divergence between predicted and observed execution.
+    \item Red--green development connects failing tests, evidence-based corrections, and repeated verification.
+  \end{itemize}
+
+  \begin{keyidea}
+    Tests tell us \emph{that} behavior is wrong. Debugging helps us explain \emph{why} it is wrong.
+  \end{keyidea}
 \end{frame}
 
 \end{document}
