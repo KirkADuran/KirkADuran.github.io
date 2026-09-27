@@ -1,54 +1,988 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\usepackage{tikz}
+
+\graphicspath{{../assets/lecture-15/}}
+
+% If an image file is not yet available, skip the visual slot.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-15/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{}%
+}
+
+% Explicit placeholder for visuals/examples that will be added later.
+\newcommand{\lectureplaceholder}[2][2.35in]{%
+  \begin{center}
+    \fbox{%
+      \begin{minipage}[c][#1][c]{0.90\linewidth}
+        \centering
+        \small\textit{#2}
+      \end{minipage}%
+    }
+  \end{center}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{15}
-\lecturetitle{Automated Logical Inference -- CNF, resolution, Horn clauses, forward/backward chaining}
+\lecturetitle{Automated Logical Inference}
 \lecturedate{September 30, 2026}
-\courseunit{Course sequence}
+\courseunit{Logic and Knowledge Representation}
 
 \begin{document}
 
+% Estimated pacing: 50 minutes
+% Motivation + bridge from model checking: 6 min
+% CNF: 11 min
+% Resolution: 15 min
+% Horn clauses + forward chaining: 9 min
+% Backward chaining + comparison: 7 min
+% Wrap / bridge to FOL: 2 min
+
+% -----------------------------------------------------------------------------
+% Slide 1
+% -----------------------------------------------------------------------------
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Automated Logical Inference -- CNF, resolution, Horn clauses, forward/backward chaining
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{From Semantics to Algorithms}
+
+% -----------------------------------------------------------------------------
+% Slide 2
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Last Time: We Could Prove Things by Checking Every World}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      Suppose our knowledge base contains
+      \[
+        A \rightarrow B,\qquad A.
+      \]
+
+      To test whether
+      \[
+        KB \models B,
+      \]
+      truth-table inference checks every assignment of truth values.
+
+      \begin{block}{Correct, but expensive}
+        With $n$ propositional symbols, there are
+        \[
+          2^n
+        \]
+        possible models.
+      \end{block}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      \lectureimage[2.70in]{slide2.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Semantic inference asks whether a conclusion is true in every model. Today we ask whether we can derive conclusions without enumerating all models.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Slide 3
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{A Logical Agent Needs an Inference Engine}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      A logical agent stores sentences in a knowledge base, but storing knowledge is not enough.
+
+      The agent also needs procedures that can answer questions such as:
+      \begin{itemize}
+        \item Is this conclusion implied by what I know?
+        \item Which new facts can I derive?
+        \item Can I prove a particular goal?
+      \end{itemize}
+
+      \begin{block}{Today}
+        We turn logical inference into algorithms that manipulate sentences directly.
+      \end{block}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \lectureimage[2.75in]{slide3.png}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Slide 4
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Two Ways to Reason}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Model checking}
+        Ask whether the knowledge base and query have the right truth values across possible worlds.
+
+        \vspace{0.08in}
+        \textbf{Think:} inspect models.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Theorem proving}
+        Apply inference rules that transform known sentences into new sentences.
+
+        \vspace{0.08in}
+        \textbf{Think:} manipulate symbols.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \lectureimage[1.45in]{slide4.png}
+
+  \begin{keyidea}
+    A proof system is useful when a small sequence of syntactic steps can replace an enormous semantic search.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\section{Conjunctive Normal Form}
+
+% -----------------------------------------------------------------------------
+% Slide 5
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Why Normalize Logical Sentences?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Consider two equivalent statements:
+      \[
+        A \rightarrow B
+      \]
+      and
+      \[
+        \neg A \lor B.
+      \]
+
+      A human can recognize that these mean the same thing. An inference algorithm is easier to write if equivalent sentences are converted into a predictable structure first.
+
+      \begin{block}{Normalization}
+        Rewrite many different logical expressions into one standard form before inference begins.
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide5.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 6
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Literals and Clauses}
+  \begin{cpdefinition}
+    A \textbf{literal} is either a propositional symbol or its negation.
+  \end{cpdefinition}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Literals}
+        \[
+          A,\qquad \neg B,\qquad C
+        \]
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Clause}
+        A disjunction of literals:
+        \[
+          A \lor \neg B \lor C
+        \]
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Resolution operates on clauses, so clause structure is the basic unit of automated inference in this lecture.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 7
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Conjunctive Normal Form}
+  \begin{cpdefinition}
+    A sentence is in \textbf{conjunctive normal form (CNF)} when it is a conjunction of clauses, where each clause is a disjunction of literals.
+  \end{cpdefinition}
+
+  \[
+    (A \lor \neg B) \land (C \lor D) \land (\neg A \lor E)
+  \]
+
+  \begin{center}
+    \textbf{AND of ORs}
+  \end{center}
+
+  \lectureimage[1.55in]{slide7.png}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 8
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{CNF Conversion: The Recipe}
+  A common propositional conversion pipeline is:
+
+  \begin{enumerate}
+    \item Eliminate biconditionals $\leftrightarrow$.
+    \item Eliminate implications $\rightarrow$.
+    \item Move negations inward using De Morgan's laws and double negation.
+    \item Distribute $\lor$ over $\land$.
+  \end{enumerate}
+
+  \begin{block}{Important}
+    Each rewrite preserves logical equivalence. We are changing the sentence's form, not its meaning.
+  \end{block}
+
+  \lectureimage[1.30in]{slide8.png}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 9
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Worked CNF Conversion: Start with an Implication}
+  Convert
+  \[
+    A \rightarrow (B \land C)
+  \]
+  to CNF.
+
+  \begin{block}{Step 1: eliminate implication}
+    \[
+      \neg A \lor (B \land C)
+    \]
+  \end{block}
+
+  We are not done because the OR contains a conjunction.
+
+  \begin{center}
+    \textbf{Next: distribute $\lor$ over $\land$.}
+  \end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 10
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Worked CNF Conversion: Distribute}
+  Continue from
+  \[
+    \neg A \lor (B \land C).
+  \]
+
+  Distribution gives
+  \[
+    (\neg A \lor B) \land (\neg A \lor C).
+  \]
+
+  Now the expression is a conjunction of clauses.
+
+  \begin{block}{Clause set view}
+    \[
+      \{\neg A,B\},\qquad \{\neg A,C\}
+    \]
+  \end{block}
+
+  \begin{keyidea}
+    CNF lets the inference engine treat the knowledge base as a collection of clauses instead of arbitrary nested expressions.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 11
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Quick Check: Which One Is CNF?}
+  Which of the following is already in conjunctive normal form?
+
+  \begin{enumerate}
+    \item $(A \land B) \lor C$
+    \item $(A \lor B) \land (\neg C \lor D)$
+    \item $A \rightarrow (B \lor C)$
+  \end{enumerate}
+
+  \pause
+  \begin{block}{Answer}
+    \[
+      (A \lor B) \land (\neg C \lor D)
+    \]
+    is an AND of OR-clauses.
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\section{Resolution}
+
+% -----------------------------------------------------------------------------
+% Slide 12
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Resolution: One Small Rule with a Big Job}
+  Suppose the knowledge base contains
+  \[
+    A \lor B
+  \]
+  and
+  \[
+    \neg B \lor C.
+  \]
+
+  If $B$ is true, the second clause requires $C$. If $B$ is false, the first clause requires $A$.
+
+  Either way,
+  \[
+    A \lor C
+  \]
+  must be true.
+
+  \begin{keyidea}
+    Resolution removes a pair of complementary literals and combines what remains.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 13
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{The Resolution Rule}
+  \begin{cpdefinition}
+    If two clauses contain complementary literals, resolution derives a new clause containing the remaining literals.
+  \end{cpdefinition}
+
+  \[
+    (L \lor A_1 \lor \cdots \lor A_m)
+  \]
+  \[
+    (\neg L \lor B_1 \lor \cdots \lor B_n)
+  \]
+
+  resolve to
+  \[
+    A_1 \lor \cdots \lor A_m \lor B_1 \lor \cdots \lor B_n.
+  \]
+
+  \lectureimage[1.35in]{slide13.png}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 14
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Worked Resolution Step}
+  Start with
+  \[
+    \neg Rain \lor Wet
+  \]
+  and
+  \[
+    Rain.
+  \]
+
+  Treat the second statement as the one-literal clause $(Rain)$.
+
+  Resolve on the complementary literals $Rain$ and $\neg Rain$.
+
+  Removing that complementary pair leaves
+  \[
+    Wet.
+  \]
+
+  \begin{block}{This should look familiar}
+    Resolution has reproduced modus ponens using a general clause-level rule.
+  \end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 15
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{But How Do We Prove a Query?}
+  Suppose we want to determine whether
+  \[
+    KB \models Q.
+  \]
+
+  Resolution is usually used by \textbf{refutation}:
+
+  \begin{enumerate}
+    \item Add the negation of the query, $\neg Q$, to the knowledge base.
+    \item Repeatedly apply resolution.
+    \item If this produces a contradiction, then $Q$ must follow from the original knowledge base.
+  \end{enumerate}
+
+  \begin{center}
+    \textbf{Assume the conclusion is false and see whether the knowledge base becomes impossible.}
+  \end{center}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 16
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Resolution by Refutation: Running Example}
+  Knowledge base:
+  \[
+    A \rightarrow B
+  \]
+  \[
+    B \rightarrow C
+  \]
+  \[
+    A
+  \]
+
+  Query:
+  \[
+    C?
+  \]
+
+  Convert the knowledge base to clauses:
+  \[
+    \neg A \lor B
+  \]
+  \[
+    \neg B \lor C
+  \]
+  \[
+    A
+  \]
+
+  Then add the negated query:
+  \[
+    \neg C.
+  \]
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 17
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Refutation Setup: Clause Form}
+  The proof search begins with four clauses:
+
+  \[
+    \neg A \lor B
+  \]
+  \[
+    \neg B \lor C
+  \]
+  \[
+    A
+  \]
+  \[
+    \neg C \qquad \text{(assumed for contradiction)}
+  \]
+
+  \begin{keyidea}
+    From this point forward, every inference step uses the same resolution rule.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 18
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Refutation Trace: Resolve the Query Backward}
+  Start with
+  \[
+    \neg B \lor C
+  \]
+  and the assumed negated query
+  \[
+    \neg C.
+  \]
+
+  Resolving on $C$ gives
+  \[
+    \neg B.
+  \]
+
+  \begin{block}{Interpretation}
+    If $C$ were false, then the rule $B\rightarrow C$ says $B$ would also have to be false.
+  \end{block}
+
+  \lectureimage[1.25in]{slide18.png}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 18
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Refutation Trace: Continue the Chain}
+  Now resolve
+  \[
+    \neg A \lor B
+  \]
+  with
+  \[
+    \neg B.
+  \]
+
+  Resolving on $B$ gives
+  \[
+    \neg A.
+  \]
+
+  But the knowledge base also contains
+  \[
+    A.
+  \]
+
+  The assumption $\neg C$ is forcing us toward a direct contradiction.
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 19
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{The Empty Clause Means Contradiction}
+  Resolve
+  \[
+    A
+  \]
+  with
+  \[
+    \neg A.
+  \]
+
+  Nothing remains:
+  \[
+    \Box
+  \]
+
+  The \textbf{empty clause} represents an impossible clause: a disjunction with no literal that could make it true.
+
+  \begin{block}{Conclusion}
+    $KB \land \neg C$ is unsatisfiable, therefore
+    \[
+      KB \models C.
+    \]
+  \end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 20
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Why Refutation Works}
+  To prove
+  \[
+    KB \models Q,
+  \]
+  we ask whether there exists any model in which
+  \[
+    KB \land \neg Q
+  \]
+  is true.
+
+  If no such model exists, then every model satisfying $KB$ must satisfy $Q$.
+
+  \begin{keyidea}
+    Resolution is syntactic, but refutation connects it directly back to the semantic definition of entailment from the previous lecture.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 21
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Resolution Is Sound and Complete for Propositional Logic}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Sound}
+        Every clause derived by resolution is logically implied by its parent clauses.
+
+        It does not invent false consequences.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Complete for refutation}
+        If a propositional CNF knowledge base is unsatisfiable, resolution can derive the empty clause.
+
+        Given enough search, a contradiction can be found.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{But complete does not mean cheap}
+    The number of possible clauses and resolution steps can still grow explosively.
+  \end{alertblock}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 22
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Resolution Is Also a Search Problem}
+  At each step, an inference engine must decide:
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Which two clauses should be resolved?
+    \item Which complementary literal should be used?
+    \item Which derived clauses should be kept?
+    \item When should the search stop?
   \end{itemize}
+
+  \lectureimage[1.55in]{slide23.png}
+
+  \begin{keyidea}
+    Logical inference does not escape search. It changes the search space from world states to proofs and symbolic consequences.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 23
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{A Useful Restriction: Horn Clauses}
+  General CNF is expressive, but unrestricted resolution can be expensive.
+
+  A \textbf{Horn clause} contains at most one positive literal.
+
+  Examples:
+  \[
+    \neg A \lor \neg B \lor C
+  \]
+  \[
+    \neg A \lor D
+  \]
+  \[
+    E
+  \]
+
+  These have a convenient rule interpretation.
+\end{frame}
+
+\section{Horn Clauses and Rule-Based Inference}
+
+% -----------------------------------------------------------------------------
+% Slide 24
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Horn Clauses Look Like Rules}
+  Consider
+  \[
+    \neg A \lor \neg B \lor C.
+  \]
+
+  This is equivalent to
+  \[
+    (A \land B) \rightarrow C.
+  \]
+
+  We can read it as
+  \begin{center}
+    \textbf{IF $A$ and $B$, THEN $C$.}
+  \end{center}
+
+  \begin{block}{Rule-system vocabulary}
+    $A$ and $B$ are \textbf{premises}.\qquad $C$ is the \textbf{conclusion} or \textbf{head}.
+  \end{block}
+
+  \lectureimage[1.20in]{slide25.png}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 25
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Why Horn Clauses Matter in AI}
+  Horn rules support a simple and efficient style of inference.
+
+  \begin{itemize}
+    \item Facts can be stored directly.
+    \item Rules have a natural IF--THEN interpretation.
+    \item New facts can be generated by matching satisfied premises.
+    \item The same rule representation supports both forward and backward reasoning.
+  \end{itemize}
+
+  \begin{block}{Historical connection}
+    Rule-based expert systems and logic-programming languages made this style of symbolic reasoning a central part of classical AI.
+  \end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 26
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Forward Chaining: Start with What You Know}
+  \begin{cpdefinition}
+    \textbf{Forward chaining} repeatedly applies rules whose premises are known to be true, adding their conclusions to the knowledge base.
+  \end{cpdefinition}
+
+  \begin{center}
+    \textbf{Facts $\rightarrow$ applicable rules $\rightarrow$ new facts $\rightarrow$ more rules}
+  \end{center}
+
+  \lectureimage[1.65in]{slide27.png}
+
+  \begin{keyidea}
+    Forward chaining is data-driven: begin with available evidence and ask what follows from it.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 27
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Forward Chaining Example: A Maintenance Agent}
+  Initial facts:
+  \[
+    BatteryLow,\qquad ChargerConnected,\qquad Docked
+  \]
+
+  Rules:
+  \[
+    BatteryLow \land ChargerConnected \rightarrow Charging
+  \]
+  \[
+    Charging \land Docked \rightarrow SafeToPowerDown
+  \]
+  \[
+    SafeToPowerDown \rightarrow MaintenanceMode
+  \]
+
+  \begin{block}{Question}
+    What new facts will forward chaining derive?
+  \end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 28
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Forward Chaining Trace}
+  \begin{enumerate}
+    \item $BatteryLow$ and $ChargerConnected$ are known.
+    \[
+      \Rightarrow Charging
+    \]
+
+    \item $Charging$ and $Docked$ are now known.
+    \[
+      \Rightarrow SafeToPowerDown
+    \]
+
+    \item $SafeToPowerDown$ is known.
+    \[
+      \Rightarrow MaintenanceMode
+    \]
+  \end{enumerate}
+
+  \begin{block}{Result}
+    The agent derives $MaintenanceMode$ even though that fact was never explicitly entered into the original knowledge base.
+  \end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 29
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{An Efficient Forward-Chaining Implementation}
+  A practical implementation avoids rescanning every rule from scratch.
+
+  \begin{itemize}
+    \item Maintain an \textbf{agenda} of newly discovered facts.
+    \item For each rule, track how many premises are still unsatisfied.
+    \item When the count reaches zero, add the rule's conclusion to the agenda.
+    \item Never process the same inferred fact twice.
+  \end{itemize}
+
+  \begin{keyidea}
+    For propositional Horn knowledge bases, forward chaining can be implemented in time linear in the size of the knowledge base.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 30
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Backward Chaining: Start with What You Want to Prove}
+  \begin{cpdefinition}
+    \textbf{Backward chaining} begins with a query and recursively asks which rules could establish that query.
+  \end{cpdefinition}
+
+  \begin{center}
+    \textbf{Goal $\rightarrow$ rules that conclude the goal $\rightarrow$ required subgoals}
+  \end{center}
+
+  \lectureimage[1.65in]{slide31.png}
+
+  \begin{keyidea}
+    Backward chaining is goal-driven: explore only the parts of the knowledge base relevant to the current query.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 31
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Backward Chaining Example}
+  Query:
+  \[
+    MaintenanceMode?
+  \]
+
+  The only rule that can produce it is
+  \[
+    SafeToPowerDown \rightarrow MaintenanceMode.
+  \]
+
+  So backward chaining creates the subgoal
+  \[
+    SafeToPowerDown?
+  \]
+
+  To prove that, it finds
+  \[
+    Charging \land Docked \rightarrow SafeToPowerDown,
+  \]
+  producing two more subgoals:
+  \[
+    Charging?\qquad Docked?
+  \]
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 32
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Backward Chaining Continues Until It Hits Facts}
+  We already know
+  \[
+    Docked.
+  \]
+
+  To prove $Charging$, use
+  \[
+    BatteryLow \land ChargerConnected \rightarrow Charging.
+  \]
+
+  Both premises are known facts:
+  \[
+    BatteryLow,\qquad ChargerConnected.
+  \]
+
+  Therefore the proof succeeds all the way back up:
+  \[
+    MaintenanceMode.
+  \]
+
+  \lectureimage[1.20in]{slide33.png}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 33
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Forward vs. Backward Chaining}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{l|p{0.34\textwidth}|p{0.34\textwidth}}
+      & \textbf{Forward chaining} & \textbf{Backward chaining} \\\hline
+      Starts from & known facts & a query / goal \\
+      Direction & data $\rightarrow$ consequences & goal $\rightarrow$ prerequisites \\
+      Good when & many consequences may matter & one specific query matters \\
+      Risk & derive many irrelevant facts & revisit subgoals / chase unproductive rules \\
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The knowledge representation may be the same; the search strategy through the rule space is different.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 34
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Logical Agents Can Mix Inference Strategies}
+  A practical logical agent does not need one universal inference procedure.
+
+  \begin{itemize}
+    \item Use forward chaining to maintain obvious consequences of new sensor data.
+    \item Use backward chaining when answering a specific query.
+    \item Use resolution when general CNF reasoning is required.
+    \item Use specialized algorithms when the knowledge representation permits them.
+  \end{itemize}
+
+  \begin{block}{AI engineering lesson}
+    Representation and inference are tightly coupled. A restricted representation can make reasoning dramatically cheaper.
+  \end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 35
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{The GOFAI Connection: Intelligence as Proof and Rules}
+  Much of classical symbolic AI was built around the idea that intelligent behavior could emerge from:
+
+  \begin{center}
+    \textbf{explicit knowledge + symbolic rules + automated inference}
+  \end{center}
+
+  This produced theorem provers, expert systems, planning systems, and logic-programming environments.
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{block}{Strength}
+        Reasoning steps can be explicit, inspectable, and justified.
+      \end{block}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      \begin{block}{Limitation}
+        Real-world knowledge can be difficult to encode completely and brittle when assumptions change.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \lectureimage[1.00in]{slide36.png}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 36
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Putting the Lecture Together}
+  \begin{center}
+    \begin{tabular}{c}
+      Arbitrary propositional sentences \\
+      $\Downarrow$ \\
+      \textbf{CNF: standard clause representation} \\
+      $\Downarrow$ \\
+      \textbf{Resolution: general clause inference} \\
+      $\Downarrow$ \\
+      \textbf{Horn restriction: rule-like structure} \\
+      $\Downarrow$ \\
+      \textbf{Forward / backward chaining: efficient rule inference}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Automated inference is the search for consequences. The structure of the knowledge base determines which inference algorithms are available and how expensive that search becomes.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 37
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Where Propositional Logic Hits a Wall}
+  Suppose we want to represent:
+
+  \begin{center}
+    \textbf{Every student enrolled in AI has access to the AI lab.}
+  \end{center}
+
+  In propositional logic, we would need separate statements for every student:
+  \[
+    EnrolledAlice \rightarrow AccessAlice
+  \]
+  \[
+    EnrolledBob \rightarrow AccessBob
+  \]
+  \[
+    EnrolledCarol \rightarrow AccessCarol
+  \]
+  \[
+    \vdots
+  \]
+
+  \begin{block}{Next lecture}
+    First-order logic introduces objects, predicates, relations, and quantifiers so one rule can describe an entire category of entities.
+  \end{block}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 38
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=8]{Takeaways and Next Time}
+  \begin{itemize}
+    \item CNF rewrites propositional sentences into a conjunction of clauses.
+    \item Resolution combines clauses by eliminating complementary literals.
+    \item Resolution refutation proves $KB\models Q$ by deriving a contradiction from $KB\land\neg Q$.
+    \item Horn clauses provide a restricted rule-like form that supports efficient inference.
+    \item Forward chaining is data-driven; backward chaining is goal-driven.
+    \item Logical inference is still a search problem---but now the search is over proofs, rules, and consequences.
+    \item Next: \textbf{First-Order Logic and Knowledge Representation}.
+  \end{itemize}
+
+  \begin{keyidea}
+    The central tradeoff is expressive power versus inference cost: richer representations can say more, but often require more sophisticated reasoning.
+  \end{keyidea}
 \end{frame}
 
 \end{document}

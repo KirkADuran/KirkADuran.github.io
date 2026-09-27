@@ -1,54 +1,1111 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\usepackage{tikz}
+
+\graphicspath{{../assets/lecture-16/}}
+
+% If an image file is not yet available, skip the visual slot.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-16/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{}%
+}
+
+% Explicit placeholder for visuals/examples that will be added later.
+\newcommand{\lectureplaceholder}[2][2.35in]{%
+  \begin{center}
+    \fbox{%
+      \begin{minipage}[c][#1][c]{0.90\linewidth}
+        \centering
+        \small\textit{#2}
+      \end{minipage}%
+    }
+  \end{center}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
-\lecturenumber{16}
-\lecturetitle{First-Order Logic and Knowledge Representation -- predicates, quantifiers, relations, categories, taxonomies, ontologies, inheritance}
+\lecturenumber{15}
+\lecturetitle{First-Order Logic and Knowledge Representation}
 \lecturedate{October 2, 2026}
-\courseunit{Course sequence}
+\courseunit{Logic and Knowledge Representation}
 
 \begin{document}
 
+% Estimated pacing: 50 minutes
+% Why propositional logic is not enough: 7 min
+% FOL vocabulary and sentence structure: 14 min
+% Quantifiers and translation: 14 min
+% Semantics and knowledge representation: 11 min
+% Bridge to first-order inference: 4 min
+
+% -----------------------------------------------------------------------------
+% Slide 1
+% -----------------------------------------------------------------------------
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: First-Order Logic and Knowledge Representation -- predicates, quantifiers, relations, categories, taxonomies, ontologies, inheritance
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{Why First-Order Logic?}
+
+% -----------------------------------------------------------------------------
+% Slide 2
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Propositional Logic Has a Scaling Problem of Meaning}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Propositional logic can encode individual facts and rules very cleanly.
+
+      \begin{itemize}
+        \item But each distinct object usually needs its own proposition.
+        \item The same rule may have to be repeated for Alice, Bob, Carol, and every future object.
+        \item The representation becomes large even when the underlying idea is simple.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.65in]{slide2.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    First-order logic lets one rule describe an entire class of objects.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Slide 3
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=12]{The Rule We Actually Want to Say}
+  Instead of writing one rule for every person:
+
+  \[
+    StudentAlice \rightarrow HasIDAlice
+  \]
+  \[
+    StudentBob \rightarrow HasIDBob
+  \]
+  \[
+    StudentCarol \rightarrow HasIDCarol
+  \]
+
+  we want one general rule:
+  \[
+    \forall x\; Student(x) \rightarrow HasID(x).
+  \]
+
+  \begin{keyidea}
+    The variable $x$ lets one sentence stand for arbitrarily many individuals.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+% -----------------------------------------------------------------------------
+% Slide 4
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Logical Agents Need More Than True/False Labels}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      An intelligent agent reasons about \emph{objects} in a world.
+
+      \begin{itemize}
+        \item Objects have properties.
+        \item Objects participate in relationships.
+        \item Objects belong to categories.
+        \item The same relationships recur across many objects.
+      \end{itemize}
+
+      The knowledge base should preserve this structure rather than flattening everything into unrelated Boolean symbols.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.70in]{slide4.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Knowledge representation is the choice of structure used to encode what the agent knows.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+% -----------------------------------------------------------------------------
+% Slide 5
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=12]{From GOFAI to Knowledge Representation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Symbolic AI}
+        Classical AI treated intelligent behavior as manipulation of explicit symbols and structured knowledge.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Knowledge representation}
+        Researchers developed logical languages, semantic networks, frames, rules, and later ontologies to organize facts about domains.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \lectureimage[1.35in]{slide5.png}
+
+  \begin{keyidea}
+    The representation is not decoration: it determines what the system can express and what it can infer.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+% -----------------------------------------------------------------------------
+% Slide 6
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{A Running Example: A Campus Delivery Robot}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Our agent operates in a campus world containing
+      \begin{itemize}
+        \item people;
+        \item packages;
+        \item rooms and buildings;
+        \item doors and hallways;
+        \item charging stations;
+        \item other robots.
+      \end{itemize}
+
+      The same structures recur constantly: \emph{located in}, \emph{owns}, \emph{carries}, \emph{connected to}, and \emph{accessible to}.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.75in]{slide6.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    A good representation captures repeated structure instead of inventing a new proposition for every situation.
+  \end{keyidea}
+\end{frame}
+
+\section{The Language of First-Order Logic}
+
+% -----------------------------------------------------------------------------
+% Slide 7
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{First-Order Logic: The Big Upgrade}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Objects}
+        Individual things in the domain.
+
+        Alice, Robot7, Room214, PackageA
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Properties / relations}
+        Predicates describe objects and how they are connected.
+
+        $Student(Alice)$
+
+        $In(Robot7,Room214)$
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Quantifiers}
+        Variables let a sentence range over many objects.
+
+        $\forall x$ and $\exists x$
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \lectureimage[1.20in]{slide7.png}
+
+  \begin{keyidea}
+    FOL represents a world in terms of entities and structured statements about those entities.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 8
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Vocabulary: Constants and Variables}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item A \textbf{constant} names a particular object in the domain.
+        \item A \textbf{variable} stands for an unspecified object.
+        \item Variables become powerful when combined with quantifiers.
+      \end{itemize}
+
+      Examples:
+      \[
+        Alice,\; Robot7,\; Room214
+      \]
+      \[
+        x,\; y,\; z
+      \]
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.50in]{slide8.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Constants point to specific objects; variables let rules talk about objects generically.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 9
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=12]{Constants Name Particular Objects}
+  Examples from our campus domain:
+  \[
+    Alice
+  \]
+  \[
+    Robot7
+  \]
+  \[
+    Room214
+  \]
+  \[
+    PackageA
+  \]
+
+  \begin{keyidea}
+    A constant is a symbol interpreted as one particular object in the domain.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 10
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Predicates Describe Properties}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      A one-place predicate behaves like a property test:
+      \[
+        Student(Alice)
+      \]
+      \[
+        Robot(Robot7)
+      \]
+      \[
+        Locked(Door3)
+      \]
+      \[
+        Fragile(PackageA)
+      \]
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide10.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    An atomic sentence is true or false depending on the object and the interpretation.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 11
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Relations Connect Objects}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Predicates can take multiple arguments:
+      \[
+        In(Robot7, Room214)
+      \]
+      \[
+        Carries(Robot7, PackageA)
+      \]
+      \[
+        Teaches(ProfLee, AI)
+      \]
+      \[
+        Connected(Room214, Hallway2)
+      \]
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.60in]{slide11.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Relations preserve structure that propositional symbols hide.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 12
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Argument Order Matters}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item $Parent(Alice,Bob)$ is generally not the same as $Parent(Bob,Alice)$.
+        \item $In(Robot7,Room214)$ differs from $In(Room214,Robot7)$.
+        \item A relation has meaning tied to both its name and the positions of its arguments.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.50in]{slide12.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Predicate arity and argument order are part of the representation.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 13
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Functions Denote Objects}
+  A function maps one or more objects to another object:
+  \[
+    OwnerOf(PackageA)
+  \]
+  \[
+    SupervisorOf(Alice)
+  \]
+  \[
+    NextRoom(Room214)
+  \]
+  \[
+    MotherOf(x)
+  \]
+
+  \begin{keyidea}
+    Predicates evaluate to truth values; functions denote objects.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 14
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Predicates vs. Functions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Predicate}
+        Returns a truth value.
+
+        \[
+          In(Robot7, Room214)
+        \]
+
+        true or false
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Function}
+        Denotes an object.
+
+        \[
+          OwnerOf(PackageA)
+        \]
+
+        some person
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Ask ``is this statement true?'' $\rightarrow$ predicate. Ask ``which object does this term refer to?'' $\rightarrow$ function.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 15
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Terms Build References to Objects}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item A constant is a term.
+        \item A variable is a term.
+        \item A function applied to terms produces another term.
+        \item Terms can therefore be nested.
+      \end{itemize}
+
+      Example:
+      \[
+        SupervisorOf(OwnerOf(PackageA))
+      \]
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.50in]{slide15.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Terms refer to objects; predicates applied to terms produce sentences.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 16
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=12]{Atomic Sentences Are Predicates Applied to Terms}
+  Examples:
+  \[
+    Student(Alice)
+  \]
+  \[
+    In(Robot7, NextRoom(Room214))
+  \]
+  \[
+    Knows(Alice, SupervisorOf(Bob))
+  \]
+
+  \begin{keyidea}
+    FOL combines a small vocabulary into richly structured statements.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 17
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=12]{Compound FOL Sentences Reuse Familiar Connectives}
+  The propositional connectives still work:
+  \[
+    Student(Alice) \land Enrolled(Alice,AI)
+  \]
+  \[
+    Locked(Door3) \rightarrow \neg Accessible(Room214)
+  \]
+  \[
+    Robot(Robot7) \land Carries(Robot7,PackageA)
+  \]
+
+  \begin{keyidea}
+    First-order logic extends propositional logic; it does not replace AND, OR, NOT, and implication.
+  \end{keyidea}
+\end{frame}
+
+\section{Quantifiers and Scope}
+
+% -----------------------------------------------------------------------------
+% Slide 18
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{The Universal Quantifier: $\forall$}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item $\forall x$ means ``for every object $x$ in the domain.''
+        \item It turns a pattern involving $x$ into a claim about all objects.
+        \item Universal rules are one of the main reasons FOL is compact.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide18.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Use $\forall$ when the statement is intended to apply to every relevant object.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 19
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=12]{Universal Rule Example}
+  ``Every student has an ID.''
+  \[
+    \forall x\; Student(x) \rightarrow HasID(x)
+  \]
+
+  Suppose we also know
+  \[
+    Student(Alice)
+  \]
+  and
+  \[
+    Student(Bob).
+  \]
+
+  \begin{keyidea}
+    One rule represents the entire category instead of repeating the rule for each person.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 20
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{The Existential Quantifier: $\exists$}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item $\exists x$ means ``there exists at least one object $x$.''
+        \item The sentence does not need to identify which object satisfies the claim.
+        \item Existential statements assert the existence of a witness.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.50in]{slide20.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Use $\exists$ when at least one object must satisfy the condition.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 21
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=12]{Existential Example}
+  ``Some robot is carrying a fragile package.''
+
+  \[
+    \exists x\exists y\;
+    Robot(x) \land Package(y)
+  \]
+  \[
+    \land\; Carries(x,y) \land Fragile(y).
+  \]
+
+  \begin{keyidea}
+    The sentence claims that a suitable pair of objects exists.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 22
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Quantifier Scope Changes Meaning}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \[
+        \forall x\exists y\; Loves(x,y)
+      \]
+      \begin{block}{Reading}
+        Everyone loves someone.
+
+        The ``someone'' may be different for each person.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \[
+        \exists y\forall x\; Loves(x,y)
+      \]
+      \begin{block}{Reading}
+        There is one person whom everyone loves.
+
+        The same $y$ works for all $x$.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Changing quantifier order can change the statement completely.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 23
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{A Classic Translation Trap}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      English often hides logical scope.
+
+      \begin{block}{Sentence}
+        Every student takes a course.
+      \end{block}
+
+      Does that mean each student may take a different course, or that there is one course every student takes?
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide23.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Formal logic is useful partly because it removes ambiguity that natural language tolerates.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 24
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=12]{Translate: Every Student Takes at Least One Course}
+  A faithful formalization is
+  \[
+    \forall x\; Student(x) \rightarrow
+    \exists y\; (Course(y) \land Takes(x,y)).
+  \]
+
+  The existential quantifier sits \emph{inside} the universal.
+
+  \begin{keyidea}
+    Each student only needs some course; the course may be different for different students.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 25
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Universal Statements Usually Use Implication}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \[
+        \forall x\; Student(x) \rightarrow HasID(x)
+      \]
+      \begin{block}{Why?}
+        Objects that are not students are irrelevant to the rule.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \[
+        \forall x\; Student(x) \land HasID(x)
+      \]
+      \begin{block}{Problem}
+        This says every object in the domain is both a student and has an ID.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    For ``all $A$ are $B$,'' the common pattern is $\forall x\,(A(x)\rightarrow B(x))$.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 26
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Existential Statements Usually Use Conjunction}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \[
+        \exists x\; Robot(x) \land Charging(x)
+      \]
+      \begin{block}{Reading}
+        There exists an object that is both a robot and charging.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \[
+        \exists x\; Robot(x) \rightarrow Charging(x)
+      \]
+      \begin{block}{Problem}
+        This can become true just by choosing an object that is not a robot.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    For ``some $A$ is $B$,'' the common pattern is $\exists x\,(A(x)\land B(x))$.
+  \end{keyidea}
+\end{frame}
+
+\section{Semantics and Knowledge Representation}
+
+% -----------------------------------------------------------------------------
+% Slide 27
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Semantics: FOL Still Needs a World}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item A \textbf{domain} specifies the objects we are talking about.
+        \item An \textbf{interpretation} assigns meanings to constants, predicates, and functions.
+        \item A sentence is true or false relative to that interpretation.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide27.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Syntax gives the form of a sentence; semantics connects the symbols to a possible world.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 28
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=11]{One Symbolic KB, One Structured World}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Domain}
+        \{Alice, Bob, Robot7, Room214, PackageA, $\ldots$\}
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Interpretation}
+        $Alice$ maps to a particular person.
+
+        $In$ maps to a relation over ordered pairs.
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{block}{Sentence}
+        $In(Robot7,Room214)$ is true exactly when that pair belongs to the relation $In$.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \lectureimage[1.20in]{slide28.png}
+
+  \begin{keyidea}
+    FOL separates the symbols we manipulate from the world those symbols are interpreted to describe.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 29
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Knowledge Representation: Categories}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Predicates naturally define categories such as
+      \begin{itemize}
+        \item $Student$;
+        \item $Professor$;
+        \item $Robot$;
+        \item $Room$;
+        \item $Package$.
+      \end{itemize}
+
+      Category relationships can then be expressed as general rules.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.60in]{slide29.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Categories compress repeated facts by letting properties be inherited through rules.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 30
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Taxonomies as Logical Rules}
+  A simple hierarchy can be written as implications:
+  \[
+    \forall x\; GraduateStudent(x) \rightarrow Student(x)
+  \]
+  \[
+    \forall x\; Student(x) \rightarrow Person(x)
+  \]
+  \[
+    \forall x\; Person(x) \rightarrow Agent(x)
+  \]
+
+  \lectureimage[1.25in]{slide30.png}
+
+  \begin{keyidea}
+    A taxonomy organizes ``is-a'' relationships between categories.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 31
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=12]{Inheritance Emerges from the Rules}
+  Suppose the KB contains
+  \[
+    GraduateStudent(Maya)
+  \]
+  \[
+    GraduateStudent(x) \rightarrow Student(x)
+  \]
+  \[
+    Student(x) \rightarrow Person(x)
+  \]
+  \[
+    Person(x) \rightarrow Agent(x).
+  \]
+
+  \begin{keyidea}
+    The hierarchy makes higher-level properties available to lower-level categories without repeating them.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 32
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Inheritance Is Powerful --- and Can Be Awkward}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Simple logical inheritance is monotonic: adding facts does not retract earlier conclusions.
+        \item Real categories often have exceptions.
+        \item ``Birds fly'' is useful as a default, but penguins create an exception.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.50in]{slide32.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Classical FOL handles explicit exceptions, but default reasoning requires extra machinery.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 33
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Relations Turn a Taxonomy into a Rich World Model}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.38\textwidth}
+      \[
+        Student(Maya)
+      \]
+      \[
+        EnrolledIn(Maya,AI)
+      \]
+      \[
+        TaughtBy(AI,ProfLee)
+      \]
+      \[
+        LocatedIn(AI,Building14)
+      \]
+    \end{column}
+    \begin{column}{0.56\textwidth}
+      \lectureimage[2.85in]{slide33.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Unary predicates classify objects; multi-place predicates connect them into a network of knowledge.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 34
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{From Logical Relations to Knowledge Graphs}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item A graph view treats entities as nodes and relations as labeled edges.
+        \item This is a convenient visualization of many FOL-style facts.
+        \item But a graph alone does not automatically capture the full semantics of quantifiers and logical rules.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide34.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Knowledge graphs and logic are closely related representations, but they are not identical languages.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 35
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Ontologies Add a Shared Vocabulary}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      An ontology specifies
+      \begin{itemize}
+        \item the kinds of entities that exist in a domain;
+        \item important properties and relationships among those kinds;
+        \item constraints or axioms that give the vocabulary precise meaning.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.60in]{slide35.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    An ontology is a model of the domain's concepts, not merely a list of facts about individual objects.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 36
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Campus Ontology Example}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Classes}
+        Person
+
+        Student
+
+        Professor
+
+        Course
+
+        Room
+
+        Building
+      \end{block}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \begin{block}{Relations}
+        $enrolledIn(Student,Course)$
+
+        $teaches(Professor,Course)$
+
+        $locatedIn(Course,Room)$
+
+        $partOf(Room,Building)$
+      \end{block}
+    \end{column}
+    \begin{column}{0.30\textwidth}
+      \begin{block}{Rules / axioms}
+        GraduateStudent $\subseteq$ Student
+
+        Professor $\subseteq$ Person
+
+        Every Course is located in some Room
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    An ontology gives many agents or systems a common conceptual schema for talking about the same domain.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 37
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Taxonomy vs. Ontology}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Taxonomy}
+        Primarily organizes categories into a hierarchy.
+
+        GraduateStudent $\rightarrow$ Student $\rightarrow$ Person
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Ontology}
+        Includes categories plus richer relations, properties, constraints, and axioms about the domain.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    A taxonomy answers ``what kind of thing is this?''; an ontology can also encode ``how can these kinds of things relate?''
+  \end{keyidea}
+\end{frame}
+
+\section{Expressiveness and the Next Inference Problem}
+
+% -----------------------------------------------------------------------------
+% Slide 38
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Representation Choices Change the Inference Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item A flat propositional KB may need thousands of repeated propositions.
+        \item FOL can express the same regularities compactly with variables and quantifiers.
+        \item That extra expressive power makes inference more complicated.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.45in]{slide38.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    More expressive representations usually buy compactness at the cost of harder reasoning.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 39
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Propositional Logic vs. First-Order Logic}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|p{0.31\textwidth}|p{0.37\textwidth}}
+      & \textbf{Propositional logic} & \textbf{First-order logic} \\\hline
+      Basic unit & Atomic proposition & Object + predicate / relation \\
+      Variables & No object variables & Yes \\
+      Quantifiers & No & $\forall$ and $\exists$ \\
+      Compact general rules & Limited & Natural \\
+      Inference & Simpler & More expressive, more complex \\
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    FOL is attractive because one symbolic pattern can cover arbitrarily many objects.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 40
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{What the Agent Can Now Represent}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Specific facts: $In(Robot7,Room214)$.
+        \item Categories: $Robot(Robot7)$.
+        \item General rules: $\forall x\; Robot(x)\rightarrow Agent(x)$.
+        \item Existence claims: $\exists x\; Charging(x)$.
+        \item Relationships among arbitrary objects.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{slide40.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    We now have a language expressive enough to describe structured domains rather than isolated Boolean facts.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 41
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{But How Does the Computer Use a Rule with Variables?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      Suppose the KB contains
+      \[
+        \forall x\; Human(x)\rightarrow Mortal(x)
+      \]
+      and
+      \[
+        Human(Socrates).
+      \]
+
+      A human immediately sees that $x$ should correspond to $Socrates$.
+
+      The inference engine needs an algorithm for making that match.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.65in]{slide41.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    The representation problem is solved; next we need machinery for matching variables to concrete terms.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 42
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=12]{Next Time: Substitution and Unification}
+  The key move will be finding a substitution such as
+  \[
+    \theta = \{x/Socrates\}.
+  \]
+
+  Applying it gives
+  \[
+    Human(x)\theta = Human(Socrates)
+  \]
+  and
+  \[
+    Mortal(x)\theta = Mortal(Socrates).
+  \]
+
+  \begin{keyidea}
+    Unification turns general first-order rules into applicable instances.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 43
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{Takeaways}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item FOL represents objects, properties, relations, functions, and general rules.
+    \item $\forall$ expresses universal claims; $\exists$ expresses existence claims; scope and order matter.
+    \item Categories and taxonomies organize ``is-a'' structure and support inheritance.
+    \item Ontologies add a richer shared model of domain concepts and relationships.
+    \item Expressiveness reduces representational duplication but makes inference harder.
+    \item Next: substitution, unification, and first-order inference.
   \end{itemize}
+
+  \begin{keyidea}
+    Knowledge representation chooses the language of thought; inference determines how an agent reasons with that language.
+  \end{keyidea}
 \end{frame}
 
 \end{document}
