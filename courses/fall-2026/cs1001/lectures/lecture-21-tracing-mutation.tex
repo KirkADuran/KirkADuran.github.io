@@ -1,11 +1,35 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-21/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-21/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-21/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{21}
-\lecturetitle{Tracing Mutation}
-\lecturedate{October 14, 2026}
+\lecturetitle{Tracing Mutation and Side Effects}
+\lecturedate{Fall 2026}
 \courseunit{8. References and Mutation}
 
 \begin{document}
@@ -14,41 +38,710 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Tracing Mutation
-    \item Placeholder for announcements and context.
+    \item Reinforce the distinction between \textbf{aliasing}, \textbf{copying}, and \textbf{rebinding}.
+    \item Predict the effects of functions that receive and mutate lists.
+    \item Identify when surprising output is caused by shared references and side effects.
+    \item Repair unintended mutation by copying or constructing independent data.
+    \item Distinguish accidental mutation from intentional, documented mutation.
+    \item Simulate changes to immutable strings and tuples by constructing new objects.
   \end{itemize}
+
+  \begin{keyidea}
+    The central tracing question is not merely ``what value does this variable have?'' It is also ``which object does this name currently refer to?''
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: A Reference-Aware Tracing Model}
+
+\begin{frame}{Why Some Programs Become Hard to Predict}
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item With immutable values, a reassignment typically affects only one binding.
+    \item With mutable lists, several names may refer to the same object.
+    \item A mutation through one alias changes the object observed through every alias.
+    \item Function parameters can temporarily become additional aliases to caller-owned lists.
   \end{itemize}
+
+  \begin{alertblock}{Source of confusion}
+    A line of code may mention only one variable name while changing state visible through several different names.
+  \end{alertblock}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Three Operations That Must Remain Distinct}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{l|l|l}
+      \textbf{Operation} & \textbf{Example} & \textbf{Effect} \\\hline
+      Rebinding & \texttt{x = new\_value} & \texttt{x} refers to another object \\
+      Aliasing & \texttt{y = x} & another name refers to the same object \\
+      Mutation & \texttt{x[0] = 7} & existing mutable object changes
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Assignment does not imply copying. Indexed assignment to a list does not rebind the list variable.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Reminder: Aliasing}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Code}
+        \texttt{a = [10, 20, 30]}\\
+        \texttt{b = a}
+      \end{block}
+
+      After the second statement:
+      \begin{itemize}
+        \item there is one list object;
+        \item both \texttt{a} and \texttt{b} refer to it;
+        \item \texttt{a is b} is \texttt{True}.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.55in]{alias-reference-diagram.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A Reliable Tracing Procedure}
+  For each statement involving a list:
+  \begin{enumerate}
+    \item Identify the object or value produced by the right-hand side.
+    \item Determine whether the statement creates a new object, a new alias, or a mutation.
+    \item Update the name-to-object bindings.
+    \item Update the state of any mutated object.
+    \item If a function is called, add its parameter bindings to the same object diagram.
+  \end{enumerate}
+
+  \begin{keyidea}
+    Track \textbf{bindings} and \textbf{object state} separately.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Warm-Up: Predict Before Running}
+  \begin{block}{Code}
+    \texttt{first = [2, 4, 6]}\\
+    \texttt{second = first}\\
+    \texttt{second[1] = 99}\\
+    \texttt{print(first)}\\
+    \texttt{print(second)}
+  \end{block}
+
+  \begin{activity}
+    Predict both printed lists. Draw the reference diagram before deciding.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Warm-Up: Reveal}
+  \begin{block}{Output}
+    \texttt{[2, 99, 6]}\\
+    \texttt{[2, 99, 6]}
+  \end{block}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item \texttt{second = first} created an alias, not a copy.
+    \item \texttt{second[1] = 99} mutated the shared list object.
+    \item The expression \texttt{first} observes that same mutated object.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\sectionframe{Part 2: Functions Can Create Caller-Visible Side Effects}
+
+\begin{frame}{Prediction 1: A Function Mutates Its Parameter}
+  \begin{block}{Code}
+    \texttt{def zero\_first(values: list[int]) -> None:}\\
+    \hspace{0.18in}\texttt{values[0] = 0}\\[0.08in]
+    \texttt{scores = [8, 9, 10]}\\
+    \texttt{alias = scores}\\
+    \texttt{zero\_first(alias)}\\
+    \texttt{print(scores)}\\
+    \texttt{print(alias)}
+  \end{block}
+
+  \begin{activity}
+    Predict both outputs. At the indexed assignment, which names refer to the same list object?
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Prediction 1: What Actually Happens}
+  During the function call:
+  \begin{center}
+    \texttt{scores} $\searrow$\qquad
+    \texttt{alias} $\rightarrow$ \boxed{[8, 9, 10]} $\leftarrow$ \texttt{values}
+  \end{center}
+
+  After \texttt{values[0] = 0}:
+  \begin{center}
+    \boxed{[0, 9, 10]}
+  \end{center}
+
+  \begin{block}{Output}
+    \texttt{[0, 9, 10]}\\
+    \texttt{[0, 9, 10]}
+  \end{block}
+
+  \begin{keyidea}
+    Parameter binding can introduce a temporary alias to a caller-owned mutable object.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Unexpected Result Is a Side Effect}
+  \begin{cpdefinition}
+    A \textbf{side effect} is an observable change to program state that occurs in addition to producing a return value.
+  \end{cpdefinition}
+
+  In the previous function:
+  \begin{itemize}
+    \item the function returns \texttt{None};
+    \item the caller's list changes anyway;
+    \item the change remains after the call frame ends.
+  \end{itemize}
+
+  \begin{alertblock}{Important}
+    The problem is not that mutation occurred. The problem is that mutation may be surprising if the function's purpose does not clearly promise it.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Repair Strategy 1: Copy Before Calling}
+  \begin{block}{Code}
+    \texttt{scores = [8, 9, 10]}\\
+    \texttt{working = scores.copy()}\\
+    \texttt{zero\_first(working)}
+  \end{block}
+
+  \begin{center}
+    \texttt{scores} $\rightarrow$ \boxed{[8, 9, 10]}\\[0.12in]
+    \texttt{working} $\rightarrow$ \boxed{[0, 9, 10]}
+  \end{center}
+
+  \begin{keyidea}
+    Copying breaks the alias before mutation occurs.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Repair Strategy 2: Copy Inside the Function}
+  \begin{block}{Code}
+    \texttt{def with\_zero\_first(values: list[int]) -> list[int]:}\\
+    \hspace{0.18in}\texttt{result = values.copy()}\\
+    \hspace{0.18in}\texttt{result[0] = 0}\\
+    \hspace{0.18in}\texttt{return result}
+  \end{block}
+
+  \begin{itemize}
+    \item The parameter \texttt{values} still aliases the caller's list.
+    \item \texttt{result} refers to a distinct list object.
+    \item Mutation is applied only to the new list.
+  \end{itemize}
+
+  \begin{keyidea}
+    A ``return a modified copy'' design makes the state change explicit in the returned value.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Harder Aliasing Traces}
+
+\begin{frame}{Prediction 2: A Local Alias Is Still an Alias}
+  \begin{block}{Code}
+    \texttt{def adjust(values: list[int]) -> list[int]:}\\
+    \hspace{0.18in}\texttt{local = values}\\
+    \hspace{0.18in}\texttt{local[1] = local[1] + 10}\\
+    \hspace{0.18in}\texttt{return local}\\[0.08in]
+    \texttt{data = [1, 2, 3]}\\
+    \texttt{result = adjust(data)}\\
+    \texttt{result[-1] = 99}\\
+    \texttt{print(data)}\\
+    \texttt{print(result)}
+  \end{block}
+
+  \begin{activity}
+    Predict both outputs. Is \texttt{local = values} a copy operation?
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Prediction 2: Reveal and Diagnose}
+  \begin{block}{Output}
+    \texttt{[1, 12, 99]}\\
+    \texttt{[1, 12, 99]}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{local = values} creates another name for the same object.
+    \item The function mutates that shared object at index 1.
+    \item Returning \texttt{local} returns a reference to the same list.
+    \item Therefore \texttt{result} becomes yet another alias.
+    \item Mutating \texttt{result[-1]} also changes what \texttt{data} observes.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Fix Prediction 2}
+  Replace the aliasing assignment:
+  \begin{block}{Problem}
+    \texttt{local = values}
+  \end{block}
+
+  with an independent copy:
+  \begin{block}{Repair}
+    \texttt{local = values.copy()}
+  \end{block}
+
+  Then:
+  \begin{center}
+    \texttt{data} $\rightarrow$ \boxed{[1, 2, 3]}\\[0.12in]
+    \texttt{result} $\rightarrow$ \boxed{[1, 12, 99]}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Prediction 3: Concatenation Can Break an Alias}
+  \begin{block}{Code}
+    \texttt{def add\_marker(values: list[int]) -> list[int]:}\\
+    \hspace{0.18in}\texttt{temp = values}\\
+    \hspace{0.18in}\texttt{temp = temp + [0]}\\
+    \hspace{0.18in}\texttt{temp[0] = 9}\\
+    \hspace{0.18in}\texttt{return temp}\\[0.08in]
+    \texttt{original = [1, 2, 3]}\\
+    \texttt{changed = add\_marker(original)}\\
+    \texttt{print(original)}\\
+    \texttt{print(changed)}
+  \end{block}
+
+  \begin{activity}
+    Does \texttt{original} change? Identify the exact statement where the reference relationship changes.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Prediction 3: Reveal}
+  \begin{block}{Output}
+    \texttt{[1, 2, 3]}\\
+    \texttt{[9, 2, 3, 0]}
+  \end{block}
+
+  \begin{itemize}
+    \item Initially, \texttt{temp} aliases \texttt{values}.
+    \item \texttt{temp + [0]} constructs a new list.
+    \item The assignment then rebinds \texttt{temp} to that new list.
+    \item The later indexed mutation affects only the new list.
+  \end{itemize}
+
+  \begin{keyidea}
+    An alias can cease to be an alias when one name is rebound to a different object.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Compare: \texttt{+} Versus \texttt{extend}}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l}
+      \textbf{Operation} & \textbf{Creates new list?} & \textbf{Mutates original?} \\\hline
+      \texttt{new = values + [0]} & yes & no \\
+      \texttt{values.extend([0])} & no & yes
+    \end{tabular}
+  \end{center}
+
+  \begin{alertblock}{Tracing consequence}
+    With aliases, \texttt{extend} is visible through every reference to that list. Concatenation produces a separate list object.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Prediction 4: Copy, Then Mutate}
+  \begin{block}{Code}
+    \texttt{def adjust\_copy(values: list[int]) -> list[int]:}\\
+    \hspace{0.18in}\texttt{result = values[:]}\\
+    \hspace{0.18in}\texttt{result[0] = 50}\\
+    \hspace{0.18in}\texttt{return result}\\[0.08in]
+    \texttt{a = [5, 6, 7]}\\
+    \texttt{b = a}\\
+    \texttt{c = adjust\_copy(b)}\\
+    \texttt{b[1] = 60}
+  \end{block}
+
+  \begin{activity}
+    Predict the final values observed through \texttt{a}, \texttt{b}, and \texttt{c}.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Prediction 4: Reveal}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l}
+      \textbf{Name} & \textbf{Final value observed} & \textbf{Object} \\\hline
+      \texttt{a} & \texttt{[5, 60, 7]} & L1 \\
+      \texttt{b} & \texttt{[5, 60, 7]} & L1 \\
+      \texttt{c} & \texttt{[50, 6, 7]} & L2
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The copy separates \texttt{c} from the aliased pair \texttt{a}/\texttt{b}; it does not retroactively remove aliasing between \texttt{a} and \texttt{b}.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Techniques for Avoiding Unintended Shared Mutation}
+
+\begin{frame}{Several Ways to Create an Independent List}
+  For the flat lists of primitive values used in this unit, each expression below creates a distinct list object:
+  \begin{block}{Examples}
+    \texttt{copy1 = original.copy()}\\
+    \texttt{copy2 = original[:]}\\
+    \texttt{copy3 = list(original)}
+  \end{block}
+
+  For a known fixed structure, explicit recreation is also possible:
+  \begin{block}{Explicit recreation}
+    \texttt{copy4 = [original[0], original[1], original[2]]}
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Mental Model: Copying Breaks the Shared Reference}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Before copy}
+        \texttt{a} $\searrow$\\
+        \hspace{0.55in}\boxed{[3, 4, 5]}\\[-0.02in]
+        \texttt{b} $\nearrow$
+      \end{block}
+
+      \begin{block}{After \texttt{b = a.copy()}}
+        \texttt{a} $\rightarrow$ \boxed{[3, 4, 5]}\\
+        \texttt{b} $\rightarrow$ \boxed{[3, 4, 5]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureimage[2.7in]{copy-breaks-alias.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Technique 1: \texttt{list.copy()}}
+  \begin{block}{Code}
+    \texttt{original = [10, 20, 30]}\\
+    \texttt{working = original.copy()}\\
+    \texttt{working[0] = 99}
+  \end{block}
+
+  \begin{block}{Result}
+    \texttt{original == [10, 20, 30]}\\
+    \texttt{working == [99, 20, 30]}
+  \end{block}
+
+  \begin{keyidea}
+    \texttt{copy()} directly communicates the programmer's intent to create another list object.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Technique 2: Full Slicing}
+  \begin{block}{Code}
+    \texttt{original = [10, 20, 30]}\\
+    \texttt{working = original[:]}\\
+    \texttt{working[-1] = 0}
+  \end{block}
+
+  A full slice selects all elements and constructs a new list.
+
+  \begin{block}{Result}
+    \texttt{original == [10, 20, 30]}\\
+    \texttt{working == [10, 20, 0]}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Technique 3: \texttt{list(original)}}
+  \begin{block}{Code}
+    \texttt{original = [1, 2, 3]}\\
+    \texttt{working = list(original)}\\
+    \texttt{working.remove(2)}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item \texttt{list(original)} constructs a new list from the supplied sequence.
+    \item The new list has equal contents initially but distinct identity.
   \end{itemize}
+
+  \begin{block}{Identity check}
+    \texttt{working == original} is initially \texttt{True}.\\
+    \texttt{working is original} is \texttt{False}.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Technique 4: Explicit Reconstruction}
+  When the structure is small and fixed, the new value can be written explicitly.
+
+  \begin{block}{Code}
+    \texttt{point = [4, 7, 9]}\\
+    \texttt{changed = [point[0], 100, point[2]]}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{point} is unchanged.
+    \item \texttt{changed} is a new list with the desired contents.
+    \item The intended change is represented as construction, not mutation.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Where Should the Copy Happen?}
+  There are two legitimate designs:
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Caller protects itself}
+        \texttt{working = data.copy()}\\
+        \texttt{mutate(working)}
+      \end{block}
+      Useful when the called function is intentionally mutating.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Function protects caller}
+        \texttt{def transformed(data):}\\
+        \hspace{0.14in}\texttt{result = data.copy()}\\
+        \hspace{0.14in}\texttt{...}\\
+        \hspace{0.14in}\texttt{return result}
+      \end{block}
+      Useful when the function promises not to modify its argument.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 5: Mutation Is Not Inherently Bad}
+
+\begin{frame}{Intentional Mutation Is a Valid Design Choice}
+  \begin{keyidea}
+    Mutation is appropriate when changing an existing object is the intended behavior of the operation.
+  \end{keyidea}
+
+  Examples already used in this unit:
+  \begin{itemize}
+    \item \texttt{append} intentionally grows a list;
+    \item \texttt{remove} intentionally deletes an element;
+    \item \texttt{reverse} intentionally changes list order;
+    \item indexed assignment intentionally replaces an element.
+  \end{itemize}
+
+  The important question is whether that state change is part of the function's clear contract.
+\end{frame}
+
+\begin{frame}{Intentional Example: Swap the Endpoints}
+  \begin{block}{Code}
+    \texttt{def swap\_ends(values: list[int]) -> None:}\\
+    \hspace{0.18in}\texttt{first = values[0]}\\
+    \hspace{0.18in}\texttt{values[0] = values[-1]}\\
+    \hspace{0.18in}\texttt{values[-1] = first}
+  \end{block}
+
+  \begin{block}{Use}
+    \texttt{numbers = [10, 20, 30, 40]}\\
+    \texttt{swap\_ends(numbers)}
+  \end{block}
+
+  After the call, \texttt{numbers} is intentionally \texttt{[40, 20, 30, 10]}.
+\end{frame}
+
+\begin{frame}{Why a \texttt{None} Return Can Be Appropriate}
+  For a function whose primary purpose is mutation:
+  \begin{itemize}
+    \item the important observable result is the changed object;
+    \item returning \texttt{None} emphasizes that the function acts through a side effect;
+    \item the caller should not expect a separate transformed list.
+  \end{itemize}
+
+  \begin{block}{Contrast}
+    \texttt{swap\_ends(values) -> None} \hfill mutates supplied list\\
+    \texttt{swapped\_ends(values) -> list[int]} \hfill returns a new list
+  \end{block}
+\end{frame}
+
+\begin{frame}{Two Clear Interface Designs}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l}
+      \textbf{Design} & \textbf{Argument} & \textbf{Returned value} \\\hline
+      Mutating operation & may change & often \texttt{None} \\
+      Transform-and-return & unchanged & new value/object
+    \end{tabular}
+  \end{center}
+
+  \begin{alertblock}{Avoid ambiguity}
+    A function is easier to reason about when its name, purpose statement, tests, and implementation agree about whether mutation is expected.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 6: Simulated Mutation for Immutable Sequences}
+
+\begin{frame}{Strings Cannot Be Mutated In Place}
+  \begin{block}{Invalid code}
+    \texttt{text = "cat"}\\
+    \texttt{text[0] = "b"}
+  \end{block}
+
+  Python raises a \texttt{TypeError} because strings are immutable.
+
+  \begin{keyidea}
+    To represent a changed string, construct a new string and bind a name to it.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Simulated String Mutation}
+  \begin{block}{Construct a new string}
+    \texttt{text = "cat"}\\
+    \texttt{changed = "b" + text[1:]}
+  \end{block}
+
+  Now:
+  \begin{center}
+    \texttt{text} $\rightarrow$ \boxed{\texttt{"cat"}}\\[0.10in]
+    \texttt{changed} $\rightarrow$ \boxed{\texttt{"bat"}}
+  \end{center}
+
+  Reusing the same variable name is also possible:
+  \begin{block}{Rebinding}
+    \texttt{text = "b" + text[1:]}
+  \end{block}
+
+  This is construction plus rebinding, not mutation of the original string.
+\end{frame}
+
+\begin{frame}{Tuples Are Immutable Sequences}
+  \begin{block}{Example}
+    \texttt{point = (10, 20, 30)}
+  \end{block}
+
+  Tuples support familiar sequence operations:
+  \begin{itemize}
+    \item indexing: \texttt{point[0]};
+    \item negative indexing: \texttt{point[-1]};
+    \item slicing: \texttt{point[1:]};
+    \item length and membership checks.
+  \end{itemize}
+
+  But indexed assignment is not permitted:
+  \begin{block}{Invalid}
+    \texttt{point[1] = 99}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Simulated Tuple Mutation}
+  Suppose we want to replace the middle element:
+  \begin{block}{Construct a new tuple}
+    \texttt{point = (10, 20, 30)}\\
+    \texttt{changed = point[:1] + (99,) + point[2:]}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{point} remains \texttt{(10, 20, 30)}.
+    \item \texttt{changed} is \texttt{(10, 99, 30)}.
+    \item \texttt{(99,)} is a one-element tuple; the comma is required.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Returning a Changed Tuple}
+  \begin{block}{Code}
+    \texttt{def replace\_middle(values: tuple[int, int, int],}\\
+    \hspace{1.22in}\texttt{new\_value: int) -> tuple[int, int, int]:}\\
+    \hspace{0.18in}\texttt{return values[:1] + (new\_value,) + values[2:]}
+  \end{block}
+
+  \begin{itemize}
+    \item The input tuple is never mutated.
+    \item The function returns a different tuple containing the requested change.
+    \item This is the immutable analogue of ``copy, change, return.''
+  \end{itemize}
+\end{frame}
+
+\sectionframe{Part 7: Integrated Tracing Challenge}
+
+\begin{frame}{Integrated Prediction}
+  \begin{block}{Code}
+    \texttt{def bump\_first(values: list[int]) -> None:}\\
+    \hspace{0.18in}\texttt{values[0] = values[0] + 1}\\[0.06in]
+    \texttt{def adjusted(values: list[int]) -> list[int]:}\\
+    \hspace{0.18in}\texttt{result = values[:]}\\
+    \hspace{0.18in}\texttt{result[-1] = 0}\\
+    \hspace{0.18in}\texttt{bump\_first(result)}\\
+    \hspace{0.18in}\texttt{return result}\\[0.08in]
+    \texttt{a = [5, 6, 7]}\\
+    \texttt{b = a}\\
+    \texttt{c = adjusted(b)}\\
+    \texttt{b[1] = 9}
+  \end{block}
+
+  \begin{activity}
+    Predict the final values of \texttt{a}, \texttt{b}, and \texttt{c}. Draw object labels before tracing statements.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Integrated Trace: Object Structure}
+  After \texttt{b = a}:
+  \begin{center}
+    \texttt{a} $\searrow$\qquad \boxed{L1 = [5, 6, 7]} \qquad$\swarrow$ \texttt{b}
+  \end{center}
+
+  Inside \texttt{adjusted}:
+  \begin{itemize}
+    \item parameter \texttt{values} aliases L1;
+    \item \texttt{result = values[:]} creates L2;
+    \item \texttt{result[-1] = 0} changes only L2;
+    \item \texttt{bump\_first(result)} temporarily aliases L2 through its parameter and mutates L2.
+  \end{itemize}
+
+  \begin{center}
+    L1 = \texttt{[5, 6, 7]} \qquad L2 = \texttt{[6, 6, 0]}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Integrated Trace: Final Result}
+  After \texttt{c = adjusted(b)}:
+  \begin{center}
+    \texttt{a, b} $\rightarrow$ L1 = \texttt{[5, 6, 7]}\\[0.10in]
+    \texttt{c} $\rightarrow$ L2 = \texttt{[6, 6, 0]}
+  \end{center}
+
+  Then \texttt{b[1] = 9} mutates L1.
+
+  \begin{block}{Final values}
+    \texttt{a == [5, 9, 7]}\\
+    \texttt{b == [5, 9, 7]}\\
+    \texttt{c == [6, 6, 0]}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Debugging Unexpected Mutation}
+  When a list changes unexpectedly, ask these questions in order:
+  \begin{enumerate}
+    \item Which statement first changed the object's state?
+    \item Which names referred to that object at that moment?
+    \item Did a function parameter alias a caller-owned list?
+    \item Was the mutation intentional according to the function's contract?
+    \item If not, where should an independent object have been created?
+  \end{enumerate}
+
+  \begin{keyidea}
+    Locate the first unintended mutation, not merely the final surprising print statement.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Common Incorrect Mental Models}
+  \begin{itemize}
+    \item \textbf{Incorrect:} ``Assignment copies the list.''\\
+      \textbf{Correct:} ordinary assignment copies the reference/binding relationship.
+    \item \textbf{Incorrect:} ``The function changed the variable in the caller.''\\
+      \textbf{Correct:} the function mutated an object that both caller and parameter referenced.
+    \item \textbf{Incorrect:} ``Returning the list makes a copy.''\\
+      \textbf{Correct:} returning an existing list returns a reference to that object.
+    \item \textbf{Incorrect:} ``Every operation that looks like a change is mutation.''\\
+      \textbf{Correct:} strings and tuples require construction of new objects.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item Aliasing means multiple names refer to one object.
+    \item Mutation changes an existing object and is visible through all of its aliases.
+    \item Function parameters can alias mutable objects owned by the caller.
+    \item Unexpected shared mutation is a side effect worth diagnosing explicitly.
+    \item Use \texttt{copy()}, full slicing, \texttt{list(...)}, or explicit reconstruction when independent list state is required.
+    \item Intentional mutation is appropriate when it is part of the function's contract.
+    \item Strings and tuples are immutable; represent changes by constructing and rebinding new values.
+  \end{itemize}
+
+  \begin{keyidea}
+    When tracing mutable data, follow the objects first and the variable names second.
+  \end{keyidea}
 \end{frame}
 
 \end{document}

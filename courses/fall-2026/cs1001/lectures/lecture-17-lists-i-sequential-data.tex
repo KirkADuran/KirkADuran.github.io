@@ -1,11 +1,35 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-17/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-17/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-17/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{17}
-\lecturetitle{Lists I -- Sequential Data}
-\lecturedate{October 5, 2026}
+\lecturetitle{Lists I --- Sequential Data}
+\lecturedate{Fall 2026}
 \courseunit{7. Sequential Data}
 
 \begin{document}
@@ -14,40 +38,642 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Lists I -- Sequential Data
-    \item Placeholder for announcements and context.
+    \item Motivate lists as one structure for representing related data.
+    \item Define lists as ordered, indexed, mutable sequences of elements.
+    \item Construct lists with list literals, including the empty list and mixed-type lists.
+    \item Access elements using zero-based positive and negative indexes.
+    \item Test membership and locate an element with \texttt{.index()}.
+    \item Mutate one element by assigning through an index.
+    \item Build a useful memory model, then refine it to match how Python lists are actually represented.
   \end{itemize}
+
+  \begin{keyidea}
+    A list gives one name to an ordered sequence of element positions. Each position can be read or updated by its index.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: Why Sequential Data?}
+
+\begin{frame}{Related Data Is Awkward When Every Value Has Its Own Name}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Separate variables}
+        \texttt{test1 = 90}\\
+        \texttt{test2 = 88}\\
+        \texttt{test3 = 76}\\
+        \texttt{test4 = 92}
+      \end{block}
+
+      \begin{itemize}
+        \item The values have the same conceptual role: test scores.
+        \item Their relationship exists only in the programmer's naming convention.
+        \item Adding more related values requires inventing more names.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      % Intended visual: many separate score variables contrasted with one grouped structure.
+      \lectureimage[2.45in]{related-data-variables-vs-list.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A List Groups Related Values Under One Name}
+  \begin{block}{One sequence of scores}
+    \centering
+    \Large\texttt{scores = [90, 88, 76, 92]}
+  \end{block}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item \texttt{scores} is one variable name.
+    \item The value bound to \texttt{scores} is a list containing four elements.
+    \item Each element occupies a specific position in the sequence.
   \end{itemize}
+
+  \begin{keyidea}
+    The list represents the relationship explicitly: these values belong to one ordered sequence.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Definition: Python List}
+  \begin{cpdefinition}
+    A \textbf{list} is an ordered, indexed, mutable sequence of zero or more elements.
+  \end{cpdefinition}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l}
+      \textbf{Property} & \textbf{Meaning} \\\hline
+      ordered & element position is part of the list's structure \\
+      indexed & a position can be addressed by an integer index \\
+      mutable & an existing element can be replaced after creation \\
+      sequence & multiple elements are represented in a defined order
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Order Is Part of the List Value}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{List A}
+        \centering
+        \texttt{[10, 20, 30]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{List B}
+        \centering
+        \texttt{[30, 20, 10]}
+      \end{block}
+    \end{column}
+  \end{columns}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item The lists contain the same three integer values.
+    \item They do not represent the same sequence because the positions differ.
+    \item Consequently, \texttt{[10, 20, 30] == [30, 20, 10]} evaluates to \texttt{False}.
   \end{itemize}
+
+  \begin{keyidea}
+    In sequential data, position carries information.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\sectionframe{Part 2: Creating Lists}
+
+\begin{frame}{List Literals Use Square Brackets}
+  \begin{block}{General form}
+    \centering
+    \Large\texttt{[element0, element1, element2, ...]}
+  \end{block}
+
+  \begin{itemize}
+    \item Square brackets delimit the list literal.
+    \item Commas separate element expressions.
+    \item Each element expression is evaluated and becomes one element of the new list.
+  \end{itemize}
+
+  \begin{block}{Examples}
+    \texttt{scores = [90, 88, 76]}\\[0.06in]
+    \texttt{names = ["Ada", "Grace", "Alan"]}\\[0.06in]
+    \texttt{flags = [True, False, True]}\\[0.06in]
+    \texttt{empty = []} \quad zero elements and no valid element index
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Python Lists May Contain Mixed Types}
+  \begin{block}{Heterogeneous list}
+    \centering
+    \Large\texttt{record = [42, "hello", True, 3.5]}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item The elements do not need to share one Python type.
+    \item Position remains well-defined even when the element types differ.
+    \item Mixed types are legal; whether they are a clear design choice depends on what the positions represent.
+  \end{itemize}
+
+  \begin{keyidea}
+    Python constrains the structure of the sequence, not the type of every value stored in that sequence.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Our Working Model: Adjacent Numbered Slots}
+  \begin{center}
+    % Intended visual: four adjacent boxes containing 90, 88, 76, 92 with indexes 0--3 beneath them.
+    \lectureimage[1.80in]{list-adjacent-slots-model.png}
+  \end{center}
+
+  \begin{itemize}
+    \item Think of a list as a row of adjacent element slots.
+    \item Each slot has a unique integer position called its index.
+    \item This model makes access and mutation easy to reason about.
+  \end{itemize}
+
+  \begin{alertblock}{Modeling note}
+    This is our conceptual model for tracing. We will refine the physical memory representation at the end of the lecture.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 3: Indexing}
+
+\begin{frame}{An Index Identifies One Position in a Sequence}
+  \begin{cpdefinition}
+    An \textbf{index} is an integer used to identify a particular element position in a sequence.
+  \end{cpdefinition}
+
+  \begin{block}{Example list}
+    \centering
+    \texttt{fruits = ["apple", "banana", "cherry", "date"]}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{c|c|c|c|c}
+      element & apple & banana & cherry & date \\\hline
+      index & 0 & 1 & 2 & 3
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Python Uses Zero-Based Indexing}
+  \begin{itemize}
+    \item The first element is at index \texttt{0}, not index \texttt{1}.
+    \item The second element is at index \texttt{1}.
+    \item For a list containing \(n\) elements, the last positive index is \(n-1\).
+  \end{itemize}
+
+  \begin{block}{Example}
+    \texttt{fruits = ["apple", "banana", "cherry", "date"]}\\[0.10in]
+    \texttt{fruits[0]} $\longrightarrow$ \texttt{"apple"}\\
+    \texttt{fruits[1]} $\longrightarrow$ \texttt{"banana"}\\
+    \texttt{fruits[3]} $\longrightarrow$ \texttt{"date"}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Indexing Is an Expression}
+  \begin{block}{Expression}
+    \centering
+    \Large\texttt{fruits[2]}
+  \end{block}
+
+  \begin{enumerate}
+    \item Evaluate the name \texttt{fruits} to obtain the list.
+    \item Evaluate the index expression \texttt{2}.
+    \item Select the element at position \texttt{2}.
+    \item The complete indexing expression evaluates to that element's value.
+  \end{enumerate}
+
+  \begin{keyidea}
+    Just like arithmetic or a function call, an indexing expression produces a value and can participate in a larger expression, such as \texttt{scores[1] + 5}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace: Reading an Element Does Not Change the List}
+  \begin{block}{Code}
+    \texttt{scores = [90, 88, 76]}\\
+    \texttt{middle = scores[1]}\\
+    \texttt{result = middle + 2}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{l|l|l}
+      \textbf{Statement} & \textbf{Expression result} & \textbf{Bindings afterward} \\\hline
+      \texttt{scores = [90,88,76]} & list value & \texttt{scores} $\rightarrow$ \texttt{[90,88,76]} \\
+      \texttt{middle = scores[1]} & \texttt{88} & \texttt{middle} $\rightarrow$ \texttt{88} \\
+      \texttt{result = middle + 2} & \texttt{90} & \texttt{result} $\rightarrow$ \texttt{90}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Accessing an element retrieves a value; it does not mutate the list.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{An Index Must Refer to an Existing Position}
+  \begin{block}{List}
+    \centering
+    \texttt{scores = [90, 88, 76]}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Valid}
+        \texttt{scores[0]}\\
+        \texttt{scores[1]}\\
+        \texttt{scores[2]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{alertblock}{Invalid}
+        \texttt{scores[3]}\\[0.05in]
+        raises \texttt{IndexError}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The number of elements is three, but the valid positive indexes are \texttt{0}, \texttt{1}, and \texttt{2}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Negative Indexes Count Backward from the End}
+  \begin{block}{List}
+    \centering
+    \texttt{fruits = ["apple", "banana", "cherry", "date"]}
+  \end{block}
+
+  \begin{center}
+    % Intended visual: same list with positive indexes 0--3 above and negative indexes -4---1 below.
+    \lectureimage[1.90in]{positive-negative-indexing.png}
+  \end{center}
+
+  \begin{block}{Examples}
+    \texttt{fruits[-1]} $\longrightarrow$ \texttt{"date"}\qquad
+    \texttt{fruits[-2]} $\longrightarrow$ \texttt{"cherry"}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Positive and Negative Indexes Can Name the Same Position}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|c|c}
+      \textbf{Element} & \textbf{Positive index} & \textbf{Negative index} \\\hline
+      apple & 0 & -4 \\
+      banana & 1 & -3 \\
+      cherry & 2 & -2 \\
+      date & 3 & -1
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    For a list containing \(n\) elements, a valid negative index \(i\) identifies the same position as \(n+i\).
+  \end{keyidea}
+
+  \begin{exampleblockcp}
+    With four elements, index \texttt{-2} corresponds to \(4 + (-2) = 2\). The valid negative indexes are \texttt{-1} through \texttt{-4}; \texttt{-5} raises \texttt{IndexError}.
+  \end{exampleblockcp}
+\end{frame}
+
+\begin{frame}{Prediction: Resolve Each Index Before Running Python}
+  \begin{block}{Given}
+    \centering
+    \texttt{values = [12, 24, 36, 48, 60]}
+  \end{block}
+
+  \begin{activity}
+    Determine the value or error produced by each expression:
+    \begin{enumerate}
+      \item \texttt{values[0]}
+      \item \texttt{values[3]}
+      \item \texttt{values[-1]}
+      \item \texttt{values[-5]}
+      \item \texttt{values[5]}
+    \end{enumerate}
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 4: Membership and Finding Positions}
+
+\begin{frame}{Membership Asks Whether a Value Is Present}
+  \begin{cpdefinition}
+    A \textbf{membership test} asks whether a value occurs as an element of a sequence and produces a Boolean result.
+  \end{cpdefinition}
+
+  \begin{block}{Examples}
+    \texttt{fruits = ["apple", "banana", "cherry"]}\\[0.08in]
+    \texttt{"banana" in fruits} $\longrightarrow$ \texttt{True}\\
+    \texttt{"orange" in fruits} $\longrightarrow$ \texttt{False}\\
+    \texttt{"orange" not in fruits} $\longrightarrow$ \texttt{True}
+  \end{block}
+
+  \begin{keyidea}
+    Membership answers an existence question; it does not produce the element's position.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace: Membership Produces a Boolean Value}
+  \begin{block}{Code}
+    \texttt{colors = ["red", "green", "blue"]}\\
+    \texttt{target = "green"}\\
+    \texttt{found = target in colors}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{l|l}
+      \textbf{Expression} & \textbf{Value} \\\hline
+      \texttt{target} & \texttt{"green"} \\
+      \texttt{colors} & \texttt{["red","green","blue"]} \\
+      \texttt{target in colors} & \texttt{True}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The final binding is \texttt{found} $\rightarrow$ \texttt{True}; the list itself is unchanged.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{\texttt{.index()} Asks Where a Value Occurs}
+  \begin{block}{Example}
+    \texttt{colors = ["red", "green", "blue"]}\\[0.08in]
+    \texttt{colors.index("green")} $\longrightarrow$ \texttt{1}
+  \end{block}
+
+  \begin{cpdefinition}
+    The list method \texttt{.index(value)} returns the index of the first element equal to \texttt{value}.
+  \end{cpdefinition}
+
+  \begin{itemize}
+    \item If a value occurs more than once, \texttt{.index()} returns the first matching position.
+    \item Example: \texttt{[90, 75, 88, 75].index(75)} $\longrightarrow$ \texttt{1}.
+  \end{itemize}
+
+  \begin{keyidea}
+    Indexing uses a known position to obtain a value; \texttt{.index()} uses a known value to obtain a position.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{\texttt{.index()} Raises an Error When the Value Is Absent}
+  \begin{block}{Example}
+    \texttt{colors = ["red", "green", "blue"]}\\[0.08in]
+    \texttt{colors.index("orange")}
+  \end{block}
+
+  \begin{alertblock}{Result}
+    Python raises \texttt{ValueError} because no matching element exists in the list.
+  \end{alertblock}
+
+  \begin{keyidea}
+    Use a membership test when the immediate question is whether the value exists. Use \texttt{.index()} when the required result is its position.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Membership and \texttt{.index()} Answer Different Questions}
+  \begin{center}
+    % Intended visual: split diagram, value -> membership -> bool and value -> .index() -> integer position.
+    \lectureimage[2.05in]{membership-versus-index.png}
+  \end{center}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l}
+      \textbf{Question} & \textbf{Operation} & \textbf{Result type} \\\hline
+      Is it present? & \texttt{value in items} & \texttt{bool} \\
+      Where is it? & \texttt{items.index(value)} & \texttt{int}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\sectionframe{Part 5: Mutating Individual Elements}
+
+\begin{frame}{Lists Are Mutable}
+  \begin{cpdefinition}
+    A value is \textbf{mutable} when its state can be changed after the value has been created.
+  \end{cpdefinition}
+
+  \begin{block}{Before}
+    \centering
+    \texttt{scores = [90, 88, 76]}
+  \end{block}
+
+  \begin{block}{Indexed assignment}
+    \centering
+    \Large\texttt{scores[1] = 91}
+  \end{block}
+
+  \begin{block}{After}
+    \centering
+    \texttt{scores} $\longrightarrow$ \texttt{[90, 91, 76]}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Indexed Assignment Replaces One Existing Element}
+  \begin{enumerate}
+    \item Evaluate the list expression.
+    \item Evaluate the index expression.
+    \item Evaluate the right-hand-side expression.
+    \item Replace the element at the selected position with the resulting value.
+  \end{enumerate}
+
+  \begin{center}
+    % Intended visual: [90,88,76] with index 1 highlighted and changed from 88 to 91.
+    \lectureimage[1.65in]{indexed-mutation.png}
+  \end{center}
+
+  \begin{keyidea}
+    The list remains the same list value conceptually, but its element state has changed. A negative index can identify the target as well: \texttt{values[-1] = 99}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Reading and Writing Use Similar Syntax but Different Semantics}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Read}
+        \texttt{x = scores[1]}\\[0.10in]
+        \texttt{scores[1]} is an expression.\\
+        It produces the current element value.
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Write}
+        \texttt{scores[1] = 91}\\[0.10in]
+        \texttt{scores[1]} is an assignment target.\\
+        It identifies the position to replace.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Context determines whether bracket notation retrieves an element or identifies where assignment should store a new value.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Invalid Mutation Targets Raise \texttt{IndexError}}
+  \begin{block}{Example}
+    \texttt{items = [10, 20, 30]}\\[0.08in]
+    \texttt{items[3] = 40}
+  \end{block}
+
+  \begin{alertblock}{Why this fails}
+    Index \texttt{3} does not identify an existing element position. Indexed assignment replaces one existing element; it neither adds a new position nor changes the number of positions in the list.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Trace: List State Can Change Across Statements}
+  \begin{block}{Code}
+    \texttt{values = [5, 10, 15]}\\
+    \texttt{x = values[1]}\\
+    \texttt{values[1] = x + 2}\\
+    \texttt{last = values[-1]}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l|l}
+      \textbf{After statement} & \textbf{Relevant scalar binding} & \textbf{List state} \\\hline
+      list creation & --- & \texttt{[5,10,15]} \\
+      \texttt{x = values[1]} & \texttt{x = 10} & \texttt{[5,10,15]} \\
+      indexed assignment & \texttt{x = 10} & \texttt{[5,12,15]} \\
+      \texttt{last = values[-1]} & \texttt{last = 15} & \texttt{[5,12,15]}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Prediction: Track Both Position and State}
+  \begin{block}{Code}
+    \texttt{data = [8, 6, 7, 5]}\\
+    \texttt{data[0] = data[-1]}\\
+    \texttt{middle = data[2]}\\
+    \texttt{data[-2] = 9}
+  \end{block}
+
+  \begin{activity}
+    Without running Python, determine:
+    \begin{enumerate}
+      \item the list after the first mutation;
+      \item the value bound to \texttt{middle};
+      \item the final state of \texttt{data}.
+    \end{enumerate}
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 6: From the Conceptual Model to Physical Memory}
+
+\begin{frame}{Why the Adjacent-Slot Model Is Useful}
+  \begin{center}
+    % Intended visual: base address plus fixed-width slot offset leading directly to an indexed slot.
+    \lectureimage[2.15in]{indexed-slot-address-model.png}
+  \end{center}
+
+  \begin{itemize}
+    \item A numbered row of fixed-width slots provides a direct way to locate a position.
+    \item Conceptually, position \(i\) is found from the beginning of the row plus an offset for \(i\) slots.
+    \item This explains why an index identifies one element position rather than searching by a variable name.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Many Low-Level Arrays Store Homogeneous Values}
+  \begin{itemize}
+    \item In many programming languages, a conventional array stores elements of one declared type.
+    \item A homogeneous element type gives every array slot a predictable representation and size.
+    \item Adjacent fixed-size elements therefore support direct address calculation from an index.
+  \end{itemize}
+
+  \begin{block}{Conceptual homogeneous array}
+    \centering
+    \texttt{[10][20][30][40]}\qquad all slots store the same kind of value
+  \end{block}
+
+  \begin{keyidea}
+    Python preserves the indexed array idea but changes what each physical slot stores.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Python List Stores Adjacent References, Not Adjacent Objects}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item In CPython, the list maintains a dynamically allocated contiguous array of object references.
+        \item Each physical slot stores a reference to a Python object.
+        \item The referenced objects themselves may reside elsewhere in memory.
+      \end{itemize}
+
+      \begin{keyidea}
+        What is physically adjacent is the array of references.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      % Intended visual: contiguous reference slots with arrows to separate int, str, bool, float objects.
+      \lectureimage[2.65in]{python-list-references.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{References Explain Why Mixed-Type Lists Work}
+  \begin{block}{Python list}
+    \centering
+    \texttt{record = [42, "hello", True, 3.5]}
+  \end{block}
+
+  \begin{itemize}
+    \item The integer, string, Boolean, and floating-point objects have different representations.
+    \item The list slots do not need to store those object representations directly.
+    \item Each slot stores the same kind of thing: a reference to a Python object.
+  \end{itemize}
+
+  \begin{keyidea}
+    Uniform reference slots allow one Python list to refer to objects of different types.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Keep the Simpler Model for Ordinary Tracing}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Tracing model}
+        \texttt{[90][88][76]}\\[0.10in]
+        Think of indexed values in adjacent numbered positions.
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Implementation model}
+        adjacent reference slots\\[0.10in]
+        $\downarrow\quad\downarrow\quad\downarrow$\\[-0.02in]
+        Python objects elsewhere in memory
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Use the simplest model that correctly predicts the behavior being studied. Refine the model when implementation details become relevant.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Lecture 17 Mental Model}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.45}
+    \begin{tabular}{l|l}
+      \textbf{Concept} & \textbf{Operational question} \\\hline
+      list & What ordered sequence of elements is represented? \\
+      index & Which position is being addressed? \\
+      indexing expression & What value occupies that position? \\
+      membership & Does this value occur in the sequence? \\
+      \texttt{.index()} & What is the first matching position? \\
+      indexed assignment & What existing position is being replaced?
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item A list is an ordered, indexed, mutable sequence.
+    \item List literals use square brackets; \texttt{[]} represents an empty list.
+    \item Positive indexes begin at \texttt{0}; negative indexes count backward from the end.
+    \item Invalid element positions raise \texttt{IndexError}.
+    \item \texttt{in} and \texttt{not in} answer membership questions with Boolean values.
+    \item \texttt{.index(value)} returns the first matching position and raises \texttt{ValueError} when no match exists.
+    \item Indexed assignment mutates one existing element while preserving the sequence's positions.
+    \item For tracing, think in adjacent numbered positions; physically, CPython stores an adjacent array of references to objects.
   \end{itemize}
 \end{frame}
 

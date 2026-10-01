@@ -1,11 +1,35 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-20/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-20/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-20/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{20}
 \lecturetitle{References, Aliasing, and Mutation}
-\lecturedate{October 12, 2026}
+\lecturedate{Fall 2026}
 \courseunit{8. References and Mutation}
 
 \begin{document}
@@ -14,41 +38,535 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: References, Aliasing, and Mutation
-    \item Placeholder for announcements and context.
+    \item Review names, values, and immutable primitive data.
+    \item Define mutability, identity, and aliasing precisely.
+    \item Explain why assigning one list variable to another does not copy the list.
+    \item Trace shared mutation, including mutation through function parameters.
+    \item Contrast mutable lists with immutable strings and tuples.
+    \item Create independent list copies when shared mutation is not desired.
   \end{itemize}
+
+  \begin{keyidea}
+    Assignment binds a name to an object. If two names refer to the same mutable object, a mutation through either name is visible through both.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
-\end{frame}
+\sectionframe{Part 1: Values, Bindings, and Mutability}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Names Are Bound to Objects}
+  \begin{block}{Example}
+    \texttt{x = 10}\\
+    \texttt{y = x}
   \end{block}
+
+  \begin{itemize}
+    \item Python evaluates the right-hand side, then binds the resulting object to the name on the left.
+    \item A name is not the object itself.
+    \item Multiple names may refer to the same object.
+    \item This distinction becomes important when the shared object is mutable.
+  \end{itemize}
+
+  \begin{keyidea}
+    When tracing references, track both the \textbf{name} and the \textbf{object} to which it refers.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Mutable and Immutable Objects}
+  \begin{cpdefinition}
+    An object is \textbf{mutable} if its observable state can be changed after creation. An object is \textbf{immutable} if its value cannot be changed in place after creation.
+  \end{cpdefinition}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{l|l}
+      \textbf{Immutable in this unit} & \textbf{Mutable in this unit} \\\hline
+      \texttt{int}, \texttt{float}, \texttt{bool} & \texttt{list} \\
+      \texttt{str}, \texttt{tuple} &
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Mutation changes an existing object. Reassignment changes which object a name refers to.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Immutable Values: Rebinding Instead of Mutation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      \begin{block}{Code}
+        \texttt{x = 10}\\
+        \texttt{y = x}\\
+        \texttt{x = x + 1}
+      \end{block}
+
+      \begin{block}{Afterward}
+        \texttt{x} $\longrightarrow$ \boxed{11}\\
+        \texttt{y} $\longrightarrow$ \boxed{10}
+      \end{block}
+
+      The integer \texttt{10} was not changed into \texttt{11}; a new value was produced and \texttt{x} was rebound.
+    \end{column}
+    \begin{column}{0.37\textwidth}
+      \lectureimage[2.55in]{immutable-rebinding.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Lists Introduce a New Possibility: In-Place Change}
+  \begin{block}{Code}
+    \texttt{scores = [90, 88, 76]}\\
+    \texttt{scores[1] = 100}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item The name \texttt{scores} still refers to the same list object.
+    \item The state of that list object has changed.
+    \item This is mutation, not rebinding.
   \end{itemize}
+
+  \begin{keyidea}
+    Once mutable data is shared, the distinction between changing a binding and changing an object becomes observable.
+  \end{keyidea}
+\end{frame}
+
+
+\sectionframe{Part 2: Aliasing}
+
+\begin{frame}{Definition: Aliasing}
+  \begin{cpdefinition}
+    \textbf{Aliasing} occurs when two or more names refer to the same object.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{scores = [90, 88, 76]}\\
+    \texttt{backup = scores}
+  \end{block}
+
+  \begin{alertblock}{Important}
+    \texttt{backup = scores} does not duplicate the list. It creates another binding to the same list object.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Mental Model: Two Names, One List}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Bindings}
+        \texttt{scores} $\searrow$\\[0.08in]
+        \hspace{0.75in}\boxed{[90, 88, 76]}\\[-0.02in]
+        \texttt{backup} $\nearrow$
+      \end{block}
+
+      \begin{itemize}
+        \item one list object;
+        \item two references;
+        \item mutation is shared.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \lectureimage[2.65in]{alias-two-names-one-list.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Trace Shared Mutation}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.28}
+    \begin{tabular}{l|l|l}
+      \textbf{Statement} & \textbf{Bindings} & \textbf{Object state} \\\hline
+      \texttt{a = [1, 2, 3]} & \texttt{a -> L1} & \texttt{L1 = [1, 2, 3]} \\
+      \texttt{b = a} & \texttt{a -> L1, b -> L1} & \texttt{L1 = [1, 2, 3]} \\
+      \texttt{b[0] = 9} & \texttt{a -> L1, b -> L1} & \texttt{L1 = [9, 2, 3]}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Do not say ``\texttt{b} changed \texttt{a}.'' The indexed assignment changed the shared list object.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Equality and Identity Answer Different Questions}
+  \begin{block}{Code}
+    \texttt{a = [1, 2]}\\
+    \texttt{b = a}\\
+    \texttt{c = [1, 2]}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{l|c|l}
+      \textbf{Expression} & \textbf{Result} & \textbf{Question} \\\hline
+      \texttt{a == b} & \texttt{True} & same contents? \\
+      \texttt{a is b} & \texttt{True} & same object? \\
+      \texttt{a == c} & \texttt{True} & same contents? \\
+      \texttt{a is c} & \texttt{False} & same object?
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Prediction: Follow the Object, Not Just the Variable Name}
+  \begin{block}{Code}
+    \texttt{first = [4, 5, 6]}\\
+    \texttt{second = first}\\
+    \texttt{first[-1] = 0}
+  \end{block}
+
+  \begin{activity}
+    Draw the reference diagram after each statement. Then determine the values observed through \texttt{first} and \texttt{second}.
+  \end{activity}
+\end{frame}
+
+
+\sectionframe{Part 3: Mutation as an Observable Side Effect}
+
+\begin{frame}{Function Parameters Can Alias Caller-Owned Lists}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.57\textwidth}
+      \begin{block}{Code}
+        \texttt{def set\_first(values: list, new\_value: int) -> None:}\\
+        \hspace{0.18in}\texttt{values[0] = new\_value}\\[0.08in]
+        \texttt{scores = [70, 80, 90]}\\
+        \texttt{set\_first(scores, 100)}
+      \end{block}
+
+      During the call, \texttt{scores} and parameter \texttt{values} refer to the same list.
+    \end{column}
+    \begin{column}{0.36\textwidth}
+      \lectureimage[2.55in]{parameter-alias-call-frame.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Definition: Side Effect}
+  \begin{cpdefinition}
+    A \textbf{side effect} is an observable change to program state that occurs in addition to producing a return value. Here, our main example is mutation of a list supplied by the caller.
+  \end{cpdefinition}
+
+  \begin{itemize}
+    \item \texttt{set\_first(...)} returns \texttt{None}, but changes the caller-visible list.
+    \item Methods such as \texttt{append()}, \texttt{remove()}, and \texttt{reverse()} also intentionally mutate lists.
+    \item Mutation is not inherently an error; unexpected or undocumented shared mutation is the problem.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Trace a Function Side Effect}
+  \begin{block}{Code}
+    \texttt{def replace\_last(items: list, value: int) -> None:}\\
+    \hspace{0.18in}\texttt{items[-1] = value}\\[0.08in]
+    \texttt{data = [2, 4, 6]}\\
+    \texttt{replace\_last(data, 99)}
+  \end{block}
+
+  \begin{activity}
+    At the indexed assignment, identify every active name referring to the list object. What is the final value observed through \texttt{data}?
+  \end{activity}
+\end{frame}
+
+
+\sectionframe{Part 4: Immutable Sequences — Strings and Tuples}
+
+\begin{frame}{Strings Prevent In-Place Element Mutation}
+  \begin{block}{Code}
+    \texttt{text = "cat"}\\
+    \texttt{text[0] = "b"}
+  \end{block}
+
+  \begin{alertblock}{Result}
+    Python raises \texttt{TypeError}. A string does not support indexed assignment.
+  \end{alertblock}
+
+  \begin{itemize}
+    \item Indexing can read a string position.
+    \item Slicing and concatenation create new strings.
+    \item The existing string value cannot be changed in place.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{String ``Change'' Means Construct, Then Rebind}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      \begin{block}{Code}
+        \texttt{a = "cat"}\\
+        \texttt{b = a}\\
+        \texttt{a = "b" + a[1:]}
+      \end{block}
+
+      \begin{block}{Afterward}
+        \texttt{a} $\longrightarrow$ \texttt{"bat"}\\
+        \texttt{b} $\longrightarrow$ \texttt{"cat"}
+      \end{block}
+
+      The original \texttt{"cat"} object was not mutated.
+    \end{column}
+    \begin{column}{0.37\textwidth}
+      \lectureimage[2.55in]{immutable-string-rebinding.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Definition: Tuple}
+  \begin{cpdefinition}
+    A \textbf{tuple} is an ordered, indexed, immutable sequence of references.
+  \end{cpdefinition}
+
+  \begin{block}{Examples}
+    \texttt{point = (3, 5)}\qquad
+    \texttt{empty = ()}\qquad
+    \texttt{single = (42,)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{l|l}
+      \texttt{point[0]} & \texttt{3} \\
+      \texttt{point[:1]} & \texttt{(3,)} \\
+      \texttt{len(point)} & \texttt{2} \\
+      \texttt{5 in point} & \texttt{True}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{To ``Change'' a Tuple, Build a New Tuple}
+  \begin{block}{Invalid mutation}
+    \texttt{data = (10, 20, 30)}\\
+    \texttt{data[1] = 99}\qquad $\rightarrow$ \quad \texttt{TypeError}
+  \end{block}
+
+  \begin{block}{Construct and rebind}
+    \texttt{data = data[:1] + (99,) + data[2:]}\\
+    \texttt{data} $\longrightarrow$ \texttt{(10, 99, 30)}
+  \end{block}
+
+  \begin{keyidea}
+    Slicing and concatenation produce a new tuple; assignment then rebinds the name.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Lists, Strings, and Tuples Share a Sequence Model}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{l|c|c|c}
+      & \textbf{List} & \textbf{String} & \textbf{Tuple} \\\hline
+      Ordered / indexed & yes & yes & yes \\
+      Sliceable & yes & yes & yes \\
+      \texttt{len()} / membership & yes & yes & yes \\
+      Element assignment & yes & no & no \\
+      Mutable & yes & no & no
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+
+\sectionframe{Part 5: Creating Independent List Copies}
+
+\begin{frame}{When Aliasing Is Not What You Want}
+  \begin{block}{Problem}
+    \texttt{original = [10, 20, 30]}\\
+    \texttt{working = original}\\
+    \texttt{working[0] = 99}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{working} is an alias, not an independent working copy.
+    \item Mutation is therefore visible through \texttt{original}.
+    \item If independent mutation is required, deliberately create a new list object.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{copy()} Creates a New List Object}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{Code}
+        \texttt{original = [10, 20, 30]}\\
+        \texttt{working = original.copy()}\\
+        \texttt{working[0] = 99}
+      \end{block}
+
+      \begin{block}{Afterward}
+        \texttt{original} $\longrightarrow$ \texttt{[10, 20, 30]}\\
+        \texttt{working} $\longrightarrow$ \texttt{[99, 20, 30]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \lectureimage[2.60in]{alias-versus-copy.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Other Ways to Create an Independent List Container}
+  \begin{block}{Full slice}
+    \texttt{working = original[:]}
+  \end{block}
+
+  \begin{block}{List construction}
+    \texttt{working = list(original)}
+  \end{block}
+
+  \begin{itemize}
+    \item Both forms create a new list object.
+    \item The new list initially contains equal element values.
+    \item For the primitive-value lists used in this unit, mutation of positions in one list does not alter the other list.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Alias vs. Copy: Equality Can Be the Same While Identity Differs}
+  \begin{block}{Code}
+    \texttt{a = [1, 2, 3]}\\
+    \texttt{b = a}\\
+    \texttt{c = a.copy()}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{l|c@{\qquad}l|c}
+      \texttt{a == b} & \texttt{True} & \texttt{a is b} & \texttt{True} \\
+      \texttt{a == c} & \texttt{True} & \texttt{a is c} & \texttt{False}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Copying can preserve current contents while intentionally changing object identity.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Copy Before Mutation When Isolation Is Required}
+  \begin{block}{Example}
+    \texttt{def changed\_first(values: list, new\_value: int) -> list:}\\
+    \hspace{0.18in}\texttt{result = values.copy()}\\
+    \hspace{0.18in}\texttt{result[0] = new\_value}\\
+    \hspace{0.18in}\texttt{return result}
+  \end{block}
+
+  \begin{itemize}
+    \item The parameter still refers to the caller's list.
+    \item Mutation is performed only on the new list.
+    \item The caller's original list remains unchanged.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Two Valid Function Designs}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Mutate caller-owned list}
+        \texttt{def set\_first(xs, value):}\\
+        \hspace{0.14in}\texttt{xs[0] = value}
+      \end{block}
+      \begin{itemize}
+        \item intentional side effect;
+        \item returns \texttt{None}.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Return a modified copy}
+        \texttt{def with\_first(xs, value):}\\
+        \hspace{0.14in}\texttt{result = xs.copy()}\\
+        \hspace{0.14in}\texttt{result[0] = value}\\
+        \hspace{0.14in}\texttt{return result}
+      \end{block}
+      \begin{itemize}
+        \item original stays unchanged;
+        \item new list is returned.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+\sectionframe{Part 6: Integrated Tracing and Design Rules}
+
+\begin{frame}{Integrated Trace: Alias and Independent Copy}
+  \begin{block}{Code}
+    \texttt{a = [10, 20, 30]}\\
+    \texttt{b = a}\\
+    \texttt{c = a.copy()}\\
+    \texttt{b[1] = 99}\\
+    \texttt{c[0] = 5}
+  \end{block}
+
+  \begin{activity}
+    Determine the final values observed through \texttt{a}, \texttt{b}, and \texttt{c}. Draw the reference diagram after each statement.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Integrated Trace: Immutable Rebinding}
+  \begin{block}{Code}
+    \texttt{s1 = "code"}\\
+    \texttt{s2 = s1}\\
+    \texttt{s1 = "C" + s1[1:]}\\[0.08in]
+    \texttt{t1 = (1, 2, 3)}\\
+    \texttt{t2 = t1}\\
+    \texttt{t1 = t1[:1] + (9,) + t1[2:]}
+  \end{block}
+
+  \begin{activity}
+    Determine the final values of all four names. Identify every newly constructed object.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Common Incorrect Mental Models}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{p{0.43\textwidth}|p{0.46\textwidth}}
+      \textbf{Incorrect} & \textbf{Replace it with} \\\hline
+      ``Each variable stores its own copy.'' & A name refers to an object; names may alias one object. \\
+      ``Changing \texttt{b} changed \texttt{a}.'' & Mutation changed the shared object. \\
+      ``Reassignment mutates the old value.'' & Reassignment changes a binding. \\
+      ``A string method edits the string.'' & String operations produce new string values.
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{A Practical Tracing Procedure}
+  \begin{enumerate}
+    \item Identify each object that is created.
+    \item Record which names refer to each object.
+    \item For assignment, decide whether the result is a new object or an existing reference.
+    \item For a mutating operation, update the object itself.
+    \item For an immutable operation, record the newly produced value and any rebinding.
+    \item During a function call, check whether a parameter aliases caller-owned mutable data.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Choosing Between a List and a Tuple}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{p{0.43\textwidth}|p{0.43\textwidth}}
+      \textbf{Use a list when...} & \textbf{Use a tuple when...} \\\hline
+      positions are expected to change & the sequence should remain fixed \\
+      elements may be inserted or removed & element replacement should be disallowed \\
+      mutation is part of the intended model & immutability communicates the intended model
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Operation Summary}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.22}
+    \begin{tabular}{l|l}
+      \textbf{Operation} & \textbf{Effect} \\\hline
+      \texttt{b = a} where \texttt{a} is a list & alias existing list \\
+      \texttt{a[i] = value} & mutate list object \\
+      \texttt{a.copy()}, \texttt{a[:]}, \texttt{list(a)} & create new list \\
+      string indexed assignment & invalid \\
+      tuple indexed assignment & invalid \\
+      string/tuple reconstruction + assignment & create new value, then rebind
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item Names refer to objects; assignment does not automatically copy mutable data.
+    \item Aliasing means multiple names refer to the same object.
+    \item Mutation changes a mutable object, so every alias observes the new state.
+    \item Function parameters can alias caller-owned lists, making mutation visible outside the call.
+    \item Integers, floats, booleans, strings, and tuples are immutable; apparent changes require new values and rebinding.
+    \item Tuples retain sequence operations while preventing element replacement.
+    \item Use \texttt{copy()}, a full slice, or \texttt{list(...)} when an independent list is required.
+  \end{itemize}
+
+  \begin{keyidea}
+    When tracing mutable data, ask not only ``What value does this variable show?'' but also ``Which object does this name refer to?''
+  \end{keyidea}
 \end{frame}
 
 \end{document}

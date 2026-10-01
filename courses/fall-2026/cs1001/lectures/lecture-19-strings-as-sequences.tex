@@ -1,11 +1,35 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-19/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-19/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-19/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{19}
 \lecturetitle{Strings as Sequences}
-\lecturedate{October 9, 2026}
+\lecturedate{Fall 2026}
 \courseunit{7. Sequential Data}
 
 \begin{document}
@@ -14,41 +38,596 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Strings as Sequences
-    \item Placeholder for announcements and context.
+    \item Model a string as an ordered sequence of characters.
+    \item Create strings using quotation marks and escape sequences.
+    \item Access characters using positive and negative indexes.
+    \item Measure and slice strings using the same positional model used for lists.
+    \item Explain string immutability and distinguish mutation from rebinding.
+    \item Combine, compare, search, split, join, and transform strings.
+    \item Connect Python strings to Unicode code points.
   \end{itemize}
+
+  \begin{keyidea}
+    A string is an immutable sequence: its character positions can be read and sliced, but an existing string value cannot be changed in place.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: Strings Are Sequential Data}
+
+\begin{frame}{Definition: String}
+  \begin{cpdefinition}
+    A \textbf{string} is a Python sequence value representing text. A string contains an ordered sequence of Unicode characters.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \centering
+    \Large\texttt{text = "Python"}
+  \end{block}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item The sequence has a fixed order.
+    \item Each position contains one character.
+    \item Character positions are identified by integer indexes.
+    \item The empty string contains zero characters: \texttt{""}.
+    \item Text such as \texttt{"42"} is still a string; Python has no separate built-in character type.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{The Same Sequence Model Applies to Lists and Strings}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{List}
+        \centering
+        \texttt{[10, 20, 30, 40]}
+      \end{block}
+      \begin{itemize}
+        \item ordered positions
+        \item integer indexes
+        \item slicing
+        \item mutable
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{String}
+        \centering
+        \texttt{"code"}
+      \end{block}
+      \begin{itemize}
+        \item ordered positions
+        \item integer indexes
+        \item slicing
+        \item immutable
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Lists and strings share positional sequence operations, but differ fundamentally in whether the existing value may be changed.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Useful Mental Model: Adjacent Character Positions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{String}
+        \centering
+        \Large\texttt{"Python"}
+      \end{block}
+      \begin{center}
+        \renewcommand{\arraystretch}{1.3}
+        \begin{tabular}{c|c|c|c|c|c|c}
+          index & 0 & 1 & 2 & 3 & 4 & 5 \\\hline
+          char. & P & y & t & h & o & n
+        \end{tabular}
+      \end{center}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureimage[2.20in]{string-adjacent-positions.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    For tracing, think of a string as consecutive character positions numbered from left to right.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Creating String Literals}
+  \begin{block}{Single-line strings}
+    \texttt{name = "Ada"}\\
+    \texttt{language = 'Python'}
+  \end{block}
+
+  \begin{block}{Multi-line literal}
+    \texttt{message = """Line one}\\
+    \texttt{Line two"""}
+  \end{block}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item Single and double quotation marks both delimit ordinary string literals.
+    \item Matching quotation marks must close the literal.
+    \item Triple quotation marks may span physical source-code lines.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+
+\sectionframe{Part 2: Indexing and Length}
+
+\begin{frame}{String Indexing Uses Zero-Based Positions}
+  \begin{block}{Example}
+    \texttt{text = "Python"}\\[0.08in]
+    \texttt{text[0]} $\longrightarrow$ \texttt{"P"}\\
+    \texttt{text[1]} $\longrightarrow$ \texttt{"y"}\\
+    \texttt{text[5]} $\longrightarrow$ \texttt{"n"}
+  \end{block}
+
+  \begin{keyidea}
+    Indexing a string produces a new one-character string containing the character at that position.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Negative Indexes Count from the End}
+  \begin{block}{Example}
+    \texttt{text = "Python"}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{c|c|c|c|c|c|c}
+      character & P & y & t & h & o & n \\\hline
+      positive & 0 & 1 & 2 & 3 & 4 & 5 \\
+      negative & -6 & -5 & -4 & -3 & -2 & -1
+    \end{tabular}
+  \end{center}
+
+  \begin{block}{Examples}
+    \texttt{text[-1]} $\longrightarrow$ \texttt{"n"}\qquad
+    \texttt{text[-2]} $\longrightarrow$ \texttt{"o"}
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{An Invalid String Index Raises \texttt{IndexError}}
+  \begin{block}{Example}
+    \texttt{text = "cat"}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Valid positive indexes are \texttt{0}, \texttt{1}, and \texttt{2}.
+    \item Valid negative indexes are \texttt{-1}, \texttt{-2}, and \texttt{-3}.
+    \item \texttt{text[3]} raises \texttt{IndexError}.
+    \item \texttt{text[-4]} also raises \texttt{IndexError}.
   \end{itemize}
+
+  \begin{keyidea}
+    Indexing requires one existing position. The same boundary rule applies to lists and strings.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{\texttt{len()} Counts Characters}
+  \begin{cpdefinition}
+    \texttt{len(string)} returns the number of character positions in the string.
+  \end{cpdefinition}
+
+  \begin{block}{Examples}
+    \texttt{len("Python")} $\longrightarrow$ \texttt{6}\\
+    \texttt{len("")} $\longrightarrow$ \texttt{0}\\
+    \texttt{len("Hello, world!")} $\longrightarrow$ \texttt{13}
+  \end{block}
+
+  \begin{itemize}
+    \item Spaces and punctuation count as characters.
+    \item Length is not the final positive index.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Length and the Final Index}
+  \begin{block}{Example}
+    \texttt{text = "Python"}\\[0.08in]
+    \texttt{len(text)} $\longrightarrow$ \texttt{6}\\
+    \texttt{text[len(text) - 1]} $\longrightarrow$ \texttt{"n"}
+  \end{block}
+
+  \begin{keyidea}
+    For a nonempty string, the final positive index is \texttt{len(text) - 1}.
+  \end{keyidea}
+\end{frame}
+
+
+\sectionframe{Part 3: String Slicing}
+
+\begin{frame}{String Slicing Uses the Same \texttt{start:stop:step} Model}
+  \begin{block}{General syntax}
+    \centering
+    \Large\texttt{text[start:stop:step]}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{start} is included.
+    \item \texttt{stop} is excluded.
+    \item \texttt{step} controls the distance between selected positions.
+    \item The result is a new string.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{The Stop Boundary Is Still Exclusive}
+  \begin{block}{Example}
+    \texttt{text = "Python Programming"}\\[0.10in]
+    \texttt{text[0:6]} $\longrightarrow$ \texttt{"Python"}
+  \end{block}
+
+  \begin{itemize}
+    \item Index \texttt{0} is selected.
+    \item Indexes \texttt{1} through \texttt{5} are selected.
+    \item Index \texttt{6} is the stopping boundary and is not selected.
+  \end{itemize}
+
+  \begin{keyidea}
+    Read \texttt{0:6} as ``start at 0, stop before 6.''
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Omitting Slice Bounds Uses Sequence Boundaries}
+  \begin{block}{Examples}
+    \texttt{text = "Python Programming"}\\[0.08in]
+    \texttt{text[:6]} $\longrightarrow$ \texttt{"Python"}\\
+    \texttt{text[7:]} $\longrightarrow$ \texttt{"Programming"}\\
+    \texttt{text[:]} $\longrightarrow$ \texttt{"Python Programming"}
+  \end{block}
+
+  \begin{itemize}
+    \item The original string remains unchanged.
+    \item A slice expression evaluates to another string value.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{The Optional Step Changes Which Positions Are Selected}
+  \begin{block}{Example}
+    \texttt{text = "abcdefgh"}\\[0.08in]
+    \texttt{text[0:8:2]} $\longrightarrow$ \texttt{"aceg"}\\
+    \texttt{text[1:8:2]} $\longrightarrow$ \texttt{"bdfh"}
+  \end{block}
+
+  \begin{itemize}
+    \item The default step is \texttt{1}.
+    \item A step of \texttt{2} selects every second position within the slice bounds.
+    \item A step of \texttt{0} is invalid and raises \texttt{ValueError}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{A Negative Step Produces Characters in Reverse Position Order}
+  \begin{block}{Example}
+    \texttt{text = "Python"}\\[0.08in]
+    \texttt{text[::-1]} $\longrightarrow$ \texttt{"nohtyP"}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{itemize}
+        \item Omitted bounds adapt to the negative direction.
+        \item The result is a new reversed string.
+        \item The original \texttt{text} remains \texttt{"Python"}.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[1.65in]{string-reverse-slice.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Practice: Predict the Slice Results}
+  \begin{block}{Given}
+    \centering
+    \texttt{text = "abcdefghij"}
+  \end{block}
+
+  \begin{activity}
+    Predict each result before evaluating it.
+    \begin{enumerate}
+      \item \texttt{text[2:6]}
+      \item \texttt{text[:4]}
+      \item \texttt{text[6:]}
+      \item \texttt{text[1:9:3]}
+      \item \texttt{text[-4:-1]}
+      \item \texttt{text[::-1]}
+    \end{enumerate}
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 4: Immutability and Building New Strings}
+
+\begin{frame}{Strings Are Immutable}
+  \begin{cpdefinition}
+    An \textbf{immutable} value cannot be changed after that value has been created.
+  \end{cpdefinition}
+
+  \begin{block}{Invalid operation}
+    \texttt{text = "cat"}\\
+    \texttt{text[0] = "b"}
+  \end{block}
+
+  \begin{alertblock}{Result}
+    Python raises \texttt{TypeError}: individual string positions cannot be assigned new characters.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Concatenation Creates a New String}
+  \begin{block}{Example}
+    \texttt{first = "Hello"}\\
+    \texttt{second = " world"}\\
+    \texttt{message = first + second}
+  \end{block}
+
+  \begin{block}{Values afterward}
+    \texttt{first} $\longrightarrow$ \texttt{"Hello"}\\
+    \texttt{second} $\longrightarrow$ \texttt{" world"}\\
+    \texttt{message} $\longrightarrow$ \texttt{"Hello world"}
+  \end{block}
+
+  \begin{keyidea}
+    The \texttt{+} operator combines string values into a new string; it does not modify either operand.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Concatenation Requires String Operands}
+  \begin{block}{Invalid}
+    \texttt{"Age: " + 21}
+  \end{block}
+
+  \begin{block}{Explicit conversion}
+    \texttt{"Age: " + str(21)} $\longrightarrow$ \texttt{"Age: 21"}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{str(value)} produces a string representation of a value.
+    \item Converting to a string changes the type of the produced value, not the original variable.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Reassignment Is Not Mutation}
+  \begin{block}{Code}
+    \texttt{text = "Python"}\\
+    \texttt{text = "C" + text[1:]}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{text[1:]} creates the new string \texttt{"ython"}.
+    \item Concatenation creates the new string \texttt{"Cython"}.
+    \item Assignment then rebinds the name \texttt{text} to that new value.
+    \item The original string value \texttt{"Python"} was never altered.
+  \end{itemize}
+
+  \begin{keyidea}
+    A variable can be rebound even when the value it previously referred to is immutable.
+  \end{keyidea}
+\end{frame}
+
+
+\begin{frame}{Escape Sequences Represent Special Characters Inside a Literal}
+  \begin{block}{Common examples}
+    \texttt{"line one\textbackslash nline two"} \quad newline\\
+    \texttt{"name\textbackslash tvalue"} \quad tab\\
+    \texttt{"She said \textbackslash"hello\textbackslash"."} \quad embedded quotation marks\\
+    \texttt{"C:\textbackslash\textbackslash Users\textbackslash\textbackslash Ada"} \quad literal backslashes
+  \end{block}
+
+  \begin{itemize}
+    \item An escape sequence is written using a backslash in source code.
+    \item The resulting string contains the represented character, not necessarily the literal source characters used to write the escape.
+  \end{itemize}
+\end{frame}
+
+\sectionframe{Part 5: Membership, Equality, and Character Codes}
+
+\begin{frame}{Membership Checks Whether a Substring Occurs}
+  \begin{block}{Examples}
+    \texttt{text = "Python programming"}\\[0.08in]
+    \texttt{"Python" in text} $\longrightarrow$ \texttt{True}\\
+    \texttt{"gram" in text} $\longrightarrow$ \texttt{True}\\
+    \texttt{"python" in text} $\longrightarrow$ \texttt{False}\\
+    \texttt{"Java" not in text} $\longrightarrow$ \texttt{True}
+  \end{block}
+
+  \begin{itemize}
+    \item Membership can search for one character or an entire substring.
+    \item The comparison is case-sensitive.
+    \item Both \texttt{in} and \texttt{not in} produce Boolean values.
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{String Equality Requires the Same Characters in the Same Order}
+  \begin{block}{Examples}
+    \texttt{"Hello" == "Hello"} $\longrightarrow$ \texttt{True}\\
+    \texttt{"Hello" == "hello"} $\longrightarrow$ \texttt{False}\\
+    \texttt{"cat" == "cat "} $\longrightarrow$ \texttt{False}\\
+    \texttt{"abc" != "acb"} $\longrightarrow$ \texttt{True}
+  \end{block}
+
+  \begin{keyidea}
+    Equality compares string contents exactly; case, order, spaces, and punctuation matter.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Ordering Comparisons Are Lexicographic}
+  \begin{cpdefinition}
+    String ordering compares corresponding characters from left to right until a difference determines the result; if one string is a prefix of the other, the shorter string orders first.
+  \end{cpdefinition}
+
+  \begin{block}{Examples}
+    \texttt{"apple" < "banana"} $\longrightarrow$ \texttt{True}\\
+    \texttt{"app" < "apple"} $\longrightarrow$ \texttt{True}
+  \end{block}
+
+  \begin{itemize}
+    \item Character ordering is based on Unicode code points.
+    \item Therefore, ordering is case-sensitive and may not match dictionary conventions used by humans.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Python Strings Use Unicode}
+  \begin{itemize}
+    \item Python's \texttt{str} type represents Unicode text.
+    \item Unicode assigns each character a numerical \textbf{code point}.
+    \item ASCII characters occupy the first 128 Unicode code points.
+  \end{itemize}
+
+  \begin{block}{Examples}
+    \texttt{ord("A")} $\longrightarrow$ \texttt{65}\\
+    \texttt{ord("Z")} $\longrightarrow$ \texttt{90}\\
+    \texttt{ord("a")} $\longrightarrow$ \texttt{97}\\
+    \texttt{chr(65)} $\longrightarrow$ \texttt{"A"}
+  \end{block}
+
+  \begin{keyidea}
+    Because uppercase and lowercase letters have different code points, relational comparisons are case-sensitive; for example, \texttt{"Zebra" < "apple"} is \texttt{True}.
+  \end{keyidea}
+\end{frame}
+
+
+\sectionframe{Part 6: Converting and Transforming Strings}
+
+\begin{frame}{\texttt{list(string)} Produces a List of One-Character Strings}
+  \begin{block}{Example}
+    \texttt{text = "hello"}\\
+    \texttt{chars = list(text)}\\[0.08in]
+    \texttt{chars} $\longrightarrow$ \texttt{["h", "e", "l", "l", "o"]}
+  \end{block}
+
+  \begin{itemize}
+    \item The original string remains unchanged.
+    \item The result is a new list.
+    \item Because lists are mutable, the resulting character positions can later be changed as list elements.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{split()} Produces a List of Substrings}
+  \begin{block}{Default whitespace separation}
+    \texttt{text = "hello world Python"}\\
+    \texttt{text.split()} $\longrightarrow$ \texttt{["hello", "world", "Python"]}
+  \end{block}
+
+  \begin{block}{Explicit separator}
+    \texttt{"red,green,blue".split(",")}\\
+    $\longrightarrow$ \texttt{["red", "green", "blue"]}
+  \end{block}
+
+  \begin{keyidea}
+    \texttt{split()} does not modify the source string; it returns a new list containing string pieces.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{\texttt{join()} Combines a List of Strings}
+  \begin{block}{Example}
+    \texttt{words = ["hello", "world", "Python"]}\\
+    \texttt{sentence = " ".join(words)}\\[0.08in]
+    \texttt{sentence} $\longrightarrow$ \texttt{"hello world Python"}
+  \end{block}
+
+  \begin{itemize}
+    \item The string before \texttt{.join(...)} is the separator.
+    \item The list supplied to \texttt{join()} must contain strings.
+    \item The result is a new string.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Case-Conversion Methods Return New Strings}
+  \begin{block}{Examples}
+    \texttt{text = "hello world"}\\[0.08in]
+    \texttt{text.upper()} $\longrightarrow$ \texttt{"HELLO WORLD"}\\
+    \texttt{text.lower()} $\longrightarrow$ \texttt{"hello world"}\\
+    \texttt{text.capitalize()} $\longrightarrow$ \texttt{"Hello world"}\\
+    \texttt{text.title()} $\longrightarrow$ \texttt{"Hello World"}
+  \end{block}
+
+  \begin{alertblock}{Important}
+    None of these methods mutates \texttt{text}; each produces a new string value.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Formatted String Literals Build Strings from Expressions}
+  \begin{block}{Example}
+    \texttt{name = "Ada"}\\
+    \texttt{age = 36}\\
+    \texttt{message = f"Name: \{name\}, Age: \{age\}"}
+  \end{block}
+
+  \begin{block}{Result}
+    \texttt{message} $\longrightarrow$ \texttt{"Name: Ada, Age: 36"}
+  \end{block}
+
+  \begin{itemize}
+    \item Expressions inside braces are evaluated first.
+    \item Their formatted representations are inserted into the new string.
+    \item Format specifications may control representation, e.g. \texttt{f"\{3.14159:.2f\}"} produces \texttt{"3.14"}.
+    \item Formatting changes the produced text, not the underlying numeric value.
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{Integrated Trace: New Strings, No Mutation}
+  \begin{block}{Code}
+    \texttt{text = "python"}\\
+    \texttt{head = text[:2]}\\
+    \texttt{tail = text[2:]}\\
+    \texttt{label = head.upper() + tail}\\
+    \texttt{words = label.split("h")}\\
+    \texttt{joined = "-".join(words)}
+  \end{block}
+
+  \begin{activity}
+    Determine the final values of \texttt{text}, \texttt{head}, \texttt{tail}, \texttt{label}, \texttt{words}, and \texttt{joined}. Identify every expression that creates a new value.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Strings in Memory: Conceptual Model vs. Implementation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Our tracing model treats a string as adjacent character positions.
+        \item Python guarantees the sequence behavior: indexing, slicing, length, equality, and immutability.
+        \item The exact physical representation of Unicode strings is an implementation detail.
+        \item An implementation may use compact internal encodings rather than one fixed-size memory cell per visible character.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.35in]{string-conceptual-vs-implementation.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Use the positional sequence model for reasoning about Python code; do not assume a specific byte layout unless the representation itself is the topic.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Operation Summary}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Operation} & \textbf{Result} \\\hline
+      \texttt{text[i]} & one-character string \\
+      \texttt{text[start:stop:step]} & new string \\
+      \texttt{len(text)} & integer length \\
+      \texttt{a + b} & new concatenated string \\
+      \texttt{sub in text} & Boolean \\
+      \texttt{text.split(...)} & new list of strings \\
+      \texttt{sep.join(parts)} & new string \\
+      \texttt{text.upper()} / \texttt{lower()} & new string
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item A string is an ordered, indexed, immutable sequence of Unicode characters.
+    \item String indexing and slicing use the same positional rules as lists, including negative indexes and an exclusive stop boundary.
+    \item Concatenation, slicing, case conversion, formatting, and related operations produce new string values.
+    \item Reassigning a variable to a new string is not mutation of the old string.
+    \item Membership, equality, and relational comparisons are case-sensitive.
+    \item \texttt{split()} converts text into a list of string pieces; \texttt{join()} combines string pieces into a new string.
+  \end{itemize}
+
+  \begin{keyidea}
+    When tracing string code, track values and bindings carefully: the string value itself never changes in place.
+  \end{keyidea}
 \end{frame}
 
 \end{document}

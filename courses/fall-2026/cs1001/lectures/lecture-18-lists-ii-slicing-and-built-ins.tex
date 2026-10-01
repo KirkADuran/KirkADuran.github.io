@@ -1,11 +1,35 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-18/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-18/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-18/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{18}
-\lecturetitle{Lists II -- Slicing and Built-ins}
-\lecturedate{October 7, 2026}
+\lecturetitle{Lists II --- Slicing and Built-ins}
+\lecturedate{Fall 2026}
 \courseunit{7. Sequential Data}
 
 \begin{document}
@@ -14,41 +38,582 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Lists II -- Slicing and Built-ins
-    \item Placeholder for announcements and context.
+    \item Extract portions of a list using slicing.
+    \item Interpret \texttt{start}, \texttt{stop}, and the optional \texttt{step}.
+    \item Distinguish operations that create a new list from operations that mutate an existing list.
+    \item Measure list length with \texttt{len()}.
+    \item Add elements using \texttt{append()}, \texttt{extend()}, concatenation, and \texttt{insert()}.
+    \item Remove elements using \texttt{pop()} and \texttt{remove()}.
+    \item Refine the list memory model to account for changing list size.
   \end{itemize}
+
+  \begin{keyidea}
+    A Python list behaves like a resizable sequence: positions remain ordered while Python manages the storage required when the sequence grows or shrinks.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\sectionframe{Part 1: Slicing a Sequence}
+
+\begin{frame}{Indexing Selects One Element; Slicing Selects a Range}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Indexing}
+        \centering
+        \texttt{values[2]} $\longrightarrow$ \texttt{30}
+      \end{block}
+      \begin{itemize}
+        \item Selects one position.
+        \item Evaluates to one element value.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Slicing}
+        \centering
+        \texttt{values[1:4]} $\longrightarrow$ \texttt{[20, 30, 40]}
+      \end{block}
+      \begin{itemize}
+        \item Selects a sequence of positions.
+        \item Evaluates to a new list.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Indexing asks for one element. Slicing asks for a subsequence.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
-\end{frame}
+\begin{frame}{Definition: Slice}
+  \begin{cpdefinition}
+    A \textbf{slice} specifies a range of positions from a sequence and produces a new sequence containing the selected elements.
+  \end{cpdefinition}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+  \begin{block}{General list-slice syntax}
+    \centering
+    \Large\texttt{list[start:stop:step]}
   \end{block}
+
+  \begin{itemize}
+    \item \texttt{start}: first selected index.
+    \item \texttt{stop}: boundary index at which selection stops.
+    \item \texttt{step}: distance between selected indexes.
+    \item Any of these components may be omitted when its default behavior is desired.
+  \end{itemize}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{The Stop Index Is Exclusive}
+  \begin{block}{Example}
+    \texttt{values = [10, 20, 30, 40, 50]}\\[0.10in]
+    \centering
+    \Large\texttt{values[1:4]} $\longrightarrow$ \texttt{[20, 30, 40]}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|c|c|c|c|c}
+      index & 0 & \textbf{1} & \textbf{2} & \textbf{3} & 4 \\\hline
+      value & 10 & \textbf{20} & \textbf{30} & \textbf{40} & 50
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    \texttt{start} is included. \texttt{stop} is not included. The slice \texttt{1:4} selects indexes \texttt{1}, \texttt{2}, and \texttt{3}.
+  \end{keyidea}
+\end{frame}
+
+
+
+
+
+\begin{frame}{Omitted Slice Bounds Use Sequence Boundaries}
+  \begin{block}{Examples}
+    \texttt{values = [10, 20, 30, 40, 50]}\\[0.08in]
+    \texttt{values[:3]} $\longrightarrow$ \texttt{[10, 20, 30]}\\
+    \texttt{values[2:]} $\longrightarrow$ \texttt{[30, 40, 50]}\\
+    \texttt{values[:]} $\longrightarrow$ \texttt{[10, 20, 30, 40, 50]}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item With a positive step, omitted \texttt{start} begins at the first element.
+    \item Omitted \texttt{stop} continues through the final element.
+    \item Omitting both bounds selects the complete list and produces a new list.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Slice Bounds May Extend Beyond the Valid Index Range}
+  \begin{block}{Examples}
+    \texttt{values = [10, 20, 30, 40]}\\[0.08in]
+    \texttt{values[1:100]} $\longrightarrow$ \texttt{[20, 30, 40]}\\
+    \texttt{values[100:200]} $\longrightarrow$ \texttt{[]}
+  \end{block}
+
+  \begin{itemize}
+    \item Ordinary indexing such as \texttt{values[100]} raises \texttt{IndexError}.
+    \item Slicing adjusts an out-of-range boundary to the available sequence.
+    \item A valid slice may therefore produce an empty list.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Negative Indexes Also Work in Slice Bounds}
+  \begin{block}{Example}
+    \texttt{values = [10, 20, 30, 40, 50]}\\[0.10in]
+    \texttt{values[1:-1]} $\longrightarrow$ \texttt{[20, 30, 40]}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{-1} identifies the final element's position.
+    \item Because \texttt{stop} is exclusive, the element at index \texttt{-1} is not selected.
+    \item The same index rules from Lecture 17 apply inside slice notation.
+  \end{itemize}
+\end{frame}
+
+\sectionframe{Part 2: The Optional Step}
+
+\begin{frame}{The Step Controls the Distance Between Selected Indexes}
+  \begin{block}{Example}
+    \texttt{values = [10, 20, 30, 40, 50, 60]}\\[0.10in]
+    \texttt{values[0:6:2]} $\longrightarrow$ \texttt{[10, 30, 50]}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{c|c|c|c}
+      selected index & 0 & 2 & 4 \\\hline
+      selected value & 10 & 30 & 50
+    \end{tabular}
+  \end{center}
+
+  \begin{itemize}
+    \item If \texttt{step} is omitted, it defaults to \texttt{1}.
+    \item A step of \texttt{0} is invalid because the index would never advance; Python raises \texttt{ValueError}.
+  \end{itemize}
+\end{frame}
+
+
+
+
+
+\begin{frame}{A Negative Step Selects Positions in Decreasing Index Order}
+  \begin{block}{Example}
+    \texttt{values = [10, 20, 30, 40, 50]}\\[0.10in]
+    \texttt{values[4:1:-1]} $\longrightarrow$ \texttt{[50, 40, 30]}
+  \end{block}
+
+  \begin{itemize}
+    \item Start at index \texttt{4}.
+    \item Subtract \texttt{1} after each selected position.
+    \item Stop before index \texttt{1}.
+  \end{itemize}
+
+  \begin{keyidea}
+    The stop boundary remains exclusive even when the direction is reversed.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Slice \texttt{[::-1]} Produces a Reversed Copy}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Code}
+        \texttt{values = [10, 20, 30, 40]}\\[0.08in]
+        \texttt{reversed\_values = values[::-1]}
+      \end{block}
+
+      \begin{block}{Result}
+        \texttt{reversed\_values}\
+        $\longrightarrow$ \texttt{[40, 30, 20, 10]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      % Intended visual: positive indexes left-to-right and arrows moving right-to-left.
+      \lectureimage[2.25in]{negative-step-reverse-slice.png}
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Important}
+    The original list is not mutated by the slice.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Practice: Predict the Slice Results}
+  \begin{block}{Given}
+    \centering
+    \texttt{data = [5, 10, 15, 20, 25, 30]}
+  \end{block}
+
+  \begin{activity}
+    Predict each result before evaluating it in Python.
+    \begin{enumerate}
+      \item \texttt{data[1:4]}
+      \item \texttt{data[:3]}
+      \item \texttt{data[3:]}
+      \item \texttt{data[::2]}
+      \item \texttt{data[4:1:-1]}
+      \item \texttt{data[::-1]}
+    \end{enumerate}
+  \end{activity}
+\end{frame}
+
+\sectionframe{Part 3: Length and Operation Categories}
+
+\begin{frame}{\texttt{len()} Returns the Number of Elements}
+  \begin{cpdefinition}
+    The built-in function \texttt{len(sequence)} returns the number of elements in the sequence as an integer.
+  \end{cpdefinition}
+
+  \begin{block}{Examples}
+    \texttt{len([10, 20, 30, 40])} $\longrightarrow$ \texttt{4}\\
+    \texttt{len([])} $\longrightarrow$ \texttt{0}
+  \end{block}
+
+  \begin{keyidea}
+    Length counts elements. It is not an index.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Length and the Last Positive Index Differ by One}
+  \begin{block}{Example}
+    \texttt{values = [10, 20, 30, 40]}\\[0.08in]
+    \texttt{len(values)} $\longrightarrow$ \texttt{4}\\
+    \texttt{values[3]} $\longrightarrow$ \texttt{40}
+  \end{block}
+
+  \begin{itemize}
+    \item Four elements occupy positive indexes \texttt{0}, \texttt{1}, \texttt{2}, and \texttt{3}.
+    \item Therefore, the final valid positive index is \texttt{len(values) - 1}.
+    \item \texttt{values[len(values)]} would be one position beyond the list and raises \texttt{IndexError}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Built-in Functions and List Methods Use Different Syntax}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Built-in function}
+        \centering
+        \Large\texttt{len(values)}
+      \end{block}
+      \begin{itemize}
+        \item The list is passed as an argument.
+        \item The call returns a result.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{List method}
+        \centering
+        \Large\texttt{values.append(40)}
+      \end{block}
+      \begin{itemize}
+        \item The method is invoked through the list value.
+        \item Many list methods mutate that list.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+
+\sectionframe{Part 4: Growing a List}
+
+\begin{frame}{\texttt{append()} Adds One Element at the End}
+  \begin{block}{Example}
+    \texttt{numbers = [10, 20, 30]}\\
+    \texttt{numbers.append(40)}\\[0.08in]
+    \texttt{numbers} $\longrightarrow$ \texttt{[10, 20, 30, 40]}
+  \end{block}
+
+  \begin{itemize}
+    \item The existing list is mutated.
+    \item Its logical length increases by one.
+    \item The supplied argument becomes exactly one new element.
+    \item \texttt{append()} returns \texttt{None}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Growing a List May Require Resizing Its Storage}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item In our working model, adding an element requires another adjacent slot.
+        \item Python manages this storage change automatically.
+        \item In CPython, the list uses a contiguous array of object references with some internal capacity.
+        \item If growth exceeds available capacity, Python may allocate a larger reference array and copy the existing references.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \lectureimage[2.30in]{append-resize-working-model.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Dynamic resizing is hidden behind the list abstraction; the programmer specifies the sequence operation, not the memory-management procedure.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{\texttt{extend()} Adds the Elements of Another List}
+  \begin{block}{Example}
+    \texttt{numbers = [10, 20, 30]}\\
+    \texttt{numbers.extend([40, 50])}\\[0.08in]
+    \texttt{numbers} $\longrightarrow$ \texttt{[10, 20, 30, 40, 50]}
+  \end{block}
+
+  \begin{itemize}
+    \item The original list is mutated.
+    \item Each element from the supplied list becomes a separate element at the end.
+    \item The logical length increases by the number of added elements.
+    \item \texttt{extend()} returns \texttt{None}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{append()} and \texttt{extend()} Are Not Equivalent}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Append one value}
+        \texttt{a = [10, 20]}\\
+        \texttt{a.append([30, 40])}\\[0.08in]
+        \texttt{a} $\longrightarrow$\\
+        \texttt{[10, 20, [30, 40]]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Extend by values}
+        \texttt{b = [10, 20]}\\
+        \texttt{b.extend([30, 40])}\\[0.08in]
+        \texttt{b} $\longrightarrow$\\
+        \texttt{[10, 20, 30, 40]}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    \texttt{append(x)} adds \texttt{x} as one element. \texttt{extend(other)} adds the elements contained in \texttt{other}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Concatenation Combines Lists Without Mutating Either Operand}
+  \begin{block}{Example}
+    \texttt{left = [10, 20]}\\
+    \texttt{right = [30, 40]}\\
+    \texttt{combined = left + right}
+  \end{block}
+
+  \begin{block}{State afterward}
+    \texttt{left} $\longrightarrow$ \texttt{[10, 20]}\\
+    \texttt{right} $\longrightarrow$ \texttt{[30, 40]}\\
+    \texttt{combined} $\longrightarrow$ \texttt{[10, 20, 30, 40]}
+  \end{block}
+
+  \begin{keyidea}
+    Concatenation creates a new list; \texttt{extend()} changes an existing list. Similar visible contents can arise from different state-change semantics.
+  \end{keyidea}
+\end{frame}
+
+
+
+\begin{frame}{\texttt{insert()} Adds One Element at a Specific Position}
+  \begin{block}{Example}
+    \texttt{numbers = [10, 20, 40, 50]}\\
+    \texttt{numbers.insert(2, 30)}\\[0.08in]
+    \texttt{numbers} $\longrightarrow$ \texttt{[10, 20, 30, 40, 50]}
+  \end{block}
+
+  \begin{itemize}
+    \item The first argument specifies the insertion position.
+    \item The second argument is the value to insert.
+    \item The existing element at that position and later elements move right.
+    \item \texttt{insert()} mutates the list and returns \texttt{None}.
+  \end{itemize}
+\end{frame}
+
+
+
+\sectionframe{Part 5: Removing Elements}
+
+\begin{frame}{\texttt{pop()} Removes by Position and Returns the Removed Element}
+  \begin{block}{Example}
+    \texttt{numbers = [10, 20, 30, 40]}\\
+    \texttt{removed = numbers.pop(1)}
+  \end{block}
+
+  \begin{block}{State afterward}
+    \texttt{removed} $\longrightarrow$ \texttt{20}\\
+    \texttt{numbers} $\longrightarrow$ \texttt{[10, 30, 40]}
+  \end{block}
+
+  \begin{itemize}
+    \item With no index argument, \texttt{pop()} removes and returns the final element.
+    \item An out-of-range supplied index raises \texttt{IndexError}.
+  \end{itemize}
+  \begin{keyidea}
+    \texttt{pop()} both mutates the list and produces the removed element as its return value.
+  \end{keyidea}
+\end{frame}
+
+
+
+\begin{frame}{Removing from the Middle Shifts Later Positions Left}
+  \begin{center}
+    % Intended visual: [10][20][30][40] with 20 removed and 30/40 shifting left.
+    \lectureimage[2.10in]{pop-shift-left.png}
+  \end{center}
+
+  \begin{itemize}
+    \item Removing a middle element creates a gap in the ordered positions.
+    \item Later elements shift left so the list continues to use consecutive indexes starting at \texttt{0}.
+    \item The logical length decreases by one.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{remove()} Removes by Value}
+  \begin{block}{Example}
+    \texttt{fruits = ["apple", "banana", "cherry", "banana"]}\\
+    \texttt{fruits.remove("banana")}\\[0.08in]
+    \texttt{fruits} $\longrightarrow$ \texttt{["apple", "cherry", "banana"]}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{remove(value)} searches for the first equal value.
+    \item That first matching element is removed.
+    \item The method mutates the list and returns \texttt{None}.
+    \item If no matching value exists, Python raises \texttt{ValueError}.
+  \end{itemize}
+\end{frame}
+
+
+
+\sectionframe{Part 6: Reversal, Resizing, and Tracing}
+
+
+
+\begin{frame}{Reversed Slice Versus \texttt{reverse()}}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{New reversed list}
+        \texttt{a = [1, 2, 3]}\\
+        \texttt{b = a[::-1]}\\[0.08in]
+        \texttt{a} $\rightarrow$ \texttt{[1, 2, 3]}\\
+        \texttt{b} $\rightarrow$ \texttt{[3, 2, 1]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Mutate existing list}
+        \texttt{a = [1, 2, 3]}\\
+        \texttt{a.reverse()}\\[0.08in]
+        \texttt{a} $\rightarrow$ \texttt{[3, 2, 1]}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Similar visible results can have different mutation semantics.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{List Size Is Logical; Capacity Is an Implementation Detail}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item \texttt{len(values)} reports the logical number of elements.
+        \item The underlying storage may reserve additional capacity for future growth.
+        \item Adding or removing elements changes the logical sequence immediately.
+        \item Any necessary allocation, copying, or capacity management is performed by Python.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: logical length 4 inside a backing capacity of 6 or 8 reference slots.
+      \lectureimage[2.35in]{logical-length-vs-capacity.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+
+
+\begin{frame}{Trace State After Each Mutating Operation}
+  \begin{block}{Code}
+    \texttt{values = [10, 20, 30]}\\
+    \texttt{values.append(40)}\\
+    \texttt{values.insert(1, 15)}\\
+    \texttt{removed = values.pop(3)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.28}
+    \begin{tabular}{l|l|l}
+      \textbf{After statement} & \textbf{values} & \textbf{removed} \\\hline
+      creation & \texttt{[10, 20, 30]} & --- \\
+      \texttt{append(40)} & \texttt{[10, 20, 30, 40]} & --- \\
+      \texttt{insert(1, 15)} & \texttt{[10, 15, 20, 30, 40]} & --- \\
+      \texttt{pop(3)} & \texttt{[10, 15, 20, 40]} & \texttt{30}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Trace New-List Operations Separately from Mutation}
+  \begin{block}{Code}
+    \texttt{values = [10, 20, 30, 40]}\\
+    \texttt{middle = values[1:3]}\\
+    \texttt{combined = values + [50, 60]}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{l|l}
+      \textbf{Name} & \textbf{Value afterward} \\\hline
+      \texttt{values} & \texttt{[10, 20, 30, 40]} \\
+      \texttt{middle} & \texttt{[20, 30]} \\
+      \texttt{combined} & \texttt{[10, 20, 30, 40, 50, 60]}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Neither slicing nor concatenation changes \texttt{values} in this trace.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=4]{Operation Summary}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|c|l}
+      \textbf{Operation} & \textbf{Mutates list?} & \textbf{Result of expression/call} \\\hline
+      \texttt{a[start:stop:step]} & no & new list \\
+      \texttt{len(a)} & no & integer length \\
+      \texttt{a.append(x)} & yes & \texttt{None} \\
+      \texttt{a.extend(b)} & yes & \texttt{None} \\
+      \texttt{a + b} & no & new list \\
+      \texttt{a.insert(i, x)} & yes & \texttt{None} \\
+      \texttt{a.pop(i)} & yes & removed element \\
+      \texttt{a.remove(x)} & yes & \texttt{None} \\
+      \texttt{a.reverse()} & yes & \texttt{None}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Integrated Prediction Exercise}
+  \begin{block}{Code}
+    \texttt{data = [5, 10, 15, 20]}\\
+    \texttt{part = data[1:3]}\\
+    \texttt{data.append(25)}\\
+    \texttt{data.insert(2, 12)}\\
+    \texttt{removed = data.pop()}\\
+    \texttt{data.reverse()}
+  \end{block}
+
+  \begin{activity}
+    Without running the program, determine the final values of \texttt{data}, \texttt{part}, and \texttt{removed}. For every statement, classify it as mutating or non-mutating.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{itemize}
+    \item Slicing uses \texttt{start:stop:step}; the stop boundary is exclusive.
+    \item Omitting slice components invokes defaults, and a negative step reverses the direction of selection.
+    \item \texttt{len()} reports the number of elements, not the last index.
+    \item \texttt{append()}, \texttt{extend()}, \texttt{insert()}, \texttt{pop()}, \texttt{remove()}, and \texttt{reverse()} mutate a list.
+    \item Slicing and concatenation create new lists instead of mutating their operands.
+    \item Python automatically manages storage as a list grows or shrinks; our programming model remains an ordered sequence of adjacent positions.
+  \end{itemize}
+
+  \begin{keyidea}
+    When tracing list code, always track both the sequence contents and whether an operation mutates an existing list or produces a new value.
+  \end{keyidea}
 \end{frame}
 
 \end{document}
