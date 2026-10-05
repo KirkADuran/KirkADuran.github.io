@@ -450,16 +450,19 @@
 
 
 \begin{frame}{Removing from the Middle Shifts Later Positions Left}
-  \begin{center}
-    % Intended visual: [10][20][30][40] with 20 removed and 30/40 shifting left.
-    \lectureimage[2.10in]{pop-shift-left.png}
-  \end{center}
-
-  \begin{itemize}
-    \item Removing a middle element creates a gap in the ordered positions.
-    \item Later elements shift left so the list continues to use consecutive indexes starting at \texttt{0}.
-    \item The logical length decreases by one.
-  \end{itemize}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      % Intended visual: [10][20][30][40] with 20 removed and 30/40 shifting left.
+      \lectureimage[2.10in]{pop-shift-left.png}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      \begin{itemize}
+        \item Removing a middle element creates a gap in the ordered positions.
+        \item Later elements shift left so the list continues to use consecutive indexes starting at \texttt{0}.
+        \item The logical length decreases by one.
+      \end{itemize}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{\texttt{remove()} Removes by Value}

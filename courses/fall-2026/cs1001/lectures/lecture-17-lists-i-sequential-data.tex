@@ -178,20 +178,23 @@
 \end{frame}
 
 \begin{frame}{Our Working Model: Adjacent Numbered Slots}
-  \begin{center}
-    % Intended visual: four adjacent boxes containing 90, 88, 76, 92 with indexes 0--3 beneath them.
-    \lectureimage[1.80in]{list-adjacent-slots-model.png}
-  \end{center}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.42\textwidth}
+      % Intended visual: four adjacent boxes containing 90, 88, 76, 92 with indexes 0--3 beneath them.
+      \lectureimage[1.80in]{list-adjacent-slots-model.png}
+    \end{column}
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item Think of a list as a row of adjacent element slots.
+        \item Each slot has a unique integer position called its index.
+        \item This model makes access and mutation easy to reason about.
+      \end{itemize}
 
-  \begin{itemize}
-    \item Think of a list as a row of adjacent element slots.
-    \item Each slot has a unique integer position called its index.
-    \item This model makes access and mutation easy to reason about.
-  \end{itemize}
-
-  \begin{alertblock}{Modeling note}
-    This is our conceptual model for tracing. We will refine the physical memory representation at the end of the lecture.
-  \end{alertblock}
+      \begin{alertblock}{Modeling note}
+        This is our conceptual model for tracing. We will refine the physical memory representation at the end of the lecture.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \sectionframe{Part 3: Indexing}
@@ -303,15 +306,18 @@
     \texttt{fruits = ["apple", "banana", "cherry", "date"]}
   \end{block}
 
-  \begin{center}
-    % Intended visual: same list with positive indexes 0--3 above and negative indexes -4---1 below.
-    \lectureimage[1.90in]{positive-negative-indexing.png}
-  \end{center}
-
-  \begin{block}{Examples}
-    \texttt{fruits[-1]} $\longrightarrow$ \texttt{"date"}\qquad
-    \texttt{fruits[-2]} $\longrightarrow$ \texttt{"cherry"}
-  \end{block}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.58\textwidth}
+      % Intended visual: same list with positive indexes 0--3 above and negative indexes -4---1 below.
+      \lectureimage[1.90in]{positive-negative-indexing.png}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \begin{block}{Examples}
+        \texttt{fruits[-1]} $\longrightarrow$ \texttt{"date"}\par
+        \texttt{fruits[-2]} $\longrightarrow$ \texttt{"cherry"}
+      \end{block}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{Positive and Negative Indexes Can Name the Same Position}
@@ -432,7 +438,7 @@
 \begin{frame}{Membership and \texttt{.index()} Answer Different Questions}
   \begin{center}
     % Intended visual: split diagram, value -> membership -> bool and value -> .index() -> integer position.
-    \lectureimage[2.05in]{membership-versus-index.png}
+    \lectureimage[1.65in]{membership-versus-index.png}
   \end{center}
 
   \begin{center}
@@ -469,17 +475,20 @@
 \end{frame}
 
 \begin{frame}{Indexed Assignment Replaces One Existing Element}
-  \begin{enumerate}
-    \item Evaluate the list expression.
-    \item Evaluate the index expression.
-    \item Evaluate the right-hand-side expression.
-    \item Replace the element at the selected position with the resulting value.
-  \end{enumerate}
-
-  \begin{center}
-    % Intended visual: [90,88,76] with index 1 highlighted and changed from 88 to 91.
-    \lectureimage[1.65in]{indexed-mutation.png}
-  \end{center}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \begin{enumerate}
+        \item Evaluate the list expression.
+        \item Evaluate the index expression.
+        \item Evaluate the right-hand-side expression.
+        \item Replace the element at the selected position with the resulting value.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      % Intended visual: [90,88,76] with index 1 highlighted and changed from 88 to 91.
+      \lectureimage[1.65in]{indexed-mutation.png}
+    \end{column}
+  \end{columns}
 
   \begin{keyidea}
     The list remains the same list value conceptually, but its element state has changed. A negative index can identify the target as well: \texttt{values[-1] = 99}.
@@ -561,16 +570,19 @@
 \sectionframe{Part 6: From the Conceptual Model to Physical Memory}
 
 \begin{frame}{Why the Adjacent-Slot Model Is Useful}
-  \begin{center}
-    % Intended visual: base address plus fixed-width slot offset leading directly to an indexed slot.
-    \lectureimage[2.15in]{indexed-slot-address-model.png}
-  \end{center}
-
-  \begin{itemize}
-    \item A numbered row of fixed-width slots provides a direct way to locate a position.
-    \item Conceptually, position \(i\) is found from the beginning of the row plus an offset for \(i\) slots.
-    \item This explains why an index identifies one element position rather than searching by a variable name.
-  \end{itemize}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      % Intended visual: base address plus fixed-width slot offset leading directly to an indexed slot.
+      \lectureimage[2.15in]{indexed-slot-address-model.png}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item A numbered row of fixed-width slots provides a direct way to locate a position.
+        \item Conceptually, position \(i\) is found from the beginning of the row plus an offset for \(i\) slots.
+        \item This explains why an index identifies one element position rather than searching by a variable name.
+      \end{itemize}
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \begin{frame}{Many Low-Level Arrays Store Homogeneous Values}
