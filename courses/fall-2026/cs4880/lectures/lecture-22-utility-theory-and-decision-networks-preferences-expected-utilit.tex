@@ -24,6 +24,21 @@
   \end{center}%
 }
 
+
+% Keep notation beside the equation that uses it.
+\newcommand{\equationlegend}[1]{%
+  \par\smallskip
+  \begingroup
+    \setlength{\fboxsep}{4pt}%
+    \noindent\colorbox{DeckSoft}{%
+      \parbox{\dimexpr\linewidth-2\fboxsep\relax}{%
+        \footnotesize\textbf{Symbols:} #1%
+      }%
+    }\par
+  \endgroup
+  \smallskip
+}
+
 \setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
@@ -36,12 +51,16 @@
 \begin{document}
 
 % Estimated pacing: 50--55 minutes
-% From belief to action: 8 min
-% Utility and expected utility: 15 min
-% Multiattribute utility + design tradeoffs: 8 min
+% From belief to action: 6 min
+% Utility and expected utility: 14 min
+% Multiattribute utility + design tradeoffs: 7 min
 % Decision networks: 8 min
-% Value of information: 8 min
+% Value of information: 12 min
 % Repeated myopic decisions + MDP bridge: 8 min
+% Concept checks: Berkeley CS188 decision networks and Poole & Mackworth,
+% https://inst.eecs.berkeley.edu/~cs188/textbook/vpis/decision-networks.html
+% https://artint.info/3e/html/ArtInt3e.Ch12.S1.html
+% https://artint.info/3e/html/ArtInt3e.Ch12.S4.html
 
 % -----------------------------------------------------------------------------
 % Slide 1
@@ -53,7 +72,8 @@
 % -----------------------------------------------------------------------------
 % Slide 2
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Last Time: The Robot Estimated Its State}
+\begin{frame}[t]{Last Time: The Robot Estimated Its State}
+  \small
   Dynamic Bayesian networks and filters gave the robot a belief about the current world:
   \[
     bel_t(x)=P(X_t=x\mid z_{1:t}).
@@ -65,9 +85,8 @@
     \item Particle filters represented flexible beliefs using weighted samples.
   \end{itemize}
 
-  \begin{block}{Lecture 21 question}
-    ``Where am I, and what is happening around me?''
-  \end{block}
+
+  \equationlegend{$bel_t(x)$: belief assigned to candidate state $x$ at time $t$; $X_t$: hidden state; $z_{1:t}$: observations through $t$; $P(\cdot\mid\cdot)$: probability given evidence. Known control history is suppressed.}
 
   \begin{keyidea}
     State estimation gives the agent beliefs about the world; decision theory uses those beliefs to choose actions.
@@ -77,79 +96,83 @@
 % -----------------------------------------------------------------------------
 % Slide 3
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{The Robot Is No Longer Following a Fixed Route}
-  The delivery robot no longer receives a precomputed sequence of moves.
-
-  At every control cycle it must choose what to do next based on:
-  \begin{itemize}
-    \item its current position belief;
-    \item uncertain obstacles and pedestrian traffic;
-    \item remaining delivery time;
-    \item battery state;
-    \item current task priority.
-  \end{itemize}
-
-  \lectureimage[2.0in]{slide3.png}
-
+\begin{frame}[t]{The Robot Must Choose Among Route Options}
+  \small
+  A planner proposes options; the robot must choose which option to execute under uncertainty.
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      The choice depends on:
+      \begin{itemize}
+        \item current position belief;
+        \item obstacles and pedestrian traffic;
+        \item remaining time and battery;
+        \item delivery priority.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \lectureimage[1.8in]{slide3.png}
+    \end{column}
+  \end{columns}
   \begin{keyidea}
-    The planning problem has moved inside the loop: estimate the current situation, choose the next action, observe the result, repeat.
+    Estimate the situation, choose an action, observe the result, and repeat.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 4
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{A Good State Estimate Still Does Not Tell Us What to Do}
-  Suppose the robot believes
+\begin{frame}[t]{A Good State Estimate Still Does Not Tell Us What to Do}
+  \small
+  Let $B$ describe whether the shortcut is blocked:
   \[
-    P(Blocked)=0.35,
-    \qquad
-    P(Clear)=0.65.
+    P(B=1)=0.35,\qquad P(B=0)=0.65.
   \]
-
+  Throughout the example, write these as $P(\text{Blocked})$ and $P(\text{Clear})$.
   That belief does not answer:
   \begin{itemize}
     \item Is the shortcut worth attempting?
-    \item Should the robot take a longer but safer detour?
-    \item Is it worth waiting for congestion to clear?
-    \item Is another sensor scan worth the time and energy?
+    \item Should the robot take a longer detour?
+    \item Is another scan worth its time and energy?
   \end{itemize}
-
+  \equationlegend{$B$: blockage variable; $1$: blocked, $0$: clear. $P$: probability given the current evidence, which is suppressed here.}
   \begin{keyidea}
-    Probability ranks how plausible outcomes are. Decision making also requires preferences over those outcomes.
+    Probability describes what may happen. Choosing an action also requires preferences over the consequences.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 5
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{The New Control Loop}
+\begin{frame}[t]{The New Control Loop}
+  \small
   \begin{center}
-    \begin{tikzpicture}[node distance=0.35in,every node/.style={draw,rounded corners,align=center,minimum height=0.65in,minimum width=1.65in}]
-      \node (b) {Belief state\\$P(X_t\mid z_{1:t})$};
-      \node[right=of b] (e) {Evaluate\\actions};
-      \node[right=of e] (a) {Act};
-      \node[right=of a] (w) {World\\changes};
-      \node[right=of w] (o) {Observe};
-      \draw[-{Stealth[length=2.5mm]},thick] (b)--(e);
-      \draw[-{Stealth[length=2.5mm]},thick] (e)--(a);
-      \draw[-{Stealth[length=2.5mm]},thick] (a)--(w);
-      \draw[-{Stealth[length=2.5mm]},thick] (w)--(o);
-      \draw[-{Stealth[length=2.5mm]},thick] (o.south) |- ++(0,-0.55) -| (b.south);
+    \begin{tikzpicture}[x=1cm,y=1cm,
+      every node/.style={draw,rounded corners,align=center,minimum height=0.7cm,minimum width=1.8cm,font=\small},
+      link/.style={-{Stealth[length=2mm]},thick}]
+      \node (n0) at (0.0,0) {Belief $b_t$};
+      \node (n1) at (2.3,0) {Evaluate};
+      \node (n2) at (4.6,0) {Act};
+      \node (n3) at (6.9,0) {World changes};
+      \node (n4) at (9.2,0) {Observe};
+      \draw[link] (n0)--(n1);
+      \draw[link] (n1)--(n2);
+      \draw[link] (n2)--(n3);
+      \draw[link] (n3)--(n4);
+      \draw[link] (n4.south) -- ++(0,-0.7) -| (n0.south);
     \end{tikzpicture}
   \end{center}
-
-  The robot repeatedly converts a current belief into a next action.
-
+  The filter supplies a belief; the decision model uses it to compare actions.
+  \equationlegend{$b_t$: current belief distribution at time $t$; it summarizes the observations and known controls so far.}
   \begin{keyidea}
-    Decision theory turns the robot from a passive estimator into an agent that continually converts beliefs into actions.
+    Today we solve one decision at a time. Later we will account for how an action changes future choices.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 6
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{At One Campus Intersection, the Robot Has Several Actions}
+\begin{frame}[t]{At One Campus Intersection, the Robot Has Several Actions}
+  \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.23\textwidth}
       \begin{block}{Shortcut}
@@ -181,26 +204,18 @@
 % -----------------------------------------------------------------------------
 % Slide 7
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Probability Alone Cannot Choose Between Actions}
-  The current belief is
-  \[
-    P(Clear)=0.65,
-    \qquad
-    P(Blocked)=0.35.
-  \]
-
-  But should the robot take the shortcut?
-
-  We still need to know:
+\begin{frame}[t]{First, Isolate One Route Decision}
+  \small
+  We will compare \textbf{shortcut} and \textbf{detour} at the same intersection.
   \begin{itemize}
-    \item how valuable a fast successful shortcut is;
-    \item how costly a blocked attempt is;
-    \item how much delay the detour causes;
-    \item how strongly the system prefers safety, time, and energy conservation.
+    \item Blockage is hidden; choosing a route does not change whether the shortcut is currently blocked.
+    \item Utilities include the time, energy, and risk of completing this route segment.
+    \item The detour has a fixed utility in our simplified model.
+    \item Later, we will allow one scan before choosing the route.
   \end{itemize}
-
+  Waiting changes the world over time; we leave that extension for sequential decision models.
   \begin{keyidea}
-    Choosing an action requires both a probabilistic model of consequences and a preference model over those consequences.
+    Keep the decision, uncertainty, and outcome boundary clear before calculating anything.
   \end{keyidea}
 \end{frame}
 
@@ -209,119 +224,71 @@
 % -----------------------------------------------------------------------------
 % Slide 8
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Utility Turns Preferences into a Numerical Model}
-  A \textbf{utility function} assigns a numerical value to an outcome:
+\begin{frame}[t]{Utility Turns Preferences into a Numerical Model}
+  \small
+  A \textbf{utility function} assigns a value to each outcome:
   \[
-    U(o): outcome \rightarrow \mathbb{R}.
+    U:\mathcal{O}\rightarrow\mathbb{R}.
   \]
-
-  Example preference ordering:
+  For example,
   \[
-    U(\text{fast safe delivery})
-    > U(\text{safe detour})
-    > U(\text{blocked attempt}).
+    U(\text{fast safe delivery})>U(\text{safe detour})>U(\text{blocked attempt}).
   \]
-
+  For risky choices, the numerical gaps must also encode willingness to trade a chance of a good outcome against a chance of a bad one.
+  \equationlegend{$\mathcal{O}$: set of outcomes; $o$: one outcome; $U(o)$: its utility; $\mathbb{R}$: real numbers; $>$: preferred to.}
   \begin{keyidea}
-    Utility is a compact numerical representation of the agent's preferences over outcomes.
+    Ranking certain outcomes is only the start. Expected utility needs a scale that also represents preferences over uncertain outcomes.
   \end{keyidea}
 \end{frame}
+
 
 % -----------------------------------------------------------------------------
 % Slide 9
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Only Relative Utility Matters}
-  Utility is not a physical measurement like meters or joules.
-
-  If a positive affine transformation is applied,
+\begin{frame}[t]{Under Uncertainty, Use Expected Utility}
+  \small
+  Average the utility of each possible outcome, weighted by its probability:
   \[
-    U'(o)=aU(o)+b,
-    \qquad a>0,
+    EU(a\mid e)=\sum_o P(o\mid a,e)U(o).
   \]
-  the same preference ordering is preserved.
-
-  Example:
+  Then choose among feasible actions:
   \[
-    U(\text{fast safe})=80,
-    \quad U(\text{detour})=45,
-    \quad U(\text{blocked})=-60.
+    a^*=\arg\max_{a\in\mathcal{A}} EU(a\mid e).
   \]
-
+  \equationlegend{$a$: candidate action; $e$: evidence already observed; $o$: possible outcome; $P(o\mid a,e)$: outcome probability under the chosen action and evidence. $\sum_o$: sum over outcomes; $\mathcal{A}$: feasible action set; $\arg\max$: return a maximizing action; $a^*$: chosen action.}
   \begin{keyidea}
-    Utility values are meaningful through preference comparisons and tradeoffs, not as standalone units.
+    Probability supplies the weights; utility supplies the values. We will suppress fixed evidence $e$ in the numerical example.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 10
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Under Uncertainty, Use Expected Utility}
-  For an action $a$ with possible outcomes $o$,
-  \[
-    EU(a)=\sum_o P(o\mid a)U(o).
-  \]
-
-  A rational expected-utility decision rule chooses
-  \[
-    a^*=\arg\max_a EU(a).
-  \]
-
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.31\textwidth}
-      \begin{block}{Probability}
-        How likely is each outcome if I choose this action?
-      \end{block}
-    \end{column}
-    \begin{column}{0.31\textwidth}
-      \begin{block}{Utility}
-        How desirable is each outcome?
-      \end{block}
-    \end{column}
-    \begin{column}{0.31\textwidth}
-      \begin{block}{Decision}
-        Choose the action with greatest expected utility.
-      \end{block}
-    \end{column}
-  \end{columns}
-
+\begin{frame}[t]{Worked Decision: Shortcut or Detour?}
+  \small
+  Current belief: $P(\text{Clear})=0.65$, $P(\text{Blocked})=0.35$.
+  \begin{center}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l|rr}
+      \textbf{Utility $U(a,b)$} & \textbf{Clear ($b=0$)} & \textbf{Blocked ($b=1$)}\\\hline
+      Shortcut & $80$ & $-60$\\
+      Detour & $45$ & $45$\\
+    \end{tabular}
+  \end{center}
+  These are illustrative preference values, not measured travel times. The detour is unaffected by shortcut blockage in this model.
+  \equationlegend{$a$: route action; $b$: value of blockage variable $B$; $U(a,b)$: utility of the resulting route-segment outcome. Higher is preferred; negative values indicate outcomes worse than the chosen zero.}
   \begin{keyidea}
-    Expected utility weights each possible consequence by both its probability and its desirability.
+    Compare both actions under the same belief and the same utility scale.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 11
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Worked Decision: Shortcut or Detour?}
-  Current belief:
+\begin{frame}[t]{Expected Utility of the Shortcut}
+  \small
   \[
-    P(Clear)=0.65,
-    \qquad
-    P(Blocked)=0.35.
-  \]
-
-  Utility model:
-  \[
-    U(Shortcut,Clear)=80,
-  \]
-  \[
-    U(Shortcut,Blocked)=-60,
-  \]
-  \[
-    U(Detour)=45.
-  \]
-
-  \begin{keyidea}
-    The action with the most likely good outcome is not necessarily the action with the highest expected utility.
-  \end{keyidea}
-\end{frame}
-
-% -----------------------------------------------------------------------------
-% Slide 12
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Expected Utility of the Shortcut}
-  \[
-    EU(Shortcut)
+    EU(\text{Shortcut})
       =0.65(80)+0.35(-60)
   \]
   \[
@@ -331,18 +298,21 @@
 
   The shortcut is more likely to be clear than blocked, but the blocked outcome is costly enough to reduce its expected utility substantially.
 
+  \equationlegend{$EU(\text{Shortcut})$: expected utility of the shortcut; $0.65,0.35$: clear/blocked probabilities; $80,-60$: their utilities. Each product is probability $\times$ utility; $31$: their sum.}
+
   \begin{keyidea}
     Expected utility combines the upside and downside of an action in one probability-weighted quantity.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 13
+% Slide 12
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Expected Utility of the Detour}
+\begin{frame}[t]{Expected Utility of the Detour}
+  \small
   For the simplified example, the detour is predictable:
   \[
-    EU(Detour)=45.
+    EU(\text{Detour})=45.
   \]
 
   Therefore
@@ -352,39 +322,58 @@
 
   The rational one-step choice is the detour.
 
+  \equationlegend{$EU(\text{Detour})$: expected utility of the detour, $45$ in both world states. $31$: shortcut value; $45>31$: detour has greater expected utility under the same belief.}
+
   \begin{keyidea}
     Rational choice is about expected preference, not simply choosing the most probable outcome.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
+% Slide 13
+% -----------------------------------------------------------------------------
+\begin{frame}[t]{When Would We Switch to the Shortcut?}
+  \small
+  Let $p$ be the probability that the shortcut is clear. It beats the detour when
+  \[
+    \underbrace{80p-60(1-p)}_{EU(\text{Shortcut})}>\underbrace{45}_{EU(\text{Detour})}.
+  \]
+  Rearranging gives
+  \[
+    140p>105\qquad\Longrightarrow\qquad p>0.75.
+  \]
+  At $p=0.75$ the actions tie; at our current $p=0.65$, choose the detour.
+  \equationlegend{$p=P(\text{Clear})$; $1-p=P(\text{Blocked})$; $80,-60,45$: utilities from the table. $EU$: expected utility; $>$: strict preference here; $\Longrightarrow$: implies.}
+  \begin{keyidea}
+    ``More likely clear than blocked'' is insufficient. These utilities require more than a 75\% chance of a clear shortcut.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
 % Slide 14
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Most Likely Outcome $\neq$ Best Action}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Maximum-probability thinking}
-        ``The shortcut is 65\% likely to be clear, so take the shortcut.''
-
-        This ignores how bad the 35\% failure case is.
-      \end{block}
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Expected-utility thinking}
-        ``The shortcut is often faster, but failure is costly enough that the detour has higher expected utility.''
-      \end{block}
-    \end{column}
-  \end{columns}
-
+\begin{frame}[t]{Changing the Utility Scale Preserves the Decision}
+  \small
+  Under the standard expected-utility consistency assumptions on preferences over lotteries, utilities represent choices under uncertainty.
+  \[
+    U'(o)=\alpha U(o)+\beta,\qquad \alpha>0.
+  \]
+  Then
+  \[
+    EU'(a)=\alpha EU(a)+\beta.
+  \]
+  A positive scaling and a common shift preserve which action has the greatest expected utility.
+  \equationlegend{$o$: outcome; $a$: action; $U,U'$: original/transformed utilities; $EU,EU'$: corresponding expected utilities. $\alpha$: positive scale; $\beta$: common offset. Outcome probabilities sum to $1$. A lottery is a probability distribution over outcomes.}
   \begin{keyidea}
-    Decision theory separates probability from preference so rare but severe outcomes can matter appropriately.
+    Arbitrary increasing transformations preserve rankings of certain outcomes, but can change decisions under uncertainty. Utility gaps matter.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 15
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{A Robot Usually Has More Than One Objective}
+\begin{frame}[t]{A Robot Usually Has More Than One Objective}
+  \small
   The robot may simultaneously care about:
   \begin{itemize}
     \item travel time;
@@ -404,31 +393,28 @@
 % -----------------------------------------------------------------------------
 % Slide 16
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{One Engineering Approximation: Multiattribute Utility}
-  A simple model is a weighted sum:
+\begin{frame}[t]{One Engineering Approximation: Multiattribute Utility}
+  \small
+  Combine attribute scores on stated, comparable scales:
   \[
     U(o)=w_tu_t(o)+w_eu_e(o)+w_su_s(o)+w_pu_p(o).
   \]
-
-  The weights encode the relative importance of time, energy, safety, and task progress.
-
-  \begin{block}{Important modeling assumption}
-    A weighted sum is convenient, but it assumes the attributes can be combined in this way. Real preference interactions may require a richer utility model.
-  \end{block}
-
+  \equationlegend{$o$: outcome; $u_t,u_e,u_s,u_p$: scores for time, energy, safety, and progress, all oriented so higher is better. $w_t,w_e,w_s,w_p$: nonnegative tradeoff weights; here subscripts identify attributes, not time steps.}
+  A larger weight matters relative to the score's scale: changing a score's units requires adjusting its weight.
   \begin{keyidea}
-    Utility design is a modeling choice: convenient mathematical structure buys simplicity but may hide real preference interactions.
+    An additive model assumes tradeoffs can be separated this way. Attribute interactions may require a richer utility model.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 17
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Changing the Weights Can Change the Robot's Behavior}
+\begin{frame}[t]{Changing the Weights Can Change the Robot's Behavior}
+  \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.31\textwidth}
       \begin{block}{Time-heavy}
-        Large penalty for delay. The robot accepts more uncertainty to preserve deadline slack.
+        Large penalty for delay. The robot favors feasible routes with smaller expected delay.
       \end{block}
     \end{column}
     \begin{column}{0.31\textwidth}
@@ -451,7 +437,8 @@
 % -----------------------------------------------------------------------------
 % Slide 18
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Not Every Requirement Should Be ``Just Another Weight''}
+\begin{frame}[t]{Not Every Requirement Should Be ``Just Another Weight''}
+  \small
   Weighted utilities make tradeoffs possible by design.
 
   But some requirements may instead be treated as \textbf{hard constraints}:
@@ -473,7 +460,8 @@
 % -----------------------------------------------------------------------------
 % Slide 19
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Decision Networks Add Actions and Preferences to Bayes Nets}
+\begin{frame}[t]{Decision Networks: Three Node Types}
+  \small
   A \textbf{decision network} or \textbf{influence diagram} contains three node types:
 
   \begin{columns}[T,onlytextwidth]
@@ -508,107 +496,105 @@
 % -----------------------------------------------------------------------------
 % Slide 20
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Robot Decision Network: One Next-Move Choice}
+\begin{frame}[t]{Robot Decision Network: One Route Choice}
+  \small
   \begin{center}
-    \begin{tikzpicture}[node distance=1.35in]
-      \node[draw,ellipse,minimum width=1.45in,minimum height=0.70in] (b) {Blocked? $B$};
-      \node[draw,rectangle,right=of b,minimum width=1.45in,minimum height=0.70in] (a) {Action $A$};
-      \node[draw,diamond,right=1.55in of a,aspect=2.2,minimum width=1.5in,minimum height=0.8in] (u) {Utility $U$};
-      \draw[-{Stealth[length=2.5mm]},thick] (b)--(u);
-      \draw[-{Stealth[length=2.5mm]},thick] (a)--(u);
+    \begin{tikzpicture}[x=1cm,y=1cm,link/.style={-{Stealth[length=2mm]},thick}]
+      \node[draw,ellipse,minimum width=2.3cm] (b) at (0,1.0) {Blocked? $B$};
+      \node[draw,rectangle,minimum width=2.3cm] (a) at (0,-0.7) {Route $A$};
+      \node[draw,diamond,aspect=2.2,minimum width=2.5cm] (u) at (5,0.15) {Utility $U$};
+      \draw[link] (b)--(u); \draw[link] (a)--(u);
     \end{tikzpicture}
   \end{center}
-
-  The world state affects the outcome. The chosen action also affects the outcome. Utility evaluates the combination.
-
+  The utility table depends on the chosen route and the hidden blockage state. There is no arrow from $B$ into $A$: blockage is not directly observed.
+  \equationlegend{$B$: chance variable (ellipse); $A$: controlled choice (rectangle); $U(a,b)$: utility function (diamond), not a probability table. Arrows into $U$ identify its inputs.}
   \begin{keyidea}
-    Decision networks make the separation between ``what the world may do'' and ``what the agent may choose'' explicit.
+    Choose a route using a belief about blockage, without pretending the hidden state is known.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 21
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Information Arcs Mean ``Known Before the Decision''}
-  Suppose a sensor reading $Z$ is available before the action is chosen.
-
+\begin{frame}[t]{Information Arcs Mean ``Known Before the Decision''}
+  \small
+  Suppose a scan reading is available before the route is chosen.
   \begin{center}
-    \begin{tikzpicture}[node distance=1.25in]
-      \node[draw,ellipse] (b) {Blocked? $B$};
-      \node[draw,ellipse,above=0.75in of b] (z) {Sensor $Z$};
-      \node[draw,rectangle,right=2.0in of b] (a) {Choose $A$};
-      \node[draw,diamond,right=1.8in of a,aspect=2.2] (u) {Utility};
-      \draw[-{Stealth[length=2.5mm]},thick] (b)--(z);
-      \draw[-{Stealth[length=2.5mm]},thick] (z)--(a);
-      \draw[-{Stealth[length=2.5mm]},thick] (b)--(u);
-      \draw[-{Stealth[length=2.5mm]},thick] (a)--(u);
+    \begin{tikzpicture}[x=1cm,y=1cm,link/.style={-{Stealth[length=2mm]},thick}]
+      \node[draw,ellipse] (b) at (0,0) {Blocked? $B$};
+      \node[draw,ellipse] (z) at (0,1.6) {Reading $Z$};
+      \node[draw,rectangle] (a) at (4,1.6) {Route $A$};
+      \node[draw,diamond,aspect=2.2] (u) at (4,0) {Utility $U$};
+      \draw[link] (b)--(z);
+      \draw[link,dashed] (z)--(a);
+      \draw[link] (b)--(u); \draw[link] (a)--(u);
     \end{tikzpicture}
   \end{center}
-
-  An arrow into a decision node indicates information available at decision time; it is not a CPT for the decision itself.
-
+  \equationlegend{$B$: hidden blockage; $Z$: noisy sensor reading; $A$: route choice; $U$: utility. Solid arrows into chance nodes define probability models; the dashed arrow into $A$ indicates available information.}
   \begin{keyidea}
-    The decision can condition on observations the agent has already seen.
+    A decision node receives information, not a CPT. The reading is known; the blockage state remains uncertain.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 22
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Evaluating a Decision Network: Sum at Chance, Max at Decision}
-  At a chance variable, average over possible outcomes:
+\begin{frame}[t]{Evaluate Using Only Information Available at Decision Time}
+  \small
+  After a reading $z$, average over the still-hidden blockage state:
   \[
-    EU(a)=\sum_o P(o\mid a)U(o).
+    EU(a\mid z)=\sum_{b\in\{0,1\}}P(B=b\mid Z=z)U(a,b).
   \]
-
-  At the decision variable, choose the maximizing action:
+  Then select a route for that reading:
   \[
-    a^*=\arg\max_a EU(a).
+    a^*(z)=\arg\max_{a\in\{\text{Shortcut},\text{Detour}\}} EU(a\mid z).
   \]
-
-  The result is a decision rule or policy for the current decision context.
-
+  \equationlegend{$b$: possible blockage value; $z$: observed reading; $P(B=b\mid Z=z)$: posterior belief. $U(a,b)$: utility table; $a^*(z)$: decision rule mapping a reading to a route. Fixed earlier evidence is suppressed.}
   \begin{keyidea}
-    Probabilistic inference supplies the distribution; decision optimization selects the maximizing action.
+    Average over hidden states before maximizing. Maximizing separately for each hidden state would incorrectly give the robot perfect information.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 23
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{The Belief State from Lecture 21 Plugs Directly Into the Decision}
+\begin{frame}[t]{The Belief State Plugs Directly Into the Decision}
+  \small
   \begin{center}
-    \begin{tikzpicture}[node distance=0.85in,every node/.style={draw,rounded corners,align=center,minimum width=2.4in,minimum height=0.85in}]
-      \node (f) {Filter\\$P(X_t\mid z_{1:t})$};
-      \node[right=of f] (d) {Decision network\\Expected utilities};
-      \node[right=of d] (a) {Next action\\$\arg\max EU(a)$};
-      \draw[-{Stealth[length=2.5mm]},thick] (f)--(d);
-      \draw[-{Stealth[length=2.5mm]},thick] (d)--(a);
+    \begin{tikzpicture}[x=1cm,y=1cm,
+      every node/.style={draw,rounded corners,align=center,minimum width=2.7cm,minimum height=1.0cm,font=\small}]
+      \node (f) at (0,0) {Filter\\Current belief $b_t$};
+      \node (d) at (4,0) {Decision model\\Expected utilities};
+      \node (a) at (8,0) {Next action\\Maximize utility};
+      \draw[-{Stealth[length=2mm]},thick] (f)--(d);
+      \draw[-{Stealth[length=2mm]},thick] (d)--(a);
     \end{tikzpicture}
   \end{center}
-
-  State estimation and decision making are not competing algorithms. The current belief is an input to the decision.
-
+  The filter updates what the robot believes. The decision model uses that distribution to compare consequences of feasible actions.
+  \equationlegend{$b_t$: current belief distribution at time $t$. In the worked example it supplies the probabilities of clear and blocked.}
   \begin{keyidea}
-    The agent acts on what it currently believes---not on an inaccessible perfect state of the world.
+    State estimation and action selection are complementary steps in the same controller.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 24
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{One-Step Decision Procedure}
+\begin{frame}[t]{One-Step Decision Procedure}
+  \small
   At each control cycle:
   \begin{enumerate}
     \item update the belief state $b_t$;
-    \item generate feasible actions $A(b_t)$;
+    \item generate the feasible action set $\mathcal{A}(b_t)$;
     \item predict possible outcomes for each action;
     \item compute expected utility for each action;
-    \item execute $\arg\max_a EU(a)$.
+    \item execute a maximizing feasible action.
   \end{enumerate}
 
+  \equationlegend{$b_t$: current belief at time $t$; $\mathcal{A}(b_t)$: actions allowed under that belief and the operational constraints; expected utility averages their outcome utilities.}
+
   \begin{keyidea}
-    This is a rational one-step controller: repeatedly choose the action with the best expected immediate outcome under the current belief.
+    For movement, this compares one segment at a time. A scan needs a short lookahead: scan, observe, then choose a route.
   \end{keyidea}
 \end{frame}
 
@@ -617,134 +603,111 @@
 % -----------------------------------------------------------------------------
 % Slide 25
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Sometimes ``Get More Information'' Is Itself an Action}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Act now}
-        Choose shortcut or detour using the current belief.
-
-        No sensing delay, but uncertainty remains high.
-      \end{block}
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Scan first}
-        Pause for a better sensor reading, update the belief, then choose.
-
-        Costs time and energy, but may improve the eventual action.
-      \end{block}
-    \end{column}
-  \end{columns}
-
+\begin{frame}[t]{Value the Plan: Scan, Observe, Then Choose}
+  \small
+  Compare the best route now with the best route after each possible reading:
+  \[
+    V_{\text{now}}=\max_a EU(a\mid e),\qquad
+    V_{\text{with}}=\sum_z P(z\mid e)\max_a EU(a\mid e,z).
+  \]
+  The \textbf{gross value of information} is $V_{\text{with}}-V_{\text{now}}$.
+  Acquire the reading when this improvement exceeds its acquisition cost.
+  \equationlegend{$e$: current evidence; $a$: route choice; $z$: possible reading; $EU$: expected utility. $V_{\text{now}}$: optimal value before sensing; $V_{\text{with}}$: expected optimal value after sensing, before its cost. Sum over readings; choose the route after each reading.}
   \begin{keyidea}
-    Information has instrumental value when it can improve the action the robot chooses afterward.
+    A scan's immediate cost buys a later decision. Evaluating only its immediate reward would miss its benefit.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 26
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Value of Information: Will a Better Measurement Change the Decision?}
-  Current belief:
+\begin{frame}[t]{Will a Better Measurement Change the Decision?}
+  \small
+  The prior probability of blockage is $P(\text{Blocked})=0.35$.
+  Without scanning, choose the detour: $V_{\text{now}}=45$.
+
+  A scan costs $c=5$ utility units and has the sensor model
   \[
-    P(Blocked)=0.35.
+    P(+\mid\text{Blocked})=0.90,\qquad P(+\mid\text{Clear})=0.10.
   \]
-
-  Without another measurement, the robot chooses the detour with utility $45$.
-
-  A short active scan costs $5$ utility units and has sensor model
-  \[
-    P(+\mid Blocked)=0.90,
-    \qquad
-    P(+\mid Clear)=0.10.
-  \]
-
-  Is the scan worth its cost?
-
+  \equationlegend{$+$: sensor reports blockage; $-$: sensor reports clear. These are readings, not true states. $c$: fixed additive utility cost; $V_{\text{now}}$: value of the best route without another reading.}
+  Assume the world stays fixed during this brief scan, both routes remain available, and its delay and energy cost are captured by $c$.
   \begin{keyidea}
-    The value of information depends on how the observation changes downstream decisions, not only on sensor accuracy.
+    We are valuing one imperfect measurement before one route choice, using the same utilities as before.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 27
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{The Scan Produces Two Possible Belief Updates}
-  First,
+\begin{frame}[t]{The Scan Produces Two Possible Belief Updates}
+  \small
+  Weight each sensor likelihood by its prior state probability:
   \[
-    P(+)=0.90(0.35)+0.10(0.65)=0.38.
+    P(+)=0.90(0.35)+0.10(0.65)=0.38,\qquad P(-)=1-0.38=0.62.
   \]
-
-  Then Bayes' rule gives
+  Bayes' rule gives
   \[
-    P(Blocked\mid +)
-      =\frac{0.90(0.35)}{0.38}
-      \approx 0.829,
+    P(\text{Blocked}\mid+)=\frac{0.90(0.35)}{0.38}\approx0.829,
   \]
-  while
   \[
-    P(Blocked\mid -)
-      =\frac{0.10(0.35)}{0.62}
-      \approx 0.056.
+    P(\text{Blocked}\mid-)=\frac{0.10(0.35)}{0.62}\approx0.0565.
   \]
-
+  \equationlegend{$P(+),P(-)$: reading probabilities; $P(\text{Blocked}\mid+)$ and $P(\text{Blocked}\mid-)$: posterior blockage beliefs. The negative-reading likelihood under blockage is $1-0.90=0.10$; denominators normalize each posterior.}
   \begin{keyidea}
-    A useful observation partitions the future decision into different belief states that may justify different actions.
+    Predict how often each reading occurs, then update the belief separately for each branch.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 28
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{After the Scan, the Best Action Depends on the Observation}
-  If the scan is positive:
+\begin{frame}[t]{After the Scan, Choose a Route for Each Reading}
+  \small
+  For a \textbf{positive} reading, blockage probability is about $0.829$:
   \[
-    P(Blocked\mid +)\approx0.829,
+    EU(\text{Shortcut}\mid+)\approx(1-0.829)(80)+0.829(-60)\approx-36.1.
   \]
-  so the shortcut has expected utility approximately $-36$ and the robot chooses the detour.
+  Choose the \textbf{detour}, whose utility is $45$.
 
-  If the scan is negative:
+  \medskip
+  For a \textbf{negative} reading, blockage probability is about $0.0565$:
   \[
-    P(Blocked\mid -)\approx0.056,
+    EU(\text{Shortcut}\mid-)\approx(1-0.0565)(80)+0.0565(-60)\approx72.1.
   \]
-  so the shortcut has expected utility approximately $72.1$ and the robot chooses the shortcut.
-
+  Choose the \textbf{shortcut}, since $72.1>45$.
+  \equationlegend{$EU(a\mid+)$ and $EU(a\mid-)$: route values after the reading, before sensing cost. $80,-60$: shortcut utilities; $45$: detour utility. Displayed posteriors are rounded; calculations use full precision.}
   \begin{keyidea}
-    The scan is valuable because different observations lead to different actions.
+    The conditional plan is: positive $\rightarrow$ detour; negative $\rightarrow$ shortcut.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 29
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Expected Value of the Scan}
-  Before subtracting sensing cost,
+\begin{frame}[t]{Separate Plan Value, Information Value, and Cost}
+  \small
+  Average the value of the best route in each reading branch:
   \[
-    EV(Scan)
-      =0.38(45)+0.62(72.1)
-      \approx 61.8.
+    V_{\text{with}}\approx\underbrace{0.38(45)}_{+\,:\ \text{detour}}+
+      \underbrace{0.62(72.1)}_{-\,:\ \text{shortcut}}\approx61.8.
   \]
+  Gross information value: $61.8-45=16.8$.
 
-  Subtract the cost of scanning:
-  \[
-    61.8-5=56.8.
-  \]
+  Scan-plan value after cost: $61.8-5=56.8$.
 
-  Without scanning, the best action has value $45$.
-
-  Therefore the net value of scanning is
-  \[
-    56.8-45=+11.8.
-  \]
-
+  Net improvement over acting now: $56.8-45=11.8$.
+  \equationlegend{$V_{\text{with}}$: expected route utility after sensing, before cost. $0.38,0.62$: reading probabilities; $45,72.1$: optimized branch values; $5$: scan cost. All values use the same utility scale.}
   \begin{keyidea}
-    Information is worth acquiring when its expected improvement in decision quality exceeds its sensing cost.
+    Choose the scan plan: its expected value $56.8$ exceeds the best immediate route value $45$ by $11.8$.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 30
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Information Can Be Accurate and Still Have Zero Decision Value}
+\begin{frame}[t]{Information Can Be Accurate and Still Have Zero Decision Value}
+  \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.47\textwidth}
       \begin{block}{Observation changes the action}
@@ -761,13 +724,13 @@
 
         Negative $\rightarrow$ detour
 
-        Even a very accurate observation may have little decision value.
+        If the same action is optimal for every possible reading, gross information value is exactly zero.
       \end{block}
     \end{column}
   \end{columns}
 
   \begin{keyidea}
-    Decision-relevant information is valuable because of its effect on action choice, not because reducing uncertainty is automatically useful.
+    Optional information has nonnegative gross value because it can be ignored. Acquisition cost can make its net value negative.
   \end{keyidea}
 \end{frame}
 
@@ -776,33 +739,36 @@
 % -----------------------------------------------------------------------------
 % Slide 31
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Now Put the Decision Back Inside the Robot Loop}
+\begin{frame}[t]{Now Put the Decision Back Inside the Robot Loop}
+  \small
   \begin{center}
-    \begin{tikzpicture}[node distance=0.34in,every node/.style={draw,rounded corners,align=center,minimum width=1.65in,minimum height=0.65in}]
-      \node (b) {Update belief};
-      \node[right=of b] (u) {Evaluate utility};
-      \node[right=of u] (c) {Choose};
-      \node[right=of c] (a) {Act};
-      \node[right=of a] (s) {Sense};
-      \draw[-{Stealth[length=2.5mm]},thick] (b)--(u);
-      \draw[-{Stealth[length=2.5mm]},thick] (u)--(c);
-      \draw[-{Stealth[length=2.5mm]},thick] (c)--(a);
-      \draw[-{Stealth[length=2.5mm]},thick] (a)--(s);
-      \draw[-{Stealth[length=2.5mm]},thick] (s.south) |- ++(0,-0.55) -| (b.south);
+    \begin{tikzpicture}[x=1cm,y=1cm,
+      every node/.style={draw,rounded corners,align=center,minimum height=0.7cm,minimum width=1.8cm,font=\small},
+      link/.style={-{Stealth[length=2mm]},thick}]
+      \node (n0) at (0.0,0) {Update belief};
+      \node (n1) at (2.3,0) {Evaluate};
+      \node (n2) at (4.6,0) {Choose};
+      \node (n3) at (6.9,0) {Act};
+      \node (n4) at (9.2,0) {Sense};
+      \draw[link] (n0)--(n1);
+      \draw[link] (n1)--(n2);
+      \draw[link] (n2)--(n3);
+      \draw[link] (n3)--(n4);
+      \draw[link] (n4.south) -- ++(0,-0.7) -| (n0.south);
     \end{tikzpicture}
   \end{center}
-
-  This loop may execute dozens or hundreds of times during one delivery.
-
+  After acting, the robot receives new evidence and reevaluates its options.
+  Repeating this loop does not by itself add long-term planning.
   \begin{keyidea}
-    A decision network can be reevaluated every control cycle using the robot's newest belief state.
+    The decision model can be reevaluated each cycle. Its planning horizon determines whether it is myopic.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 32
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{This Gives Us a Myopic Decision Controller}
+\begin{frame}[t]{This Gives Us a Myopic Decision Controller}
+  \small
   \begin{block}{One-step controller}
     \ttfamily\small
     while delivery not complete:\\
@@ -813,7 +779,9 @@
     \quad execute(argmax\_a EU[a])
   \end{block}
 
-  It is \textbf{myopic} because it optimizes what is best now without yet including the value of future states and future actions.
+  Here \texttt{b\_t} is the current belief, \texttt{a} a feasible action, and \texttt{EU[a]} its expected immediate utility.
+
+  This version is \textbf{myopic}: it omits consequences beyond the immediate segment. To include sensing, evaluate the scan--then--route plan from the previous example, rather than just the scan cost.
 
   \begin{keyidea}
     Repeated one-step optimization is a useful reactive strategy, but repeated local optimality does not guarantee globally good behavior.
@@ -823,7 +791,8 @@
 % -----------------------------------------------------------------------------
 % Slide 33
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Failure Mode: Locally Rational Actions Can Oscillate}
+\begin{frame}[t]{Failure Mode: Locally Rational Actions Can Oscillate}
+  \small
   Imagine two similar corridors whose estimated congestion changes slightly with each noisy scan.
 
   \begin{enumerate}
@@ -833,8 +802,10 @@
   \end{enumerate}
 
   \[
-    Left \leftrightarrow Right \leftrightarrow Left \leftrightarrow \cdots
+    \text{Left} \leftrightarrow \text{Right} \leftrightarrow \text{Left} \leftrightarrow \cdots
   \]
+
+  \equationlegend{$t,t+1,t+2$: successive control cycles; $\rightarrow$: controller chooses that direction; $\leftrightarrow$: repeated switching, not a probabilistic dependency.}
 
   \begin{keyidea}
     A controller that only asks ``what is best this instant?'' can thrash when actions have switching costs or delayed effects.
@@ -844,23 +815,26 @@
 % -----------------------------------------------------------------------------
 % Slide 34
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Failure Mode: The Best Immediate Move Can Create a Bad Future}
+\begin{frame}[t]{Failure Mode: The Best Immediate Move Can Create a Bad Future}
+  \small
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.47\textwidth}
       \begin{block}{Narrow shortcut}
-        Immediate utility: $+30$.
+        Immediate utility: $+30$ (new example).
 
         Moves quickly toward the destination, but enters a courtyard with one exit and frequent congestion.
       \end{block}
     \end{column}
     \begin{column}{0.47\textwidth}
       \begin{block}{Wider detour}
-        Immediate utility: $+20$.
+        Immediate utility: $+20$ (new example).
 
         Looks worse right now, but preserves several future route choices.
       \end{block}
     \end{column}
   \end{columns}
+
+  These illustrative values concern only the immediate move; later congestion is omitted.
 
   \begin{keyidea}
     Actions do not merely produce immediate outcomes---they change which states and choices will be available later.
@@ -870,10 +844,11 @@
 % -----------------------------------------------------------------------------
 % Slide 35
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{The Question Has Changed Again}
+\begin{frame}[t]{The Question Has Changed Again}
+  \small
   So far the robot chooses
   \[
-    a_t^*=\arg\max_a EU(a\mid b_t).
+    a_t^*=\arg\max_{a\in\mathcal{A}(b_t)} EU(a\mid b_t).
   \]
 
   But repeated autonomous control asks something stronger:
@@ -881,6 +856,8 @@
   \begin{center}
     \Large\textbf{What action is best when I also care about the future states and future decisions it creates?}
   \end{center}
+
+  \equationlegend{$t$: current time; $b_t$: current belief; $\mathcal{A}(b_t)$: feasible actions; $EU(a\mid b_t)$: utility expected under that belief for the current outcome horizon; $a_t^*$: maximizing action.}
 
   \begin{keyidea}
     Once actions influence future opportunities, rational decision making must reason across sequences of states and actions.
@@ -890,8 +867,9 @@
 % -----------------------------------------------------------------------------
 % Slide 36
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Next: Markov Decision Processes}
-  Lecture 23 will formalize the repeated decision problem with:
+\begin{frame}[t]{Next: Markov Decision Processes}
+  \small
+  Lecture 23 will first assume the state is fully observed and formalize:
 
   \begin{itemize}
     \item \textbf{states}: what situation is the robot in?
@@ -902,46 +880,47 @@
   \end{itemize}
 
   \begin{keyidea}
-    Decision networks choose under uncertainty; MDPs will formalize repeated decisions whose consequences propagate into the future.
+    Our one-decision examples become sequential planning problems. MDPs use observed states; partially observable MDPs (POMDPs) use hidden states and beliefs. Decision networks can also represent multiple decisions.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 37
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{The Whole Unit Now Forms One Pipeline}
+\begin{frame}[t]{The Whole Unit Now Forms One Pipeline}
+  \small
   \begin{center}
-    \begin{tikzpicture}[node distance=0.22in,every node/.style={draw,rounded corners,align=center,minimum width=2.15in,minimum height=0.48in}]
-      \node (p) {Probability};
-      \node[below=of p] (bn) {Bayesian networks};
-      \node[below=of bn] (f) {Filtering};
-      \node[below=of f] (u) {Utility};
-      \node[below=of u] (dn) {Decision networks};
-      \node[below=of dn] (m) {MDPs};
-      \draw[-{Stealth[length=2.5mm]},thick] (p)--(bn);
-      \draw[-{Stealth[length=2.5mm]},thick] (bn)--(f);
-      \draw[-{Stealth[length=2.5mm]},thick] (f)--(u);
-      \draw[-{Stealth[length=2.5mm]},thick] (u)--(dn);
-      \draw[-{Stealth[length=2.5mm]},thick] (dn)--(m);
+    \begin{tikzpicture}[x=1cm,y=1cm,
+      every node/.style={draw,rounded corners,align=center,minimum width=2.8cm,minimum height=0.8cm,font=\small},
+      link/.style={-{Stealth[length=2mm]},thick}]
+      \node (p) at (0,0) {Probability};
+      \node (bn) at (4,0) {Bayesian networks};
+      \node (f) at (8,0) {Filtering};
+      \node (u) at (8,-1.8) {Utility};
+      \node (dn) at (4,-1.8) {Decision networks};
+      \node (m) at (0,-1.8) {MDPs / POMDPs};
+      \draw[link] (p)--(bn); \draw[link] (bn)--(f); \draw[link] (f)--(u);
+      \draw[link] (u)--(dn); \draw[link] (dn)--(m);
     \end{tikzpicture}
   \end{center}
-
+  Beliefs describe uncertainty. Utility describes preferences. A decision model joins them to select actions; sequential models account for what comes afterward.
   \begin{keyidea}
-    The course is progressively adding what an autonomous agent needs: beliefs, time, preferences, actions, and finally long-term strategy.
+    The course adds beliefs, time, preferences, actions, and finally long-term strategy.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 38
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Takeaways}
+\begin{frame}[t]{Takeaways}
+  \small
   \begin{itemize}
     \item Probability describes uncertain outcomes; utility describes preferences over those outcomes.
     \item Expected utility combines probability and preference: choose the action with maximum expected utility.
     \item Multiattribute utilities make tradeoffs explicit, but weights and modeling assumptions directly shape behavior.
     \item Decision networks combine chance variables, decision variables, information, and utility.
     \item Value of information asks whether better evidence is worth its sensing cost because it changes downstream decisions.
-    \item Repeating a decision network every cycle produces a useful myopic controller, but immediate optimality can fail when actions change future states.
+    \item Repeating immediate-utility choices gives a myopic controller; modeling future choices requires an explicit planning horizon.
   \end{itemize}
 
   \begin{keyidea}
