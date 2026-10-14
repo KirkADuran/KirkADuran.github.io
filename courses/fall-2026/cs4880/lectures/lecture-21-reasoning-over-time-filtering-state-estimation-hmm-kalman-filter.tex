@@ -50,9 +50,9 @@
 \begin{document}
 
 % Estimated pacing: 52--55 minutes
-% Factored DBNs + filtering assumptions: 11 min
+% Rich DBN query cost + simpler HMM + assumptions: 11 min
 % Filtering worked example + blow-up: 12 min
-% HMM special case + state-space tradeoffs: 9 min
+% History compression + state-space tradeoffs: 9 min
 % Kalman filtering: 9 min
 % Particle filtering + AMCL: 11 min
 % Synthesis: 3 min
@@ -121,73 +121,120 @@
 % -----------------------------------------------------------------------------
 % Slide 4
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{A DBN Keeps the Variables Inside Each Time Slice}
-  A dynamic Bayesian network (DBN) connects Bayesian-network slices across time.
-  For the robot, keep location $L$, wheel slip $S$, and sensor health $H$ separate:
-
+\begin{frame}[t]{A Rich DBN: Many Things Change Together}
+  \small
+  A dynamic Bayesian network (DBN) repeats a Bayesian network across time.
+  Shaded nodes are sensor readings; the other variables are hidden.
   \begin{center}
-    \begin{tikzpicture}[x=1cm,y=1cm,
-      state/.style={draw,rounded corners,minimum width=1.55cm,minimum height=0.55cm,font=\small},
+    \begin{tikzpicture}[x=1cm,y=1cm,scale=0.72,transform shape,
+      state/.style={draw,rounded corners,minimum width=1.25cm,minimum height=0.48cm,font=\small},
       obs/.style={state,fill=DeckSoft},
-      link/.style={-{Stealth[length=2mm]},thick}]
-      \node at (0,2.65) {Time $t-1$};
-      \node at (5,2.65) {Time $t$};
-      \node[state] (sm) at (0,1.85) {$S_{t-1}$};
-      \node[state] (lm) at (0,0.65) {$L_{t-1}$};
-      \node[state] (hm) at (0,-0.55) {$H_{t-1}$};
-      \node[obs] (zm) at (2,-0.55) {$Z_{t-1}$};
-      \node[state] (st) at (5,1.85) {$S_t$};
-      \node[state] (lt) at (5,0.65) {$L_t$};
-      \node[state] (ht) at (5,-0.55) {$H_t$};
-      \node[obs] (zt) at (7,-0.55) {$Z_t$};
-      \draw[link] (sm)--(st); \draw[link] (lm)--(lt); \draw[link] (hm) to[bend right=28] (ht);
-      \draw[link] (sm)--(lm); \draw[link] (st)--(lt);
-      \draw[link] (lm)--(zm); \draw[link] (hm)--(zm);
-      \draw[link] (lt)--(zt); \draw[link] (ht)--(zt);
+      link/.style={-{Stealth[length=1.8mm]},thick}]
+      \foreach \i/\time in {0/{t-1},1/{t},2/{t+1}} {
+        \node at (4*\i,2.85) {Time $\time$};
+        \node[state] (c\i) at (4*\i,2.15) {$C_{\time}$};
+        \node[state] (s\i) at (4*\i,1.15) {$S_{\time}$};
+        \node[state] (l\i) at (4*\i,0.15) {$L_{\time}$};
+        \node[state] (h\i) at (4*\i,-0.85) {$H_{\time}$};
+        \node[obs] (z\i) at (4*\i+1.65,-0.85) {$Z_{\time}$};
+        \draw[link] (c\i.west) to[out=180,in=180,looseness=1.3] (l\i.west);
+        \draw[link] (s\i)--(l\i);
+        \draw[link] (l\i)--(z\i);
+        \draw[link] (h\i)--(z\i);
+      }
+      \foreach \a/\b in {0/1,1/2} {
+        \foreach \v in {c,s,l} {\draw[link] (\v\a)--(\v\b);}
+        \draw[link] (h\a) to[bend right=25] (h\b);
+      }
     \end{tikzpicture}
   \end{center}
-  Slip affects location; location and sensor health affect the observed reading $Z$.
-
+  $C$: crowd conditions; $S$: slip; $L$: location; $H$: sensor health; $Z$: reading.
   \begin{keyidea}
-    A time slice can contain several interacting variables, with arrows both within a slice and between slices. The unrolled graph must remain acyclic.
+    A DBN can describe a rich changing world, with dependencies within each slice and across time.
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 5
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Read the DBN as Local Probability Models}
-  The arrows specify one conditional distribution for each variable:
-  \[
-    \underbrace{P(s_t\mid s_{t-1})}_{\text{slip persists}}\;
-    \underbrace{P(h_t\mid h_{t-1})}_{\text{health persists}}\;
-    \underbrace{P(l_t\mid l_{t-1},s_t)}_{\text{slip affects motion}}\;
-    \underbrace{P(z_t\mid l_t,h_t)}_{\text{health affects sensing}}.
-  \]
-  These factors multiply to give
-  \[
-    P(s_t,h_t,l_t,z_t\mid s_{t-1},h_{t-1},l_{t-1}).
-  \]
+\begin{frame}[t]{One Simple Question Can Require a Lot of Work}
+  \small
+  Ask: \textbf{``Where is the robot now, given all the readings so far?''}
 
   \begin{itemize}
-    \item A missing parent encodes a conditional-independence assumption.
-    \item For example, health affects the reading but does not directly affect motion in this model.
-    \item Specify an initial-slice distribution and reuse this template for later slices.
+    \item A surprising reading could mean a different location or an unhealthy sensor.
+    \item An unexpected position could result from wheel slip or a crowd blocking motion.
+    \item Those explanations persist across time and affect one another.
   \end{itemize}
 
-  \equationlegend{$s,h,l,z$: values of slip, health, location, and observation. Each factor conditions only on that node's parents. Controls are omitted here to keep the graph readable.}
+  To answer exactly, we must combine evidence and sum over the hidden possibilities.
+  With many variables and time steps, that can take substantial computation.
+
+  \medskip
+  Naively listing every possible history is especially expensive. Structured inference helps, but a large, tightly coupled hidden state can still be costly.
 
   \begin{keyidea}
-    The DBN exposes the structure inside the evolving state instead of treating it as one undifferentiated variable.
+    The graph is easy to draw; querying a rich model can be hard. Can we use a simpler model for the question we actually need to answer?
   \end{keyidea}
 \end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 6
 % -----------------------------------------------------------------------------
+\begin{frame}[t]{An Easier Starting Point: Track Just the Zone}
+  \small
+  For a first localization model, keep only
+  \[
+    X_t\in\{A,B,C\}:\quad\text{the robot's current corridor zone.}
+  \]
+  \begin{itemize}
+    \item Replace explicit crowd and slip variables with a noisy motion model.
+    \item Replace explicit sensor health with a noisy observation model.
+    \item Assume the current zone and command suffice to predict the next zone.
+    \item Assume the current zone suffices to predict the sensor reading.
+  \end{itemize}
+
+  This is a simpler model of the world, not just a new name for the rich DBN.
+  Persistent slip or sensor faults may require adding hidden variables back later.
+
+  \begin{keyidea}
+    Use a small state and explicit independence assumptions, then update a small belief as readings arrive. This gives us a controlled HMM.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 7
+% -----------------------------------------------------------------------------
+\begin{frame}[shrink=10]{A Hidden Markov Model Is a Very Simple DBN}
+  The standard finite-state HMM used here has:
+  \begin{itemize}
+    \item one finite-valued hidden state variable $X_t$ per time step;
+    \item one observation variable $Z_t$ per time step;
+    \item a first-order Markov transition model;
+    \item a local observation model;
+    \item usually stationary parameters reused through time.
+  \end{itemize}
+
+  \begin{center}
+    \begin{tikzpicture}[node distance=0.62in,every node/.style={draw,rounded corners,minimum width=0.72in,minimum height=0.38in,align=center,font=\small}]
+      \node (x1) {$X_1$}; \node[right=of x1] (x2) {$X_2$}; \node[right=of x2] (x3) {$X_3$}; \node[right=of x3] (x4) {$X_4$};
+      \node[below=0.65in of x1] (z1) {$Z_1$}; \node[below=0.65in of x2] (z2) {$Z_2$}; \node[below=0.65in of x3] (z3) {$Z_3$}; \node[below=0.65in of x4] (z4) {$Z_4$};
+      \draw[-{Stealth[length=2mm]},thick] (x1)--(x2); \draw[-{Stealth[length=2mm]},thick] (x2)--(x3); \draw[-{Stealth[length=2mm]},thick] (x3)--(x4);
+      \draw[-{Stealth[length=2mm]},thick] (x1)--(z1); \draw[-{Stealth[length=2mm]},thick] (x2)--(z2); \draw[-{Stealth[length=2mm]},thick] (x3)--(z3); \draw[-{Stealth[length=2mm]},thick] (x4)--(z4);
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{keyidea}
+    HMMs are not a different universe from Bayesian networks; they are a restricted temporal Bayesian-network structure.
+  \end{keyidea}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+% Slide 8
+% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{The First-Order Markov Assumption}
-  Bundle the hidden variables as $X_t=(L_t,S_t,H_t)$.
-  In a first-order DBN, the previous slice and current control suffice for the next state:
+  In our simplified model, $X_t$ is the corridor zone.
+  Assume the previous state and current command suffice to predict the next state:
   \[
     P(X_t\mid X_{0:t-1},U_{1:t})
     =P(X_t\mid X_{t-1},U_t).
@@ -205,7 +252,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 7
+% Slide 9
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Observations Get a Similar Locality Assumption}
   For the filtering model used today, assume the observation depends only on the current hidden state:
@@ -223,11 +270,11 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 8
+% Slide 10
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{For a Robot, Actions Also Affect the Next State}
-  Now draw the hidden variables together as $X_t=(L_t,S_t,H_t)$ and add control $U_t$.
-  This is a compact view of the state, hiding its internal DBN structure:
+  Our simplified hidden state is the zone $X_t$.
+  A known control $U_t$, such as \texttt{move east}, also affects the next state:
 
   \begin{center}
     \begin{tikzpicture}[scale=0.70,transform shape,node distance=1.25in,every node/.style={draw,rounded corners,minimum width=1.10in,minimum height=0.48in,align=center}]
@@ -256,7 +303,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 9
+% Slide 11
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{The Temporal Joint Distribution}
   Under a first-order transition model and local observation model,
@@ -266,9 +313,9 @@
       P(x_t\mid x_{t-1},u_t)P(z_t\mid x_t).
   \]
 
-  In this bundled representation, every new time step adds:
+  In this simplified model, every new time step adds:
   \begin{itemize}
-    \item one new hidden state vector;
+    \item one new hidden zone variable;
     \item one new observation;
     \item one transition factor;
     \item one observation factor.
@@ -282,7 +329,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 10
+% Slide 12
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Temporal Models Support Different Questions}
   \begin{center}
@@ -305,10 +352,10 @@
   \end{keyidea}
 \end{frame}
 
-\section{Filtering: Exact State Estimation}
+\section{HMM Filtering: Predict Then Correct}
 
 % -----------------------------------------------------------------------------
-% Slide 11
+% Slide 13
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Filtering Maintains a Belief State}
   Define the robot's belief at time $t$:
@@ -319,7 +366,6 @@
   This is not one guessed location.
 
   It is a probability distribution over possible current states.
-
 
 
   \begin{columns}[c,onlytextwidth]
@@ -337,9 +383,9 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 12
+% Slide 14
 % -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Filtering Is a Two-Step Recursion}
+\begin{frame}[shrink=10]{HMM Filtering Is a Two-Step Recursion}
   \textbf{1. Predict using motion:}
   \[
     \overline{bel}_t(x_t)=
@@ -361,7 +407,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 13
+% Slide 15
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Worked Example: A Three-Zone Campus Corridor}
   The robot is hidden in one of three zones:
@@ -381,7 +427,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 14
+% Slide 16
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Transition Model: Motion Is Not Deterministic}
   For command \texttt{move east}:
@@ -404,7 +450,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 15
+% Slide 17
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Observation Model: The Mural Sensor Is Noisy}
   Let $Z_t=+$ mean ``mural detected.''
@@ -427,7 +473,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 16
+% Slide 18
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Start with an Uncertain Prior}
   Before moving,
@@ -450,7 +496,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 17
+% Slide 19
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Prediction Step: Push the Belief Through Motion}
   \[
@@ -476,7 +522,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 18
+% Slide 20
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Correction Step: The Sensor Reports ``Mural''}
   Suppose $Z_1=+$.
@@ -502,7 +548,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 19
+% Slide 21
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{That Was Easy Because the State Was Tiny}
   We tracked only three possible states.
@@ -525,7 +571,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 20
+% Slide 22
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{If We Track Full Histories, the Number of Paths Explodes}
   With $n$ possible states per time step, a length-$T$ state history has
@@ -548,7 +594,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 21
+% Slide 23
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Do We Actually Care About the Entire History?}
   To estimate the robot's \emph{current} state, do we need to remember
@@ -564,96 +610,13 @@
   \end{center}
 
   \begin{keyidea}
-    The predict--correct recursion already uses this summary. Next, name the familiar finite-state special case: the HMM.
+    We compress the observation history into a current belief. We have not removed time: the state and its belief still change at every step.
   \end{keyidea}
 \end{frame}
 
-\section{Hidden Markov Models as a Special Case}
-
-% -----------------------------------------------------------------------------
-% Slide 22
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{A Hidden Markov Model Is a Very Simple DBN}
-  The standard finite-state HMM used here has:
-  \begin{itemize}
-    \item one finite-valued hidden state variable $X_t$ per time step;
-    \item one observation variable $Z_t$ per time step;
-    \item a first-order Markov transition model;
-    \item a local observation model;
-    \item usually stationary parameters reused through time.
-  \end{itemize}
-
-  \begin{center}
-    \begin{tikzpicture}[node distance=0.62in,every node/.style={draw,rounded corners,minimum width=0.72in,minimum height=0.38in,align=center,font=\small}]
-      \node (x1) {$X_1$}; \node[right=of x1] (x2) {$X_2$}; \node[right=of x2] (x3) {$X_3$}; \node[right=of x3] (x4) {$X_4$};
-      \node[below=0.65in of x1] (z1) {$Z_1$}; \node[below=0.65in of x2] (z2) {$Z_2$}; \node[below=0.65in of x3] (z3) {$Z_3$}; \node[below=0.65in of x4] (z4) {$Z_4$};
-      \draw[-{Stealth[length=2mm]},thick] (x1)--(x2); \draw[-{Stealth[length=2mm]},thick] (x2)--(x3); \draw[-{Stealth[length=2mm]},thick] (x3)--(x4);
-      \draw[-{Stealth[length=2mm]},thick] (x1)--(z1); \draw[-{Stealth[length=2mm]},thick] (x2)--(z2); \draw[-{Stealth[length=2mm]},thick] (x3)--(z3); \draw[-{Stealth[length=2mm]},thick] (x4)--(z4);
-    \end{tikzpicture}
-  \end{center}
-
-  \begin{keyidea}
-    HMMs are not a different universe from Bayesian networks; they are a restricted temporal Bayesian-network structure.
-  \end{keyidea}
-\end{frame}
-
-% -----------------------------------------------------------------------------
-% Slide 23
-% -----------------------------------------------------------------------------
-\begin{frame}[t]{DBN and HMM: Structure Versus a Joint State}
-  \small
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.48\textwidth}
-      \begin{block}{Factored DBN}
-        Separate location, slip, and health nodes.\\[4pt]
-        Store local models such as $P(S_t\mid S_{t-1})$ and $P(Z_t\mid L_t,H_t)$.\\[4pt]
-        The graph exposes which variables depend on which others.
-      \end{block}
-    \end{column}
-    \begin{column}{0.48\textwidth}
-      \begin{block}{Bundled finite-state HMM}
-        One state label for every tuple $(L_t,S_t,H_t)$.\\[4pt]
-        With 100 locations, 2 slip modes, and 3 health modes, there are $100(2)(3)=600$ states.\\[4pt]
-        A dense transition table has $600^2$ entries.
-      \end{block}
-    \end{column}
-  \end{columns}
-
-  \medskip
-  A finite first-order hidden-state DBN with local observations can be represented this way as an HMM; bundling hides the factorization.
-
-  \begin{keyidea}
-    HMMs are a special case of DBNs. Factoring can reduce model size, but exact inference in a DBN can still be expensive because hidden variables become correlated.
-  \end{keyidea}
-\end{frame}
 
 % -----------------------------------------------------------------------------
 % Slide 24
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{The HMM Filtering Recursion}
-  Prediction:
-  \[
-    P(X_t\mid z_{1:t-1})
-    =\sum_{x_{t-1}}P(X_t\mid x_{t-1})P(x_{t-1}\mid z_{1:t-1}).
-  \]
-
-  Correction:
-  \[
-    P(X_t\mid z_{1:t})
-    =\eta P(z_t\mid X_t)P(X_t\mid z_{1:t-1}).
-  \]
-
-  This is the same two-step filter; known controls can be included in the transition model.
-
-  \equationlegend{$X_t$: current hidden state; $x_{t-1}$: a possible previous state; $z_{1:t-1}$: earlier readings; $z_{1:t}$: earlier readings plus the new $z_t$. $\sum_{x_{t-1}}$: add over previous states; $P(z_t\mid X_t)$: sensor likelihood; $\eta$: normalization factor.}
-
-  \begin{keyidea}
-    The HMM forward update compresses an arbitrarily long observation history into the current belief vector.
-  \end{keyidea}
-\end{frame}
-
-% -----------------------------------------------------------------------------
-% Slide 25
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Why This Avoids the History Explosion}
   Suppose the HMM has $n$ discrete states.
@@ -679,7 +642,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 26
+% Slide 25
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{HMM Tradeoff: The State Must Be Good Enough}
   The Markov assumption is only useful if $X_t$ actually captures the information needed for future prediction.
@@ -697,7 +660,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 27
+% Slide 26
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{HMMs Are Excellent When the Hidden State Is Discrete}
   Examples:
@@ -728,7 +691,7 @@
 \section{Kalman Filtering: Continuous Gaussian Beliefs}
 
 % -----------------------------------------------------------------------------
-% Slide 28
+% Slide 27
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Why Not Just Discretize the Continuous Pose?}
   Suppose campus localization uses:
@@ -752,7 +715,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 29
+% Slide 28
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{What If the Belief Has a Simple Shape?}
   Instead of storing every possible continuous state, suppose the belief is Gaussian:
@@ -765,7 +728,6 @@
     \item a mean vector $\mu_t$;
     \item a covariance matrix $\Sigma_t$.
   \end{itemize}
-
 
 
   \begin{columns}[c,onlytextwidth]
@@ -783,7 +745,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 30
+% Slide 29
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{The Linear-Gaussian State-Space Model}
   Kalman filtering assumes linear dynamics with Gaussian noise:
@@ -806,7 +768,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 31
+% Slide 30
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Kalman Filtering Is Still Predict Then Correct}
   \textbf{Predict:}
@@ -833,7 +795,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 32
+% Slide 31
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{One-Dimensional Kalman Example}
   \setlength{\abovedisplayskip}{3pt}
@@ -874,7 +836,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 33
+% Slide 32
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Why Kalman Filters Are So Attractive}
   \begin{itemize}
@@ -892,7 +854,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 34
+% Slide 33
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{But the Gaussian Assumption Can Be the Wrong Shape}
   Imagine two visually identical campus corridors.
@@ -905,7 +867,6 @@
   \]
 
   One Gaussian tends to summarize that as a mean location \emph{between} the two possibilities.
-
 
 
   \begin{columns}[c,onlytextwidth]
@@ -923,7 +884,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 35
+% Slide 34
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Kalman Failure Modes Motivate a Different Representation}
   Standard Kalman filtering assumes:
@@ -945,7 +906,7 @@
 \section{Particle Filters: Sampling the Belief Over Time}
 
 % -----------------------------------------------------------------------------
-% Slide 36
+% Slide 35
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Lecture 20 Comes Back: Represent the Belief with Samples}
   A particle filter approximates the current belief with weighted samples:
@@ -956,7 +917,6 @@
   Each particle is one hypothesis about the current state.
 
   Many particles in one region means high probability mass there.
-
 
 
   \begin{columns}[c,onlytextwidth]
@@ -974,7 +934,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 37
+% Slide 36
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Particle Filtering: Predict, Weight, Resample}
   At each time step:
@@ -997,7 +957,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 38
+% Slide 37
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Why Resampling Matters}
   Without resampling, many particles eventually carry almost no weight.
@@ -1017,7 +977,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 39
+% Slide 38
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Particle Filters Can Represent Multiple Hypotheses}
   Suppose the robot could be in either of two similar corridors.
@@ -1045,7 +1005,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 40
+% Slide 39
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Particle Filters Have Their Own Failure Modes}
   \begin{itemize}
@@ -1064,7 +1024,7 @@
 \section{AMCL: The Robotics Payoff}
 
 % -----------------------------------------------------------------------------
-% Slide 41
+% Slide 40
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{AMCL: Adaptive Monte Carlo Localization}
   In ROS 2 Navigation, AMCL is a particle-filter-based localizer for estimating robot pose in a known static map.
@@ -1084,7 +1044,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 42
+% Slide 41
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{What AMCL Is Estimating}
   The hidden state is approximately robot pose:
@@ -1116,7 +1076,7 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 43
+% Slide 42
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{One Problem, Three Belief Representations}
   \begin{columns}[T,onlytextwidth]
@@ -1161,13 +1121,13 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 44
+% Slide 43
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{The Whole Lecture in One Flow}
   \begin{enumerate}
     \item Static Bayesian network: reason about one snapshot.
     \item Dynamic Bayesian network: connect factored variable slices through time.
-    \item Choose Markov and local-observation assumptions for this model.
+    \item Simplify to a small HMM with Markov and local-observation assumptions.
     \item Filtering: maintain $P(X_t\mid z_{1:t})$ online using the current belief.
     \item Choose a belief representation appropriate to the problem.
   \end{enumerate}
@@ -1196,13 +1156,13 @@
 \end{frame}
 
 % -----------------------------------------------------------------------------
-% Slide 45
+% Slide 44
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Takeaways}
   \begin{itemize}
-    \item DBNs expose dependencies within and between time slices.
+    \item Rich DBNs describe interacting variables over time; exact queries can be costly.
     \item Filtering recursively combines a transition model with new evidence.
-    \item Explicit state histories explode; the Markov assumption lets the current belief summarize the relevant past.
+    \item A small state and local assumptions let us update a belief without enumerating histories.
     \item Finite-state HMMs are a special case of DBNs; forward filtering is exact.
     \item Kalman filters compress continuous linear-Gaussian beliefs into a mean and covariance.
     \item Particle filters approximate flexible, multimodal beliefs with weighted samples.
