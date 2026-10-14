@@ -1,28 +1,12 @@
 \documentclass[aspectratio=169,10pt]{beamer}
 
 \input{../../common/preamble.tex}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\input{../assets/lecture-21/reference-diagrams.tex}
+\AtBeginEnvironment{verbatim}{\small}
 
 \pdfstringdefDisableCommands{\def\translate#1{#1}}
-
-\graphicspath{{../assets/lecture-21/}}
-
-% If an image file is not yet available, the slide displays a labeled
-% placeholder using the intended filename. Place the matching file in
-% ../assets/lecture-21/ to replace the placeholder automatically.
-\newcommand{\lectureimage}[2][1.75in]{%
-  \IfFileExists{../assets/lecture-21/#2}{%
-    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
-  }{%
-    \fbox{%
-      \parbox[c][#1][c]{0.94\linewidth}{%
-        \centering
-        \small\textbf{Image Placeholder}\\[0.08in]
-        \scriptsize\texttt{\detokenize{#2}}
-      }%
-    }%
-  }%
-}
-
 \setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
@@ -36,711 +20,628 @@
 
 \makedecktitle
 
-\begin{frame}{Today}
+\begin{frame}{Today: Follow a Changing Reference Diagram}
+  Lecture 20 gave us the rules. Today we combine them in longer traces.
   \begin{itemize}
-    \item Reinforce the distinction between \textbf{aliasing}, \textbf{copying}, and \textbf{rebinding}.
-    \item Predict the effects of functions that receive and mutate lists.
-    \item Identify when surprising output is caused by shared references and side effects.
-    \item Repair unintended mutation by copying or constructing independent data.
-    \item Distinguish accidental mutation from intentional, documented mutation.
-    \item Simulate changes to immutable strings and tuples by constructing new objects.
+    \item Follow aliases as names move between lists.
+    \item Separate a function's mutations from its returned value.
+    \item Trace two parameters that may refer to the same list.
+    \item Find the first unintended mutation and place a copy before it.
+    \item Trace repeated calls using a binding ledger and object labels.
   \end{itemize}
-
-  \begin{keyidea}
-    The central tracing question is not merely ``what value does this variable have?'' It is also ``which object does this name currently refer to?''
-  \end{keyidea}
+  \begin{activity}
+    Predict first, draw references, then compare with the reveal. Explain the statement responsible for each change.
+  \end{activity}
 \end{frame}
 
-\sectionframe{Part 1: A Reference-Aware Tracing Model}
-
-\begin{frame}{Why Some Programs Become Hard to Predict}
-  \begin{itemize}
-    \item With immutable values, a reassignment typically affects only one binding.
-    \item With mutable lists, several names may refer to the same object.
-    \item A mutation through one alias changes the object observed through every alias.
-    \item Function parameters can temporarily become additional aliases to caller-owned lists.
-  \end{itemize}
-
-  \begin{alertblock}{Source of confusion}
-    A line of code may mention only one variable name while changing state visible through several different names.
-  \end{alertblock}
-\end{frame}
-
-\begin{frame}{Three Operations That Must Remain Distinct}
+\begin{frame}{One-Minute Toolkit}
   \begin{center}
     \renewcommand{\arraystretch}{1.3}
-    \begin{tabular}{l|l|l}
-      \textbf{Operation} & \textbf{Example} & \textbf{Effect} \\\hline
-      Rebinding & \texttt{x = new\_value} & \texttt{x} refers to another object \\
-      Aliasing & \texttt{y = x} & another name refers to the same object \\
-      Mutation & \texttt{x[0] = 7} & existing mutable object changes
+    \begin{tabular}{l|l}
+      \textbf{Statement} & \textbf{What to record} \\\hline
+      \texttt{b = a} & Bind \texttt{b} to the object currently named by \texttt{a}. \\
+      \texttt{b = a.copy()} & Create a new list; bind \texttt{b} to it. \\
+      \texttt{a[0] = 7} & Change the existing list's contents. \\
+      \texttt{a = a + [7]} & Create a new list; move the \texttt{a} arrow. \\
+      \texttt{return a} & Give the caller a reference to the current object.
     \end{tabular}
   \end{center}
-
   \begin{keyidea}
-    Assignment does not imply copying. Indexed assignment to a list does not rebind the list variable.
+    Label the lists we track L1, L2, \ldots\ as they appear. Keep a \textbf{binding ledger} and a separate record of each list's \textbf{contents}.
   \end{keyidea}
+  Our examples use flat lists of integers: copies have independent list state.
 \end{frame}
 
-\begin{frame}{Reminder: Aliasing}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.52\textwidth}
-      \begin{block}{Code}
-        \texttt{a = [10, 20, 30]}\\
-        \texttt{b = a}
-      \end{block}
-
-      After the second statement:
-      \begin{itemize}
-        \item there is one list object;
-        \item both \texttt{a} and \texttt{b} refer to it;
-        \item \texttt{a is b} is \texttt{True}.
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.40\textwidth}
-      \lectureimage[2.55in]{alias-reference-diagram.png}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{A Reliable Tracing Procedure}
-  For each statement involving a list:
-  \begin{enumerate}
-    \item Identify the object or value produced by the right-hand side.
-    \item Determine whether the statement creates a new object, a new alias, or a mutation.
-    \item Update the name-to-object bindings.
-    \item Update the state of any mutated object.
-    \item If a function is called, add its parameter bindings to the same object diagram.
-  \end{enumerate}
-
-  \begin{keyidea}
-    Track \textbf{bindings} and \textbf{object state} separately.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Warm-Up: Predict Before Running}
-  \begin{block}{Code}
-    \texttt{first = [2, 4, 6]}\\
-    \texttt{second = first}\\
-    \texttt{second[1] = 99}\\
-    \texttt{print(first)}\\
-    \texttt{print(second)}
-  \end{block}
-
-  \begin{activity}
-    Predict both printed lists. Draw the reference diagram before deciding.
-  \end{activity}
-\end{frame}
-
-\begin{frame}{Warm-Up: Reveal}
-  \begin{block}{Output}
-    \texttt{[2, 99, 6]}\\
-    \texttt{[2, 99, 6]}
-  \end{block}
-
-  \begin{itemize}
-    \item \texttt{second = first} created an alias, not a copy.
-    \item \texttt{second[1] = 99} mutated the shared list object.
-    \item The expression \texttt{first} observes that same mutated object.
-  \end{itemize}
-\end{frame}
-
-\sectionframe{Part 2: Functions Can Create Caller-Visible Side Effects}
-
-\begin{frame}{Prediction 1: A Function Mutates Its Parameter}
-  \begin{block}{Code}
-    \texttt{def zero\_first(values: list[int]) -> None:}\\
-    \hspace{0.18in}\texttt{values[0] = 0}\\[0.08in]
-    \texttt{scores = [8, 9, 10]}\\
-    \texttt{alias = scores}\\
-    \texttt{zero\_first(alias)}\\
-    \texttt{print(scores)}\\
-    \texttt{print(alias)}
-  \end{block}
-
-  \begin{activity}
-    Predict both outputs. At the indexed assignment, which names refer to the same list object?
-  \end{activity}
-\end{frame}
-
-\begin{frame}{Prediction 1: What Actually Happens}
-  During the function call:
-  \begin{center}
-    \texttt{scores} $\searrow$\qquad
-    \texttt{alias} $\rightarrow$ \boxed{[8, 9, 10]} $\leftarrow$ \texttt{values}
-  \end{center}
-
-  After \texttt{values[0] = 0}:
-  \begin{center}
-    \boxed{[0, 9, 10]}
-  \end{center}
-
-  \begin{block}{Output}
-    \texttt{[0, 9, 10]}\\
-    \texttt{[0, 9, 10]}
-  \end{block}
-
-  \begin{keyidea}
-    Parameter binding can introduce a temporary alias to a caller-owned mutable object.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{The Unexpected Result Is a Side Effect}
-  \begin{cpdefinition}
-    A \textbf{side effect} is an observable change to program state that occurs in addition to producing a return value.
-  \end{cpdefinition}
-
-  In the previous function:
-  \begin{itemize}
-    \item the function returns \texttt{None};
-    \item the caller's list changes anyway;
-    \item the change remains after the call frame ends.
-  \end{itemize}
-
-  \begin{alertblock}{Important}
-    The problem is not that mutation occurred. The problem is that mutation may be surprising if the function's purpose does not clearly promise it.
-  \end{alertblock}
-\end{frame}
-
-\begin{frame}{Repair Strategy 1: Copy Before Calling}
-  \begin{block}{Code}
-    \texttt{scores = [8, 9, 10]}\\
-    \texttt{working = scores.copy()}\\
-    \texttt{zero\_first(working)}
-  \end{block}
-
-  \begin{center}
-    \texttt{scores} $\rightarrow$ \boxed{[8, 9, 10]}\\[0.12in]
-    \texttt{working} $\rightarrow$ \boxed{[0, 9, 10]}
-  \end{center}
-
-  \begin{keyidea}
-    Copying breaks the alias before mutation occurs.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Repair Strategy 2: Copy Inside the Function}
-  \begin{block}{Code}
-    \texttt{def with\_zero\_first(values: list[int]) -> list[int]:}\\
-    \hspace{0.18in}\texttt{result = values.copy()}\\
-    \hspace{0.18in}\texttt{result[0] = 0}\\
-    \hspace{0.18in}\texttt{return result}
-  \end{block}
-
-  \begin{itemize}
-    \item The parameter \texttt{values} still aliases the caller's list.
-    \item \texttt{result} refers to a distinct list object.
-    \item Mutation is applied only to the new list.
-  \end{itemize}
-
-  \begin{keyidea}
-    A ``return a modified copy'' design makes the state change explicit in the returned value.
-  \end{keyidea}
-\end{frame}
-
-\sectionframe{Part 3: Harder Aliasing Traces}
-
-\begin{frame}{Prediction 2: A Local Alias Is Still an Alias}
-  \begin{block}{Code}
-    \texttt{def adjust(values: list[int]) -> list[int]:}\\
-    \hspace{0.18in}\texttt{local = values}\\
-    \hspace{0.18in}\texttt{local[1] = local[1] + 10}\\
-    \hspace{0.18in}\texttt{return local}\\[0.08in]
-    \texttt{data = [1, 2, 3]}\\
-    \texttt{result = adjust(data)}\\
-    \texttt{result[-1] = 99}\\
-    \texttt{print(data)}\\
-    \texttt{print(result)}
-  \end{block}
-
-  \begin{activity}
-    Predict both outputs. Is \texttt{local = values} a copy operation?
-  \end{activity}
-\end{frame}
-
-\begin{frame}{Prediction 2: Reveal and Diagnose}
-  \begin{block}{Output}
-    \texttt{[1, 12, 99]}\\
-    \texttt{[1, 12, 99]}
-  \end{block}
-
-  \begin{itemize}
-    \item \texttt{local = values} creates another name for the same object.
-    \item The function mutates that shared object at index 1.
-    \item Returning \texttt{local} returns a reference to the same list.
-    \item Therefore \texttt{result} becomes yet another alias.
-    \item Mutating \texttt{result[-1]} also changes what \texttt{data} observes.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Fix Prediction 2}
-  Replace the aliasing assignment:
-  \begin{block}{Problem}
-    \texttt{local = values}
-  \end{block}
-
-  with an independent copy:
-  \begin{block}{Repair}
-    \texttt{local = values.copy()}
-  \end{block}
-
-  Then:
-  \begin{center}
-    \texttt{data} $\rightarrow$ \boxed{[1, 2, 3]}\\[0.12in]
-    \texttt{result} $\rightarrow$ \boxed{[1, 12, 99]}
-  \end{center}
-\end{frame}
-
-\begin{frame}{Prediction 3: Concatenation Can Break an Alias}
-  \begin{block}{Code}
-    \texttt{def add\_marker(values: list[int]) -> list[int]:}\\
-    \hspace{0.18in}\texttt{temp = values}\\
-    \hspace{0.18in}\texttt{temp = temp + [0]}\\
-    \hspace{0.18in}\texttt{temp[0] = 9}\\
-    \hspace{0.18in}\texttt{return temp}\\[0.08in]
-    \texttt{original = [1, 2, 3]}\\
-    \texttt{changed = add\_marker(original)}\\
-    \texttt{print(original)}\\
-    \texttt{print(changed)}
-  \end{block}
-
-  \begin{activity}
-    Does \texttt{original} change? Identify the exact statement where the reference relationship changes.
-  \end{activity}
-\end{frame}
-
-\begin{frame}{Prediction 3: Reveal}
-  \begin{block}{Output}
-    \texttt{[1, 2, 3]}\\
-    \texttt{[9, 2, 3, 0]}
-  \end{block}
-
-  \begin{itemize}
-    \item Initially, \texttt{temp} aliases \texttt{values}.
-    \item \texttt{temp + [0]} constructs a new list.
-    \item The assignment then rebinds \texttt{temp} to that new list.
-    \item The later indexed mutation affects only the new list.
-  \end{itemize}
-
-  \begin{keyidea}
-    An alias can cease to be an alias when one name is rebound to a different object.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Compare: \texttt{+} Versus \texttt{extend}}
-  \begin{center}
-    \renewcommand{\arraystretch}{1.35}
-    \begin{tabular}{l|l|l}
-      \textbf{Operation} & \textbf{Creates new list?} & \textbf{Mutates original?} \\\hline
-      \texttt{new = values + [0]} & yes & no \\
-      \texttt{values.extend([0])} & no & yes
-    \end{tabular}
-  \end{center}
-
-  \begin{alertblock}{Tracing consequence}
-    With aliases, \texttt{extend} is visible through every reference to that list. Concatenation produces a separate list object.
-  \end{alertblock}
-\end{frame}
-
-\begin{frame}{Prediction 4: Copy, Then Mutate}
-  \begin{block}{Code}
-    \texttt{def adjust\_copy(values: list[int]) -> list[int]:}\\
-    \hspace{0.18in}\texttt{result = values[:]}\\
-    \hspace{0.18in}\texttt{result[0] = 50}\\
-    \hspace{0.18in}\texttt{return result}\\[0.08in]
-    \texttt{a = [5, 6, 7]}\\
-    \texttt{b = a}\\
-    \texttt{c = adjust\_copy(b)}\\
-    \texttt{b[1] = 60}
-  \end{block}
-
-  \begin{activity}
-    Predict the final values observed through \texttt{a}, \texttt{b}, and \texttt{c}.
-  \end{activity}
-\end{frame}
-
-\begin{frame}{Prediction 4: Reveal}
-  \begin{center}
-    \renewcommand{\arraystretch}{1.35}
-    \begin{tabular}{l|l|l}
-      \textbf{Name} & \textbf{Final value observed} & \textbf{Object} \\\hline
-      \texttt{a} & \texttt{[5, 60, 7]} & L1 \\
-      \texttt{b} & \texttt{[5, 60, 7]} & L1 \\
-      \texttt{c} & \texttt{[50, 6, 7]} & L2
-    \end{tabular}
-  \end{center}
-
-  \begin{keyidea}
-    The copy separates \texttt{c} from the aliased pair \texttt{a}/\texttt{b}; it does not retroactively remove aliasing between \texttt{a} and \texttt{b}.
-  \end{keyidea}
-\end{frame}
-
-\sectionframe{Part 4: Techniques for Avoiding Unintended Shared Mutation}
-
-\begin{frame}{Several Ways to Create an Independent List}
-  For the flat lists of primitive values used in this unit, each expression below creates a distinct list object:
-  \begin{block}{Examples}
-    \texttt{copy1 = original.copy()}\\
-    \texttt{copy2 = original[:]}\\
-    \texttt{copy3 = list(original)}
-  \end{block}
-
-  For a known fixed structure, explicit recreation is also possible:
-  \begin{block}{Explicit recreation}
-    \texttt{copy4 = [original[0], original[1], original[2]]}
-  \end{block}
-\end{frame}
-
-\begin{frame}{Mental Model: Copying Breaks the Shared Reference}
+\begin{frame}[fragile]{Warm-Up: The Alias Changes Halfway Through}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.48\textwidth}
-      \begin{block}{Before copy}
-        \texttt{a} $\searrow$\\
-        \hspace{0.55in}\boxed{[3, 4, 5]}\\[-0.02in]
-        \texttt{b} $\nearrow$
-      \end{block}
-
-      \begin{block}{After \texttt{b = a.copy()}}
-        \texttt{a} $\rightarrow$ \boxed{[3, 4, 5]}\\
-        \texttt{b} $\rightarrow$ \boxed{[3, 4, 5]}
+      \begin{block}{Code}
+\begin{verbatim}
+tray = [3, 6, 9]
+saved = tray
+tray = tray + [12]
+saved.pop(0)
+tray[1] = saved[1]
+print(tray)
+print(saved)
+\end{verbatim}
       \end{block}
     \end{column}
-    \begin{column}{0.44\textwidth}
-      \lectureimage[2.7in]{copy-breaks-alias.png}
+    \begin{column}{0.47\textwidth}
+      \begin{activity}
+        Predict both outputs. At which line do \texttt{tray} and \texttt{saved} stop sharing a list?
+      \end{activity}
+      \begin{itemize}
+        \item Draw a new box for concatenation.
+        \item Recompute indexes after \texttt{pop(0)}.
+        \item Read the right-hand side before replacing an element.
+      \end{itemize}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Technique 1: \texttt{list.copy()}}
-  \begin{block}{Code}
-    \texttt{original = [10, 20, 30]}\\
-    \texttt{working = original.copy()}\\
-    \texttt{working[0] = 99}
-  \end{block}
-
-  \begin{block}{Result}
-    \texttt{original == [10, 20, 30]}\\
-    \texttt{working == [99, 20, 30]}
-  \end{block}
-
-  \begin{keyidea}
-    \texttt{copy()} directly communicates the programmer's intent to create another list object.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Technique 2: Full Slicing}
-  \begin{block}{Code}
-    \texttt{original = [10, 20, 30]}\\
-    \texttt{working = original[:]}\\
-    \texttt{working[-1] = 0}
-  \end{block}
-
-  A full slice selects all elements and constructs a new list.
-
-  \begin{block}{Result}
-    \texttt{original == [10, 20, 30]}\\
-    \texttt{working == [10, 20, 0]}
-  \end{block}
-\end{frame}
-
-\begin{frame}{Technique 3: \texttt{list(original)}}
-  \begin{block}{Code}
-    \texttt{original = [1, 2, 3]}\\
-    \texttt{working = list(original)}\\
-    \texttt{working.remove(2)}
-  \end{block}
-
-  \begin{itemize}
-    \item \texttt{list(original)} constructs a new list from the supplied sequence.
-    \item The new list has equal contents initially but distinct identity.
-  \end{itemize}
-
-  \begin{block}{Identity check}
-    \texttt{working == original} is initially \texttt{True}.\\
-    \texttt{working is original} is \texttt{False}.
-  \end{block}
-\end{frame}
-
-\begin{frame}{Technique 4: Explicit Reconstruction}
-  When the structure is small and fixed, the new value can be written explicitly.
-
-  \begin{block}{Code}
-    \texttt{point = [4, 7, 9]}\\
-    \texttt{changed = [point[0], 100, point[2]]}
-  \end{block}
-
-  \begin{itemize}
-    \item \texttt{point} is unchanged.
-    \item \texttt{changed} is a new list with the desired contents.
-    \item The intended change is represented as construction, not mutation.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Where Should the Copy Happen?}
-  There are two legitimate designs:
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Caller protects itself}
-        \texttt{working = data.copy()}\\
-        \texttt{mutate(working)}
-      \end{block}
-      Useful when the called function is intentionally mutating.
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Function protects caller}
-        \texttt{def transformed(data):}\\
-        \hspace{0.14in}\texttt{result = data.copy()}\\
-        \hspace{0.14in}\texttt{...}\\
-        \hspace{0.14in}\texttt{return result}
-      \end{block}
-      Useful when the function promises not to modify its argument.
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\sectionframe{Part 5: Mutation Is Not Inherently Bad}
-
-\begin{frame}{Intentional Mutation Is a Valid Design Choice}
-  \begin{keyidea}
-    Mutation is appropriate when changing an existing object is the intended behavior of the operation.
-  \end{keyidea}
-
-  Examples already used in this unit:
-  \begin{itemize}
-    \item \texttt{append} intentionally grows a list;
-    \item \texttt{remove} intentionally deletes an element;
-    \item \texttt{reverse} intentionally changes list order;
-    \item indexed assignment intentionally replaces an element.
-  \end{itemize}
-
-  The important question is whether that state change is part of the function's clear contract.
-\end{frame}
-
-\begin{frame}{Intentional Example: Swap the Endpoints}
-  \begin{block}{Code}
-    \texttt{def swap\_ends(values: list[int]) -> None:}\\
-    \hspace{0.18in}\texttt{first = values[0]}\\
-    \hspace{0.18in}\texttt{values[0] = values[-1]}\\
-    \hspace{0.18in}\texttt{values[-1] = first}
-  \end{block}
-
-  \begin{block}{Use}
-    \texttt{numbers = [10, 20, 30, 40]}\\
-    \texttt{swap\_ends(numbers)}
-  \end{block}
-
-  After the call, \texttt{numbers} is intentionally \texttt{[40, 20, 30, 10]}.
-\end{frame}
-
-\begin{frame}{Why a \texttt{None} Return Can Be Appropriate}
-  For a function whose primary purpose is mutation:
-  \begin{itemize}
-    \item the important observable result is the changed object;
-    \item returning \texttt{None} emphasizes that the function acts through a side effect;
-    \item the caller should not expect a separate transformed list.
-  \end{itemize}
-
-  \begin{block}{Contrast}
-    \texttt{swap\_ends(values) -> None} \hfill mutates supplied list\\
-    \texttt{swapped\_ends(values) -> list[int]} \hfill returns a new list
-  \end{block}
-\end{frame}
-
-\begin{frame}{Two Clear Interface Designs}
+\begin{frame}{Warm-Up: Keep Bindings and Contents Separate}
   \begin{center}
-    \renewcommand{\arraystretch}{1.35}
-    \begin{tabular}{l|l|l}
-      \textbf{Design} & \textbf{Argument} & \textbf{Returned value} \\\hline
-      Mutating operation & may change & often \texttt{None} \\
-      Transform-and-return & unchanged & new value/object
+    \small
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{l|l|l|l}
+      \textbf{After statement} & \textbf{Bindings} & \textbf{L1} & \textbf{L2} \\\hline
+      \texttt{saved = tray} & \texttt{tray, saved -> L1} & \texttt{[3, 6, 9]} & --- \\
+      \texttt{tray = tray + [12]} & \texttt{tray -> L2; saved -> L1} & \texttt{[3, 6, 9]} & \texttt{[3, 6, 9, 12]} \\
+      \texttt{saved.pop(0)} & unchanged & \texttt{[6, 9]} & \texttt{[3, 6, 9, 12]} \\
+      \texttt{tray[1] = saved[1]} & unchanged & \texttt{[6, 9]} & \texttt{[3, 9, 9, 12]}
     \end{tabular}
   \end{center}
-
-  \begin{alertblock}{Avoid ambiguity}
-    A function is easier to reason about when its name, purpose statement, tests, and implementation agree about whether mutation is expected.
-  \end{alertblock}
+  \begin{block}{Output}
+    \texttt{[3, 9, 9, 12]}\\
+    \texttt{[6, 9]}
+  \end{block}
+  After the removal, \texttt{saved[1]} reads \texttt{9} from L1. The assignment writes that value into index 1 of L2.
 \end{frame}
 
-\sectionframe{Part 6: Simulated Mutation for Immutable Sequences}
-
-\begin{frame}{Strings Cannot Be Mutated In Place}
-  \begin{block}{Invalid code}
-    \texttt{text = "cat"}\\
-    \texttt{text[0] = "b"}
-  \end{block}
-
-  Python raises a \texttt{TypeError} because strings are immutable.
-
+\begin{frame}{Picture the Moment a Name Moves}
+  \begin{center}
+    \resizebox{0.94\linewidth}{!}{\warmupdiagram}
+  \end{center}
   \begin{keyidea}
-    To represent a changed string, construct a new string and bind a name to it.
+    Rebinding \texttt{tray} leaves \texttt{saved} pointing to L1. Later operations must follow the arrows that exist \emph{at that time}.
   \end{keyidea}
 \end{frame}
 
-\begin{frame}{Simulated String Mutation}
-  \begin{block}{Construct a new string}
-    \texttt{text = "cat"}\\
-    \texttt{changed = "b" + text[1:]}
-  \end{block}
+\sectionframe{Part 1: Mutation, Rebinding, and Return}
 
-  Now:
+\begin{frame}[fragile]{Trace 1: Mutate First, Then Rebind a Parameter}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.57\textwidth}
+      \begin{block}{Code}
+\begin{verbatim}
+def tag(values: list[int]) -> list[int]:
+    values.append(4)
+    values = values + [5]
+    values[0] = 0
+    return values
+
+batch = [7, 8]
+watch = batch
+tagged = tag(batch)
+print(batch)
+print(tagged)
+\end{verbatim}
+      \end{block}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \begin{activity}
+        Predict both outputs and \texttt{watch is tagged}.
+
+        Which mutation reaches the caller's original list? Which reaches only the returned list?
+      \end{activity}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Trace 1: A Function Can Affect Two Different Lists}
   \begin{center}
-    \texttt{text} $\rightarrow$ \boxed{\texttt{"cat"}}\\[0.10in]
-    \texttt{changed} $\rightarrow$ \boxed{\texttt{"bat"}}
+    \small
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l|l}
+      \textbf{Inside \texttt{tag}} & \textbf{Parameter} & \textbf{L1} & \textbf{L2} \\\hline
+      enter call & \texttt{values -> L1} & \texttt{[7, 8]} & --- \\
+      \texttt{values.append(4)} & \texttt{values -> L1} & \texttt{[7, 8, 4]} & --- \\
+      \texttt{values = values + [5]} & \texttt{values -> L2} & \texttt{[7, 8, 4]} & \texttt{[7, 8, 4, 5]} \\
+      \texttt{values[0] = 0} & \texttt{values -> L2} & \texttt{[7, 8, 4]} & \texttt{[0, 8, 4, 5]}
+    \end{tabular}
   \end{center}
-
-  Reusing the same variable name is also possible:
-  \begin{block}{Rebinding}
-    \texttt{text = "b" + text[1:]}
+  \begin{block}{Output and identity}
+    \texttt{batch: [7, 8, 4]}\qquad \texttt{tagged: [0, 8, 4, 5]}\\
+    \texttt{watch is tagged} is \texttt{False}.
   \end{block}
-
-  This is construction plus rebinding, not mutation of the original string.
+  \texttt{batch} and \texttt{watch} remain bound to L1 throughout the call.
 \end{frame}
 
-\begin{frame}{Tuples Are Immutable Sequences}
-  \begin{block}{Example}
-    \texttt{point = (10, 20, 30)}
-  \end{block}
-
-  Tuples support familiar sequence operations:
-  \begin{itemize}
-    \item indexing: \texttt{point[0]};
-    \item negative indexing: \texttt{point[-1]};
-    \item slicing: \texttt{point[1:]};
-    \item length and membership checks.
-  \end{itemize}
-
-  But indexed assignment is not permitted:
-  \begin{block}{Invalid}
-    \texttt{point[1] = 99}
-  \end{block}
+\begin{frame}{Trace 1: Just Before the Return}
+  \begin{center}
+    \resizebox{0.90\linewidth}{!}{\parameterdiagram}
+  \end{center}
+  \begin{keyidea}
+    Moving the local parameter's arrow does not move the caller's arrows. The earlier append has already changed L1.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Simulated Tuple Mutation}
-  Suppose we want to replace the middle element:
-  \begin{block}{Construct a new tuple}
-    \texttt{point = (10, 20, 30)}\\
-    \texttt{changed = point[:1] + (99,) + point[2:]}
+\begin{frame}[fragile]{Quick Check: What If We Ignore the Return?}
+  Use the same \texttt{tag} function with a fresh list.
+  \begin{block}{Caller code}
+\begin{verbatim}
+batch = [7, 8]
+tag(batch)
+print(batch)
+\end{verbatim}
   \end{block}
-
-  \begin{itemize}
-    \item \texttt{point} remains \texttt{(10, 20, 30)}.
-    \item \texttt{changed} is \texttt{(10, 99, 30)}.
-    \item \texttt{(99,)} is a one-element tuple; the comma is required.
-  \end{itemize}
-\end{frame}
-
-\begin{frame}{Returning a Changed Tuple}
-  \begin{block}{Code}
-    \texttt{def replace\_middle(values: tuple[int, int, int],}\\
-    \hspace{1.22in}\texttt{new\_value: int) -> tuple[int, int, int]:}\\
-    \hspace{0.18in}\texttt{return values[:1] + (new\_value,) + values[2:]}
-  \end{block}
-
-  \begin{itemize}
-    \item The input tuple is never mutated.
-    \item The function returns a different tuple containing the requested change.
-    \item This is the immutable analogue of ``copy, change, return.''
-  \end{itemize}
-\end{frame}
-
-\sectionframe{Part 7: Integrated Tracing Challenge}
-
-\begin{frame}{Integrated Prediction}
-  \begin{block}{Code}
-    \texttt{def bump\_first(values: list[int]) -> None:}\\
-    \hspace{0.18in}\texttt{values[0] = values[0] + 1}\\[0.06in]
-    \texttt{def adjusted(values: list[int]) -> list[int]:}\\
-    \hspace{0.18in}\texttt{result = values[:]}\\
-    \hspace{0.18in}\texttt{result[-1] = 0}\\
-    \hspace{0.18in}\texttt{bump\_first(result)}\\
-    \hspace{0.18in}\texttt{return result}\\[0.08in]
-    \texttt{a = [5, 6, 7]}\\
-    \texttt{b = a}\\
-    \texttt{c = adjusted(b)}\\
-    \texttt{b[1] = 9}
-  \end{block}
-
   \begin{activity}
-    Predict the final values of \texttt{a}, \texttt{b}, and \texttt{c}. Draw object labels before tracing statements.
+    Does ignoring the returned value prevent the append? Predict the output before revealing it.
+  \end{activity}
+  \pause
+  \begin{block}{Reveal}
+    \texttt{[7, 8, 4]} --- the append happened during the call. The caller does not save a reference to the returned list.
+  \end{block}
+\end{frame}
+
+\sectionframe{Part 2: Two Parameters, One Possible List}
+
+\begin{frame}[fragile]{Trace 2: Start with Different Arguments}
+  \begin{block}{Code}
+\begin{verbatim}
+def transfer(source: list[int], target: list[int]) -> int:
+    moved = source.pop(0)
+    target.append(moved + 10)
+    return moved
+
+left = [2, 5]
+right = [8]
+number = transfer(left, right)
+\end{verbatim}
+  \end{block}
+  \begin{activity}
+    Predict \texttt{left}, \texttt{right}, and \texttt{number}. Record the list contents immediately after each function statement.
   \end{activity}
 \end{frame}
 
-\begin{frame}{Integrated Trace: Object Structure}
-  After \texttt{b = a}:
+\begin{frame}{Trace 2: Different Arguments, Different Objects}
   \begin{center}
-    \texttt{a} $\searrow$\qquad \boxed{L1 = [5, 6, 7]} \qquad$\swarrow$ \texttt{b}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l|l|l|l}
+      \textbf{Checkpoint} & \textbf{L1: \texttt{left/source}} & \textbf{L2: \texttt{right/target}} & \texttt{moved} \\\hline
+      entry & \texttt{[2, 5]} & \texttt{[8]} & --- \\
+      after \texttt{pop(0)} & \texttt{[5]} & \texttt{[8]} & \texttt{2} \\
+      after \texttt{append} & \texttt{[5]} & \texttt{[8, 12]} & \texttt{2}
+    \end{tabular}
   \end{center}
-
-  Inside \texttt{adjusted}:
-  \begin{itemize}
-    \item parameter \texttt{values} aliases L1;
-    \item \texttt{result = values[:]} creates L2;
-    \item \texttt{result[-1] = 0} changes only L2;
-    \item \texttt{bump\_first(result)} temporarily aliases L2 through its parameter and mutates L2.
-  \end{itemize}
-
-  \begin{center}
-    L1 = \texttt{[5, 6, 7]} \qquad L2 = \texttt{[6, 6, 0]}
-  \end{center}
-\end{frame}
-
-\begin{frame}{Integrated Trace: Final Result}
-  After \texttt{c = adjusted(b)}:
-  \begin{center}
-    \texttt{a, b} $\rightarrow$ L1 = \texttt{[5, 6, 7]}\\[0.10in]
-    \texttt{c} $\rightarrow$ L2 = \texttt{[6, 6, 0]}
-  \end{center}
-
-  Then \texttt{b[1] = 9} mutates L1.
-
-  \begin{block}{Final values}
-    \texttt{a == [5, 9, 7]}\\
-    \texttt{b == [5, 9, 7]}\\
-    \texttt{c == [6, 6, 0]}
+  \begin{block}{After the call}
+    \texttt{left == [5]}\qquad \texttt{right == [8, 12]}\qquad \texttt{number == 2}
   \end{block}
-\end{frame}
-
-\begin{frame}{Debugging Unexpected Mutation}
-  When a list changes unexpectedly, ask these questions in order:
-  \begin{enumerate}
-    \item Which statement first changed the object's state?
-    \item Which names referred to that object at that moment?
-    \item Did a function parameter alias a caller-owned list?
-    \item Was the mutation intentional according to the function's contract?
-    \item If not, where should an independent object have been created?
-  \end{enumerate}
-
   \begin{keyidea}
-    Locate the first unintended mutation, not merely the final surprising print statement.
+    A call can produce a returned value and also mutate its arguments. Track both results.
   \end{keyidea}
 \end{frame}
 
-\begin{frame}{Common Incorrect Mental Models}
+\begin{frame}[fragile]{Trace 3: Pass the Same Argument Twice}
+  The function body is unchanged.
+  \begin{block}{Fresh caller code}
+\begin{verbatim}
+shared = [2, 5]
+number = transfer(shared, shared)
+print(shared)
+print(number)
+\end{verbatim}
+  \end{block}
+  \begin{activity}
+    Draw \texttt{shared}, \texttt{source}, and \texttt{target} at function entry. How many list objects exist? Trace the statements in order.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Trace 3: Both Parameters Observe Each Mutation}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l|l|l}
+      \textbf{Checkpoint} & \textbf{L1: \texttt{shared/source/target}} & \texttt{moved} \\\hline
+      entry & \texttt{[2, 5]} & --- \\
+      \texttt{moved = source.pop(0)} & \texttt{[5]} & \texttt{2} \\
+      \texttt{target.append(moved + 10)} & \texttt{[5, 12]} & \texttt{2}
+    \end{tabular}
+  \end{center}
+  \begin{block}{Output}
+    \texttt{[5, 12]}\\
+    \texttt{2}
+  \end{block}
+  The append acts on the list \emph{after} the removal. Parameter names do not guarantee distinct objects.
+\end{frame}
+
+\begin{frame}{Compare the Two Call Diagrams}
+  \begin{center}
+    \resizebox{0.94\linewidth}{!}{\twoparameterdiagram}
+  \end{center}
+  \begin{activity}
+    At function entry, which arrows would you draw for \texttt{transfer(shared, shared.copy())}? Which list would \texttt{shared} observe afterward?
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Quick Check: A Copy as the Second Argument}
+  Start again with \texttt{shared = [2, 5]}.
   \begin{itemize}
-    \item \textbf{Incorrect:} ``Assignment copies the list.''\\
-      \textbf{Correct:} ordinary assignment copies the reference/binding relationship.
-    \item \textbf{Incorrect:} ``The function changed the variable in the caller.''\\
-      \textbf{Correct:} the function mutated an object that both caller and parameter referenced.
-    \item \textbf{Incorrect:} ``Returning the list makes a copy.''\\
-      \textbf{Correct:} returning an existing list returns a reference to that object.
-    \item \textbf{Incorrect:} ``Every operation that looks like a change is mutation.''\\
-      \textbf{Correct:} strings and tuples require construction of new objects.
+    \item \texttt{shared.copy()} is evaluated before entering \texttt{transfer}.
+    \item \texttt{source} refers to L1, the original list.
+    \item \texttt{target} refers to L2, the new list containing \texttt{[2, 5]}.
+    \item The removal changes L1 to \texttt{[5]}.
+    \item The append changes L2 to \texttt{[2, 5, 12]}.
+  \end{itemize}
+  \begin{block}{Caller-visible results}
+    \texttt{shared == [5]} and the returned integer is \texttt{2}.\\
+    The caller has not saved a reference to the copied list.
+  \end{block}
+\end{frame}
+
+\sectionframe{Part 3: Timing and Returned Values}
+
+\begin{frame}[fragile]{Trace 4: The Copy Happens Too Late}
+  \textbf{Promise:} Return a preview; leave \texttt{scores} unchanged.
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.61\textwidth}
+  \begin{block}{Code}
+\begin{verbatim}
+def preview(scores: list[int]) -> list[int]:
+    working = scores
+    working.reverse()
+    working = working.copy()
+    working[0] = 0
+    return working
+
+scores = [10, 20, 30]
+draft = preview(scores)
+\end{verbatim}
+  \end{block}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+  \begin{activity}
+    Predict both final lists. Identify the first line that breaks the promise. Which statement should move?
+  \end{activity}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Trace 4: A Copy Is a Snapshot of the Current State}
+  \begin{center}
+    \resizebox{0.88\linewidth}{!}{\copytimingdiagram}
+  \end{center}
+  \begin{block}{Actual result}
+    \texttt{scores == [30, 20, 10]}\qquad \texttt{draft == [0, 20, 10]}
+  \end{block}
+  The copy isolates \textbf{later} mutations. It cannot undo a mutation that already reached the original list.
+\end{frame}
+
+\begin{frame}[fragile]{Repair the Promise: Copy Before the First Mutation}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.57\textwidth}
+      \begin{block}{Repaired function}
+\begin{verbatim}
+def preview(scores: list[int]) -> list[int]:
+    working = scores.copy()
+    working.reverse()
+    working[0] = 0
+    return working
+\end{verbatim}
+      \end{block}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      \begin{block}{Fresh input: \texttt{[10, 20, 30]}}
+        \texttt{scores: [10, 20, 30]}\\[0.08in]
+        \texttt{draft: [0, 20, 10]}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \begin{activity}
+    Explain why both assignments to \texttt{working} in the original are replaced by one assignment here. Which object does \texttt{reverse()} change now?
+  \end{activity}
+\end{frame}
+
+\begin{frame}[fragile]{Trace 5: Use the Value Returned by a Mutation}
+  \begin{block}{Code}
+\begin{verbatim}
+queue = [4, 7, 9]
+watch = queue
+queue.append(queue.pop(0) + len(queue))
+print(queue)
+print(watch)
+\end{verbatim}
+  \end{block}
+  \begin{activity}
+    Trace the expression in order: \texttt{pop(0)}, then \texttt{len(queue)}, then addition, then \texttt{append}. What is the length when it is read?
+  \end{activity}
+  A single statement can contain more than one mutation. Record intermediate states inside the statement.
+\end{frame}
+
+\begin{frame}{Trace 5: Evaluate the Argument Before Appending}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l|l|l}
+      \textbf{Evaluation step} & \textbf{Value produced} & \textbf{Shared list} \\\hline
+      \texttt{queue.pop(0)} & \texttt{4} & \texttt{[7, 9]} \\
+      \texttt{len(queue)} & \texttt{2} & \texttt{[7, 9]} \\
+      \texttt{4 + 2} & \texttt{6} & \texttt{[7, 9]} \\
+      \texttt{queue.append(6)} & \texttt{None} & \texttt{[7, 9, 6]}
+    \end{tabular}
+  \end{center}
+  \begin{block}{Both outputs}
+    \texttt{[7, 9, 6]}\\
+    \texttt{[7, 9, 6]}
+  \end{block}
+  \texttt{watch} sees both mutations because its arrow still points to the same list.
+\end{frame}
+
+\begin{frame}[fragile]{Trace 6: Assigning a Method's Result}
+  \begin{block}{Code}
+\begin{verbatim}
+values = [6, 2, 8]
+watch = values
+values = values.reverse()
+print(values)
+print(watch)
+\end{verbatim}
+  \end{block}
+  \begin{activity}
+    Record two events for the third line: what \texttt{reverse()} does to the list, and what its returned value makes \texttt{values} refer to.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Trace 6: Mutation Happens Before the Assignment}
+  \begin{center}
+    \resizebox{0.90\linewidth}{!}{\nonereturndiagram}
+  \end{center}
+  \begin{block}{Output}
+    \texttt{None}\\
+    \texttt{[8, 2, 6]}
+  \end{block}
+  To keep \texttt{values} bound to the reversed list, use \texttt{values.reverse()} as a statement. To create a separate reversed list, use \texttt{values = values[::-1]}.
+\end{frame}
+
+\sectionframe{Part 4: An Integrated Trace with Two Calls}
+
+\begin{frame}[fragile]{Challenge Helper: A Mutation and a New List}
+  \begin{block}{Function used on the next slides}
+\begin{verbatim}
+def prepare(source: list[int], extra: int) -> list[int]:
+    removed = source.pop(0)
+    result = source.copy()
+    result.append(removed + extra)
+    return result
+\end{verbatim}
+  \end{block}
+  \begin{activity}
+    Before seeing the caller, identify which line changes \texttt{source}. Does the returned list contain the removed element, the remaining elements, or both in some form?
+  \end{activity}
+  Assume the supplied list is nonempty. The returned list contains the remaining elements followed by \texttt{removed + extra}.
+\end{frame}
+
+\begin{frame}[fragile]{Challenge Caller: Predict Before Seeing the Trace}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{block}{Code}
+\begin{verbatim}
+base = [3, 6, 9]
+watch = base
+first = prepare(base, 1)
+second = prepare(first, base[0])
+watch.append(second.pop())
+first[0] = base[-1]
+\end{verbatim}
+      \end{block}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{activity}
+        Work in pairs. Predict \texttt{base}, \texttt{watch}, \texttt{first}, and \texttt{second}.
+
+        Label each new list. Record the integer passed as \texttt{extra} in each call.
+      \end{activity}
+      Also predict \texttt{base is watch} and \texttt{first is second}.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Challenge: First Call}
+  At \texttt{first = prepare(base, 1)}, \texttt{source} refers to L1 and \texttt{extra} is \texttt{1}.
+  \begin{center}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l|l|l|l}
+      \textbf{Checkpoint} & \textbf{L1} & \textbf{L2} & \texttt{removed} \\\hline
+      entry & \texttt{[3, 6, 9]} & --- & --- \\
+      after \texttt{pop(0)} & \texttt{[6, 9]} & --- & \texttt{3} \\
+      after \texttt{copy()} & \texttt{[6, 9]} & \texttt{[6, 9]} & \texttt{3} \\
+      after \texttt{append} & \texttt{[6, 9]} & \texttt{[6, 9, 4]} & \texttt{3}
+    \end{tabular}
+  \end{center}
+  \begin{block}{Bindings after return}
+    \texttt{base, watch -> L1}\qquad \texttt{first -> L2}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Challenge: Second Call Uses the Current State}
+  At \texttt{second = prepare(first, base[0])}, \texttt{base[0]} is now \texttt{6}. The parameter \texttt{source} refers to L2.
+  \begin{center}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l|l|l|l}
+      \textbf{Checkpoint} & \textbf{L2} & \textbf{L3} & \texttt{removed} \\\hline
+      entry & \texttt{[6, 9, 4]} & --- & --- \\
+      after \texttt{pop(0)} & \texttt{[9, 4]} & --- & \texttt{6} \\
+      after \texttt{copy()} & \texttt{[9, 4]} & \texttt{[9, 4]} & \texttt{6} \\
+      after \texttt{append} & \texttt{[9, 4]} & \texttt{[9, 4, 12]} & \texttt{6}
+    \end{tabular}
+  \end{center}
+  \begin{block}{Bindings after return}
+    \texttt{base, watch -> L1}\qquad \texttt{first -> L2}\qquad \texttt{second -> L3}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Challenge: Finish the Last Two Statements}
+  \begin{center}
+    \resizebox{0.93\linewidth}{!}{\challengediagram}
+  \end{center}
+  \begin{itemize}
+    \item \texttt{watch.append(second.pop())}: remove \texttt{12} from L3, then append it to L1.
+    \item \texttt{first[0] = base[-1]}: read \texttt{12} from L1, then replace index 0 of L2.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Takeaways}
-  \begin{itemize}
-    \item Aliasing means multiple names refer to one object.
-    \item Mutation changes an existing object and is visible through all of its aliases.
-    \item Function parameters can alias mutable objects owned by the caller.
-    \item Unexpected shared mutation is a side effect worth diagnosing explicitly.
-    \item Use \texttt{copy()}, full slicing, \texttt{list(...)}, or explicit reconstruction when independent list state is required.
-    \item Intentional mutation is appropriate when it is part of the function's contract.
-    \item Strings and tuples are immutable; represent changes by constructing and rebinding new values.
-  \end{itemize}
+\begin{frame}{Challenge: Final Values and Identity}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.45}
+    \begin{tabular}{l|l|l}
+      \textbf{Name} & \textbf{List} & \textbf{Final contents} \\\hline
+      \texttt{base} & L1 & \texttt{[6, 9, 12]} \\
+      \texttt{watch} & L1 & \texttt{[6, 9, 12]} \\
+      \texttt{first} & L2 & \texttt{[12, 4]} \\
+      \texttt{second} & L3 & \texttt{[9, 4]}
+    \end{tabular}
+  \end{center}
+  \texttt{base is watch}: \texttt{True}.\qquad \texttt{first is second}: \texttt{False}.
+  \begin{activity}
+    Explain why the second call changes \texttt{first}, even though its returned value is assigned to \texttt{second}.
+  \end{activity}
+\end{frame}
 
+\begin{frame}[fragile]{Change the Contract: Preserve the Argument}
+  \begin{activity}
+    Rewrite \texttt{prepare} so it returns the remaining elements followed by \texttt{removed + extra}, but leaves the argument unchanged. Where must the copy happen?
+  \end{activity}
+  \pause
+  \begin{block}{One repair}
+\begin{verbatim}
+def prepare_copy(source: list[int], extra: int) -> list[int]:
+    result = source.copy()
+    removed = result.pop(0)
+    result.append(removed + extra)
+    return result
+\end{verbatim}
+  \end{block}
+  With \texttt{source = [3, 6, 9]} and \texttt{extra = 1}, the caller keeps \texttt{[3, 6, 9]} and receives \texttt{[6, 9, 4]}.
+\end{frame}
+
+\sectionframe{Part 5: Independent Practice}
+
+\begin{frame}[fragile]{Practice A: A Saved Value and a Snapshot}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{block}{Code}
+\begin{verbatim}
+items = [5, 10, 15, 20]
+watch = items
+saved = items[1]
+snapshot = items[1:]
+watch.pop(0)
+items[1] = saved + snapshot[0]
+snapshot.reverse()
+\end{verbatim}
+      \end{block}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{activity}
+        Predict \texttt{items}, \texttt{watch}, \texttt{saved}, and \texttt{snapshot}.
+
+        Explain which index 1 changes after the removal. Does \texttt{saved} change when the lists change?
+      \end{activity}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Practice A: Reveal}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l|l|l}
+      \textbf{Name} & \textbf{Final value} & \textbf{Reason} \\\hline
+      \texttt{items, watch} & \texttt{[10, 20, 20]} & same list; index 1 receives \texttt{10 + 10} \\
+      \texttt{saved} & \texttt{10} & integer read before the removal \\
+      \texttt{snapshot} & \texttt{[20, 15, 10]} & separate sliced list, then reversed
+    \end{tabular}
+  \end{center}
   \begin{keyidea}
-    When tracing mutable data, follow the objects first and the variable names second.
+    Saving an element reads its current value. Saving a slice creates a new list. Saving the list name creates an alias.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Practice B: Rebinding Before the Next Mutation}
+  \begin{block}{Code}
+\begin{verbatim}
+def revise(a: list[int], b: list[int]) -> list[int]:
+    a.append(b.pop())
+    b = b + [0]
+    b[0] = 99
+    return b
+
+data = [1, 2, 3]
+result = revise(data, data)
+\end{verbatim}
+  \end{block}
+  \begin{activity}
+    Predict \texttt{data}, \texttt{result}, and \texttt{data is result}. Record the state after \texttt{b.pop()} and again after \texttt{a.append(...)}.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Practice B: Reveal}
+  \begin{enumerate}
+    \item On entry, \texttt{a}, \texttt{b}, and \texttt{data} refer to L1 = \texttt{[1, 2, 3]}.
+    \item \texttt{b.pop()} removes and returns \texttt{3}; L1 becomes \texttt{[1, 2]}.
+    \item \texttt{a.append(3)} puts it back; L1 becomes \texttt{[1, 2, 3]}.
+    \item \texttt{b = b + [0]} creates L2 = \texttt{[1, 2, 3, 0]} and rebinds \texttt{b}.
+    \item \texttt{b[0] = 99} changes L2, which is returned.
+  \end{enumerate}
+  \begin{block}{Final result}
+    \texttt{data == [1, 2, 3]}\qquad \texttt{result == [99, 2, 3, 0]}\\
+    \texttt{data is result} is \texttt{False}.
+  \end{block}
+  L1 was mutated twice even though its final contents match its initial contents.
+\end{frame}
+
+\begin{frame}[fragile]{Exit Ticket: Explain Every Arrow}
+  \begin{block}{Code}
+\begin{verbatim}
+original = [4, 8]
+alias = original
+copy = original.copy()
+answer = alias.append(copy.pop())
+alias = copy
+alias[0] = 0
+\end{verbatim}
+  \end{block}
+  \begin{activity}
+    Give the final values of all four names. Which names share a list at the end? Identify one mutation and one rebinding, explaining their different effects.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Exit Ticket: Reveal}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l|l|l}
+      \textbf{Name} & \textbf{Refers to} & \textbf{Final value} \\\hline
+      \texttt{original} & L1 & \texttt{[4, 8, 8]} \\
+      \texttt{alias, copy} & L2 & \texttt{[0]} \\
+      \texttt{answer} & \texttt{None} & \texttt{None}
+    \end{tabular}
+  \end{center}
+  \begin{itemize}
+    \item \texttt{copy.pop()} removes \texttt{8} from L2; \texttt{append} adds it to L1 and returns \texttt{None}.
+    \item \texttt{alias = copy} moves one arrow from L1 to L2.
+    \item \texttt{alias[0] = 0} changes L2, visible through \texttt{copy} too.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{What a Complete Mutation Trace Shows}
+  \begin{itemize}
+    \item The current list object for each active name and parameter.
+    \item Intermediate contents after \emph{each} mutation, including inside expressions.
+    \item The returned value separately from any change to an argument.
+    \item A new box whenever slicing, copying, or concatenation creates a list.
+    \item A moved arrow whenever a name is rebound.
+    \item The exact first mutation that violates a function's promise.
+  \end{itemize}
+  \begin{keyidea}
+    Follow the current arrows, execute one step at a time, and place a protective copy before the first mutation that needs isolation.
   \end{keyidea}
 \end{frame}
 

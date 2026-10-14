@@ -1,0 +1,137 @@
+% Editable vector illustrations for Lecture 21. Loaded after TikZ and the theme.
+% Green arrows show references; gold arrows show progression through statements.
+% Boxes with L labels identify distinct list objects.
+\tikzset{
+  trace name/.style={font=\small\ttfamily, text=DeckInk},
+  trace label/.style={font=\small\bfseries, text=CalPolyGreen, align=center},
+  trace note/.style={font=\footnotesize, text=DeckMuted, align=center},
+  trace list/.style={draw=CalPolyGreen, fill=CalPolyMint, rounded corners=3pt,
+    minimum height=0.78cm, minimum width=3.0cm, font=\small\ttfamily, align=center},
+  trace copy/.style={trace list, draw=CalPolyGold, fill=CalPolyBeige},
+  trace third/.style={trace list, draw=CalPolySage, fill=DeckSoft},
+  trace arrow/.style={-{Latex[length=2mm]}, thick, draw=CalPolyGreen},
+  trace time/.style={-{Latex[length=2mm]}, thick, draw=CalPolyGold},
+}
+
+\newcommand{\warmupdiagram}{%
+\begin{tikzpicture}
+  \node[trace label] at (2.5,3.1) {After saved = tray};
+  \node[trace name] (tray1) at (0.5,2.1) {tray};
+  \node[trace name] (saved1) at (0.5,0.9) {saved};
+  \node[trace list] (old1) at (3.4,1.5) {L1: [3, 6, 9]};
+  \draw[trace arrow] (tray1.east) -- (old1.west);
+  \draw[trace arrow] (saved1.east) -- (old1.west);
+  \node[trace label] at (9.0,3.1) {After tray = tray + [12]};
+  \node[trace name] (tray2) at (6.5,2.2) {tray};
+  \node[trace name] (saved2) at (6.5,0.8) {saved};
+  \node[trace copy, minimum width=3.8cm] (new2) at (10,2.2) {L2: [3, 6, 9, 12]};
+  \node[trace list, minimum width=3.8cm] (old2) at (10,0.8) {L1: [3, 6, 9]};
+  \draw[trace arrow] (tray2) -- (new2);
+  \draw[trace arrow] (saved2) -- (old2);
+  \draw[trace time] (5.1,1.5) -- (5.8,1.5);
+  \node[trace note] at (3.0,-0.1) {One list, two names};
+  \node[trace note] at (9.0,-0.1) {A new list; only the tray arrow moves};
+\end{tikzpicture}%
+}
+
+\newcommand{\parameterdiagram}{%
+\begin{tikzpicture}
+  \draw[draw=CalPolySage, dashed, rounded corners] (-0.5,0.2) rectangle (4.4,3.2);
+  \draw[draw=CalPolySage, dashed, rounded corners] (5.2,0.2) rectangle (10.3,3.2);
+  \node[trace label] at (1.95,2.85) {Caller bindings};
+  \node[trace label] at (7.75,2.85) {Local binding in tag};
+  \node[trace name] (batch) at (0.3,2.0) {batch};
+  \node[trace name] (watch) at (3.6,2.0) {watch};
+  \node[trace list, minimum width=3.7cm] (l1) at (1.95,0.9) {L1: [7, 8, 4]};
+  \draw[trace arrow] (batch.south) -- (l1.north west);
+  \draw[trace arrow] (watch.south) -- (l1.north east);
+  \node[trace name] (values) at (7.75,2.0) {values};
+  \node[trace copy, minimum width=4.3cm] (l2) at (7.75,0.9) {L2: [0, 8, 4, 5]};
+  \draw[trace arrow] (values) -- (l2);
+  \node[trace note] at (1.95,-0.3) {append(4) changed this list};
+  \node[trace note] at (7.75,-0.3) {The return will give tagged this reference};
+\end{tikzpicture}%
+}
+
+\newcommand{\twoparameterdiagram}{%
+\begin{tikzpicture}
+  \node[trace label] at (2.8,3.1) {transfer(left, right): entry};
+  \node[trace name] (left) at (0.6,2.2) {left};
+  \node[trace name] (source1) at (0.6,1.5) {source};
+  \node[trace list, minimum width=2.8cm] (l1) at (3.8,1.85) {L1: [2, 5]};
+  \draw[trace arrow] (left.east) -- (l1.west);
+  \draw[trace arrow] (source1.east) -- (l1.west);
+  \node[trace name] (right) at (0.6,0.3) {right};
+  \node[trace name] (target1) at (0.6,-0.4) {target};
+  \node[trace copy, minimum width=2.8cm] (l2) at (3.8,-0.05) {L2: [8]};
+  \draw[trace arrow] (right.east) -- (l2.west);
+  \draw[trace arrow] (target1.east) -- (l2.west);
+  \node[trace label] at (9.0,3.1) {transfer(shared, shared): entry};
+  \node[trace name] (shared) at (7.0,2.2) {shared};
+  \node[trace name] (source2) at (7.0,1.0) {source};
+  \node[trace name] (target2) at (7.0,-0.2) {target};
+  \node[trace list, minimum width=2.8cm] (same) at (10.3,1.0) {L1: [2, 5]};
+  \draw[trace arrow] (shared.east) -- (same.west);
+  \draw[trace arrow] (source2.east) -- (same.west);
+  \draw[trace arrow] (target2.east) -- (same.west);
+\end{tikzpicture}%
+}
+
+\newcommand{\copytimingdiagram}{%
+\begin{tikzpicture}
+  \node[trace label] at (1.6,3.0) {1. Alias};
+  \node[trace label] at (6.1,3.0) {2. Reverse};
+  \node[trace label] at (10.6,3.0) {3. Copy, then replace};
+  \node[trace note] at (1.6,2.35) {scores and working};
+  \node[trace note] at (6.1,2.35) {scores and working};
+  \node[trace note] at (10.6,2.35) {scores};
+  \node[trace list, minimum width=3.7cm] (a) at (1.6,1.6) {L1: [10, 20, 30]};
+  \node[trace list, minimum width=3.7cm] (b) at (6.1,1.6) {L1: [30, 20, 10]};
+  \node[trace list, minimum width=3.7cm] (c) at (10.6,1.6) {L1: [30, 20, 10]};
+  \draw[trace time] (a.east) -- (b.west);
+  \draw[trace time] (b.east) -- (c.west);
+  \node[trace copy, minimum width=3.7cm] (d) at (10.6,0.1) {L2: [0, 20, 10]};
+  \node[trace note] at (10.6,-0.65) {working; later returned as draft};
+  \node[trace note, text width=3.5cm] at (6.1,0.1) {The original is already reversed before the copy.};
+\end{tikzpicture}%
+}
+
+\newcommand{\nonereturndiagram}{%
+\begin{tikzpicture}
+  \node[trace label] at (2.4,3.0) {Before the statement};
+  \node[trace name] (v1) at (0.2,2.0) {values};
+  \node[trace name] (w1) at (0.2,0.8) {watch};
+  \node[trace list] (l1) at (3.1,1.4) {L1: [6, 2, 8]};
+  \draw[trace arrow] (v1.east) -- (l1.west);
+  \draw[trace arrow] (w1.east) -- (l1.west);
+  \node[trace label] at (8.7,3.0) {After values = values.reverse()};
+  \node[trace name] (v2) at (6.3,2.1) {values};
+  \node[trace name] (w2) at (6.3,0.7) {watch};
+  \node[trace copy] (none) at (9.7,2.1) {None};
+  \node[trace list] (l2) at (9.7,0.7) {L1: [8, 2, 6]};
+  \draw[trace arrow] (v2.east) -- (none.west);
+  \draw[trace arrow] (w2.east) -- (l2.west);
+  \draw[trace time] (4.9,1.4) -- (5.5,1.4);
+\end{tikzpicture}%
+}
+
+\newcommand{\challengediagram}{%
+\begin{tikzpicture}
+  \node[trace name] at (1.8,3.5) {base, watch};
+  \node[trace name] at (6.1,3.5) {first};
+  \node[trace name] at (10.4,3.5) {second};
+  \node[trace list, minimum width=3.6cm] (a1) at (1.8,2.6) {L1: [6, 9]};
+  \node[trace copy, minimum width=3.6cm] (b1) at (6.1,2.6) {L2: [9, 4]};
+  \node[trace third, minimum width=3.6cm] (c1) at (10.4,2.6) {L3: [9, 4, 12]};
+  \draw[trace arrow] (1.8,3.2) -- (a1.north);
+  \draw[trace arrow] (6.1,3.2) -- (b1.north);
+  \draw[trace arrow] (10.4,3.2) -- (c1.north);
+  \node[trace list, minimum width=3.6cm] (a2) at (1.8,0.4) {L1: [6, 9, 12]};
+  \node[trace copy, minimum width=3.6cm] (b2) at (6.1,0.4) {L2: [12, 4]};
+  \node[trace third, minimum width=3.6cm] (c2) at (10.4,0.4) {L3: [9, 4]};
+  \draw[trace time] (a1.south) -- node[right, trace note] {append 12} (a2.north);
+  \draw[trace time] (b1.south) -- node[right, trace note] {replace index 0} (b2.north);
+  \draw[trace time] (c1.south) -- node[right, trace note] {pop 12} (c2.north);
+  \node[trace note] at (6.1,-0.5) {The name-to-list bindings stay the same during the final two statements.};
+\end{tikzpicture}%
+}
