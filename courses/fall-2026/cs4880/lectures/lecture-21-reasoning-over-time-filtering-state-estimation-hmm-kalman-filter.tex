@@ -24,6 +24,20 @@
   \end{center}%
 }
 
+% Compact reminders beside equations; no additional frames.
+\newcommand{\equationlegend}[1]{%
+  \par\smallskip
+  \begingroup
+    \setlength{\fboxsep}{5pt}%
+    \noindent\colorbox{DeckSoft}{%
+      \parbox{\dimexpr\linewidth-2\fboxsep\relax}{%
+        \footnotesize\textbf{Symbol reminder:} #1%
+      }%
+    }\par
+  \endgroup
+  \smallskip
+}
+
 \setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
@@ -68,6 +82,8 @@
     \item sensor readings arrive continuously;
     \item yesterday's best estimate may be wrong now.
   \end{itemize}
+
+  \equationlegend{$X_1,\ldots,X_n$: random variables; $n$: number of variables. $P$: probability; $\mid$: ``given; $Parents(X_i)$: direct causes/inputs of $X_i$ in the network; $\prod_i$: multiply one factor for each variable.}
 
   \begin{keyidea}
     Temporal reasoning asks how an agent should update uncertain beliefs as the hidden world changes over time.
@@ -138,7 +154,7 @@
   A useful robotics slice often contains a control input $U_t$:
 
   \begin{center}
-    \begin{tikzpicture}[node distance=1.25in,every node/.style={draw,rounded corners,minimum width=1.10in,minimum height=0.48in,align=center}]
+    \begin{tikzpicture}[scale=0.70,transform shape,node distance=1.25in,every node/.style={draw,rounded corners,minimum width=1.10in,minimum height=0.48in,align=center}]
       \node (xm) {$X_{t-1}$};
       \node[right=of xm] (x) {$X_t$};
       \node[above=0.72in of x] (u) {$U_t$};
@@ -155,6 +171,8 @@
   \[
     P(Z_t\mid X_t) \qquad \text{sensor / observation model}
   \]
+
+  \equationlegend{$X_{t-1}$: previous hidden state; $X_t$: current hidden state; $U_t$: control for this step; $Z_t$: current sensor reading. $P(\cdot\mid\cdot)$ means probability given the quantities after the bar.}
 
   \begin{keyidea}
     State estimation combines what motion predicts with what the sensors observe.
@@ -180,6 +198,8 @@
     \item one observation factor.
   \end{itemize}
 
+  \equationlegend{$x_{0:T}$: states from time $0$ through $T$; $z_{1:T}$ and $u_{1:T}$: observations and controls from $1$ through $T$. Lowercase letters are particular values of the uppercase random variables. $P(x_0)$: initial belief; $\prod_{t=1}^{T}$: multiply the transition and sensor factors for every step.}
+
   \begin{keyidea}
     The model remains locally simple even as the complete trajectory becomes very large.
   \end{keyidea}
@@ -202,6 +222,8 @@
 
   Today we focus on \textbf{filtering / state estimation}.
 
+  \equationlegend{$X_t$: state now; $z_{1:t}$: all observations so far. In prediction, $k$ is the number of future steps; in smoothing, $k$ is an earlier time. $x_{1:t}$: a candidate state sequence; $\arg\max$: choose the sequence with the highest probability.}
+
   \begin{keyidea}
     Filtering is online inference: estimate the current hidden state from all evidence observed so far.
   \end{keyidea}
@@ -222,7 +244,16 @@
 
   It is a probability distribution over possible current states.
 
-  \lectureimage[1.75in]{slide8.png}
+
+
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.44\textwidth}
+      \lectureimage[1.75in]{slide8.png}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \equationlegend{$bel_t(x)$: probability assigned to candidate state $x$ at time $t$; $X_t=x$: the hidden state equals that candidate. $z_{1:t}$: observations so far; $u_{1:t}$: controls so far; $\mid$: ``given.}
+    \end{column}
+  \end{columns}
 
   \begin{keyidea}
     State estimation should represent uncertainty, not merely output a single point estimate.
@@ -245,6 +276,8 @@
   \]
 
   $\eta$ normalizes the distribution.
+
+  \equationlegend{$x_t$: candidate current state; $x_{t-1}$: candidate previous state; $u_t$: current control; $z_t$: new observation. $bel_{t-1}$: previous belief; $\overline{bel}_t$: predicted belief before sensing; $bel_t$: corrected belief. $\sum_{x_{t-1}}$: add over all previous states; $\eta$: scale so probabilities sum to $1$.}
 
   \begin{keyidea}
     Every filter cycles through the same idea: predict from dynamics, then correct with evidence.
@@ -333,6 +366,8 @@
 
   It now commands \texttt{move east}.
 
+  \equationlegend{$bel_0$: initial belief before moving. Entries are ordered $[A,B,C]$; each entry is the probability of that zone, and the entries sum to $1$.}
+
   \begin{keyidea}
     Filtering never starts from certainty unless the system genuinely has certainty.
   \end{keyidea}
@@ -356,6 +391,8 @@
   \[
     \overline{bel}_1=[0.12,\;0.54,\;0.34].
   \]
+
+  \equationlegend{$\overline{bel}_1$: predicted belief after the first move, before the sensor update; entries are ordered $[A,B,C]$. Each product is previous-zone probability $\times$ transition probability; add all ways to reach the destination zone.}
 
   \begin{keyidea}
     Motion spreads probability mass because uncertain actions create several plausible next states.
@@ -381,6 +418,8 @@
     bel_1\approx[0.014,\;0.257,\;0.729].
   \]
 
+  \equationlegend{$Z_1=+$: the first reading detects the mural. Entries are ordered $[A,B,C]$; each product is predicted-zone probability $\times$ sensor likelihood. $0.420$: sum of the unnormalized entries; $bel_1$: corrected belief after dividing each entry by that sum.}
+
   \begin{keyidea}
     Motion favored zone $B$, but the new sensor evidence shifts most probability mass to zone $C$.
   \end{keyidea}
@@ -401,6 +440,8 @@
   \[
     |X|=|x|\,|y|\,|\theta|\,|v|\,|slip|\cdots
   \]
+
+  \equationlegend{$X_t$: complete state; $x_t,y_t$: position coordinates; $\theta_t$: heading; $v_t$: velocity; $\text{slip}_t$: wheel-slip state; $\text{sensorHealth}_t$: sensor condition. Here $|X|$ means number of joint states, and $|x|,|y|,\ldots$ are counts of possible values for each component.}
 
   \begin{keyidea}
     Exact filtering cost depends on the size and structure of the hidden state representation.
@@ -467,6 +508,8 @@
 
   It matters \emph{through the current state distribution}.
 
+  \equationlegend{$X_{0:t-1}$: all states from time $0$ through $t-1$; $U_{1:t}$: all controls through time $t$. $X_{t-1}$: just the previous state; $U_t$: just the current control; $\mid$: ``given.}
+
   \begin{keyidea}
     Markov does not mean ``history is irrelevant''; it means the chosen state is a sufficient summary of relevant history for one-step prediction.
   \end{keyidea}
@@ -482,6 +525,8 @@
   \]
 
   Once $X_t$ is known, earlier states and observations do not directly improve prediction of $Z_t$.
+
+  \equationlegend{$Z_t$: current observation; $X_t$: current hidden state; $X_{0:t}$: state history through now; $Z_{1:t-1}$: earlier observations. The equality says that, given $X_t$, the extra history does not change the observation probability.}
 
   \begin{keyidea}
     Local conditional independence is what lets temporal models reuse the same small transition and observation models at every step.
@@ -533,6 +578,8 @@
 
   This is exactly the two-step filter we just used.
 
+  \equationlegend{$X_t$: current hidden state; $x_{t-1}$: a possible previous state; $z_{1:t-1}$: earlier readings; $z_{1:t}$: earlier readings plus the new $z_t$. $\sum_{x_{t-1}}$: add over previous states; $P(z_t\mid X_t)$: sensor likelihood; $\eta$: normalization factor.}
+
   \begin{keyidea}
     The HMM forward update compresses an arbitrarily long observation history into the current belief vector.
   \end{keyidea}
@@ -556,6 +603,8 @@
     O(n^2)
   \]
   per time step rather than enumerating all histories.
+
+  \equationlegend{$s_1,\ldots,s_n$: the $n$ possible discrete states; $bel_t$: their current probability vector; $z_{1:t}$: observations so far. $T$: number of transitions in a full history; $O(n^2)$: work grows roughly with the square of the state count for a dense transition model.}
 
   \begin{keyidea}
     Dynamic programming works because many different histories lead to the same current state and can be merged into one probability mass.
@@ -601,6 +650,8 @@
   \[
     (x,y,\theta)\in\mathbb{R}^2\times[-\pi,\pi).
   \]
+
+  \equationlegend{$x,y$: position coordinates; $\theta$: heading angle in radians. $\mathbb{R}^2$: any real-valued position pair; $[-\pi,\pi)$: heading range including $-\pi$ and excluding $\pi$; $\times$: combine position and heading into one pose.}
 
   \begin{keyidea}
     The next question is how to maintain a belief over a continuous state without discretizing the world into millions of bins.
@@ -648,7 +699,16 @@
     \item a covariance matrix $\Sigma_t$.
   \end{itemize}
 
-  \lectureimage[1.7in]{slide27.png}
+
+
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.44\textwidth}
+      \lectureimage[1.7in]{slide27.png}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \equationlegend{$X_t$: continuous hidden state; $\sim$: ``is distributed as; $\mathcal{N}$: Gaussian (normal) distribution. $\mu_t$: mean / center; $\Sigma_t$: covariance, describing spread and how state components vary together.}
+    \end{column}
+  \end{columns}
 
   \begin{keyidea}
     A parametric filter gains efficiency by assuming the belief can be represented with a small number of parameters.
@@ -670,6 +730,8 @@
     Z_t=H X_t+\delta_t,
     \qquad \delta_t\sim\mathcal{N}(0,R).
   \]
+
+  \equationlegend{$X_{t-1},X_t$: previous/current state; $U_t$: control; $Z_t$: measurement. $A$: state-transition matrix; $B$: control-effect matrix; $H$: maps state to measurement. $\epsilon_t,\delta_t$: process/sensor noise; $Q,R$: their covariance matrices. $\mathcal{N}(0,Q)$ and $\mathcal{N}(0,R)$: zero-mean Gaussian noise.}
 
   \begin{keyidea}
     Linear transformations of Gaussian variables remain Gaussian, so prediction and correction stay inside the same compact family.
@@ -696,6 +758,8 @@
     \mu_t=\mu_t^-+K_t(Z_t-H\mu_t^-)
   \]
 
+  \equationlegend{$\mu,\Sigma$: state mean and covariance; superscript $-$: prediction before sensing, not subtraction; $t-1$: previous step. $A$: dynamics; $B$: control mapping; $U_t$: control; $Q$: process-noise covariance. $H$: measurement mapping; $R$: sensor-noise covariance; $Z_t$: measurement. $K_t$: Kalman gain; $Z_t-H\mu_t^-$: measurement minus prediction. Superscript $T$: matrix transpose; $^{-1}$: matrix inverse.}
+
   \begin{keyidea}
     The Kalman gain decides how strongly to trust the new measurement relative to the predicted uncertainty.
   \end{keyidea}
@@ -705,6 +769,10 @@
 % Slide 30
 % -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{One-Dimensional Kalman Example}
+  \setlength{\abovedisplayskip}{3pt}
+  \setlength{\belowdisplayskip}{3pt}
+  \setlength{\abovedisplayshortskip}{3pt}
+  \setlength{\belowdisplayshortskip}{3pt}
   Suppose before the measurement:
   \[
     X_t\sim\mathcal{N}(12,5).
@@ -730,6 +798,8 @@
   \[
     \Sigma_t=(1-K)5\approx2.22.
   \]
+
+  \equationlegend{Here $\mathcal{N}(12,5)$ has predicted mean $12$ and variance $5$ (not standard deviation). $z_t=11$: measured position; $R=4$: sensor variance; $K$: gain / measurement weight. $\mu_t$: updated mean; $\Sigma_t$: updated variance. Direct position sensing uses $H=1$.}
 
   \begin{keyidea}
     The estimate moves toward the measurement, while uncertainty decreases because prediction and sensing provide complementary information.
@@ -769,7 +839,16 @@
 
   One Gaussian tends to summarize that as a mean location \emph{between} the two possibilities.
 
-  \lectureimage[1.65in]{slide32.png}
+
+
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.44\textwidth}
+      \lectureimage[1.65in]{slide32.png}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \equationlegend{$x$: a candidate continuous state; $p(x)$: probability density at that state; $\approx$: approximate shape. The two peaks represent two plausible locations, rather than one certain location between them.}
+    \end{column}
+  \end{columns}
 
   \begin{keyidea}
     A compact parameterization can be computationally excellent while representing the wrong uncertainty geometry.
@@ -811,7 +890,16 @@
 
   Many particles in one region means high probability mass there.
 
-  \lectureimage[1.75in]{slide34.png}
+
+
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.44\textwidth}
+      \lectureimage[1.75in]{slide34.png}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \equationlegend{$bel_t(x)$: current belief at candidate state $x$; $x_t^{[i]}$: state proposed by particle $i$; $w_t^{[i]}$: its weight; $M$: number of particles. $[i]$ labels a particle, not a power; $\approx$: the weighted sample set approximates the belief.}
+    \end{column}
+  \end{columns}
 
   \begin{keyidea}
     Particle filtering replaces one analytic distribution with a population of explicit state hypotheses.
@@ -833,6 +921,8 @@
   \[
     w_t^{[i]}\propto P(z_t\mid x_t^{[i]}).
   \]
+
+  \equationlegend{$w_t^{[i]}$: weight of particle $i$; $x_t^{[i]}$: its predicted state; $z_t$: new sensor reading. $P(z_t\mid x_t^{[i]})$: how likely that reading is at the particle state; $\propto$: proportional to, before normalizing weights to sum to $1$.}
 
   \begin{keyidea}
     Particle filtering is sequential importance sampling plus resampling, applied repeatedly as evidence arrives.
@@ -936,7 +1026,7 @@
   \]
 
   \begin{center}
-    \begin{tikzpicture}[node distance=0.72in,every node/.style={draw,rounded corners,minimum width=1.15in,minimum height=0.42in,align=center,font=\small}]
+    \begin{tikzpicture}[scale=0.70,transform shape,node distance=0.72in,every node/.style={draw,rounded corners,minimum width=1.15in,minimum height=0.42in,align=center,font=\small}]
       \node (odom) {Odometry};
       \node[right=of odom] (particles) {Pose particles};
       \node[above=0.55in of particles] (scan) {Laser scan};
@@ -950,6 +1040,8 @@
   \end{center}
 
   Evidence comes from a range sensor scored against a known map; motion information comes from odometry.
+
+  \equationlegend{$X_t$: robot pose at time $t$; $x_t,y_t$: position coordinates in the map; $\theta_t$: heading angle.}
 
   \begin{keyidea}
     Localization is filtering: estimate current pose from motion history and sensor evidence without storing every past trajectory.
