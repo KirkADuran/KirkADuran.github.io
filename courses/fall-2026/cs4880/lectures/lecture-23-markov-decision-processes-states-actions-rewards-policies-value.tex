@@ -29,48 +29,60 @@
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{23}
-\lecturetitle{Markov Decision Processes and Partial Observability}
+\lecturetitle{MDPs and POMDPs}
 \lecturedate{October 19, 2026}
 \courseunit{Temporal and Decision Reasoning}
 
 \begin{document}
 
 % Estimated pacing: 50--55 minutes
-% MDP motivation and formalism: 14 min
-% Value functions and dynamic programming: 16 min
-% Limits of full observability + POMDP pivot: 10 min
-% POMDP blow-up + Monte Carlo circle-back: 10--15 min
+% Boundary with Lecture 22 + MDP model: 12 min
+% Long-term value and Bellman reasoning: 15 min
+% POMDPs, beliefs, and information-gathering actions: 15 min
+% Computational cost, Monte Carlo, and synthesis: 8--13 min
+% https://inst.eecs.berkeley.edu/~cs188/textbook/mdp/markov-decision-processes.html
+% https://cs.brown.edu/courses/csci2951-k/papers/kaelbling98.pdf
 
-% -----------------------------------------------------------------------------
-% Slide 1
-% -----------------------------------------------------------------------------
 \makedecktitle
 
 \section{From Myopic Decisions to Sequential Decisions}
 
-% -----------------------------------------------------------------------------
-% Slide 2
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Last Time: One-Step Decision Making}
-  The robot combined three ingredients:
+\begin{frame}{Lecture 22 Gave Us a Way to Compare Consequences}
+  We combined:
   \begin{itemize}
-    \item a belief about the current world;
-    \item a utility model over outcomes;
-    \item expected utility to choose the best action now.
+    \item beliefs about an uncertain world;
+    \item utilities that express preferences over outcomes;
+    \item expected utility to compare a route choice;
+    \item value of information to decide whether a reading was worth buying.
   \end{itemize}
-
-  \[
-    a^*=\arg\max_a EU(a)
-  \]
-
+  Those examples ended after one route segment.
   \begin{keyidea}
-    Decision networks solved ``what should I do now?'' but did not yet reason about how today's action changes tomorrow's choices.
+    Today we model the next state, the decisions available there, and the consequences of continuing to act.
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 3
-% -----------------------------------------------------------------------------
+\begin{frame}{Today: Two Models for Sequential Decisions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Part 1: MDPs}
+        We observe the current modeled state.
+
+        Actions have uncertain outcomes. Plan for accumulated reward and choose an action for each state.
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Part 2: POMDPs}
+        The current physical state may be hidden.
+
+        Maintain a belief, plan for future observations, and choose an action for each belief.
+      \end{block}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Both models optimize a strategy over time. Partial observability changes what the agent knows when choosing.
+  \end{keyidea}
+\end{frame}
+
 \begin{frame}[shrink=10]{The Problem: A Locally Good Action Can Create a Bad Future}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.47\textwidth}
@@ -94,36 +106,29 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 4
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{This Is No Longer Just a Path Problem}
-  A path is a fixed sequence:
-  \[
-    North, North, East, East, \ldots
-  \]
-
-  But the robot does not control exactly what happens after each move.
-  \begin{itemize}
-    \item pedestrians change motion;
-    \item doors may open or close;
-    \item wheel slip changes position;
-    \item congestion changes what is reachable next.
-  \end{itemize}
-
-  \lectureimage[1.6in]{slide4.png}
-
+\begin{frame}{A Fixed Route Cannot Specify Every Future Response}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      A path commits to one sequence of moves. But after each action:
+      \begin{itemize}
+        \item pedestrians may block the intended route;
+        \item wheel slip may put the robot elsewhere;
+        \item a door may open or close.
+      \end{itemize}
+      The robot must choose again from the situation it actually reaches.
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureimage[1.8in]{slide4.png}
+    \end{column}
+  \end{columns}
   \begin{keyidea}
-    We need a policy---a decision rule that reacts to the state reached, not a single precomputed path.
+    A policy specifies how to respond to the states reached, including outcomes that differ from the expected route.
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 5
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{The MDP Loop}
   \begin{center}
-    \begin{tikzpicture}[node distance=0.55in,every node/.style={draw,rounded corners,align=center,minimum width=1.55in,minimum height=0.65in}]
+    \begin{tikzpicture}[node distance=0.55cm,every node/.style={draw,rounded corners,align=center,minimum width=1.9cm,minimum height=1.0cm,font=\small}]
       \node (s) {State\\$s_t$};
       \node[right=of s] (a) {Action\\$a_t$};
       \node[right=of a] (t) {Stochastic\\transition};
@@ -144,9 +149,6 @@
 
 \section{Markov Decision Processes}
 
-% -----------------------------------------------------------------------------
-% Slide 6
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{A Markov Decision Process}
   \[
     \boxed{MDP=(S,A,T,R,\gamma)}
@@ -168,9 +170,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 7
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{What Counts as a State?}
   A useful robot state might include:
   \begin{itemize}
@@ -192,9 +191,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 8
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{State Design Is Already a Tradeoff}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.47\textwidth}
@@ -218,9 +214,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 9
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Actions Are the Robot's Controllable Choices}
   The action set might include:
   \begin{itemize}
@@ -236,9 +229,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 10
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{The Transition Model Makes Actions Stochastic}
   \[
     T(s,a,s')=P(s_{t+1}=s'\mid s_t=s,a_t=a)
@@ -249,9 +239,9 @@
     \renewcommand{\arraystretch}{1.3}
     \begin{tabular}{l|l}
       \textbf{Action} & \textbf{Possible next states} \\\hline
-      Shortcut & $0.70$ NearGoal, $0.25$ CrowdedPlaza, $0.05$ SameLocation \\
-      Detour & $0.95$ SafeCorridor, $0.05$ SameLocation \\
-      Wait & $0.60$ CrowdClears, $0.40$ CrowdPersists \\
+      Shortcut & $0.70$ NearGoal, $0.30$ CrowdedPlaza \\
+      Detour & $0.95$ SafeCorridor, $0.05$ CrowdedPlaza \\
+      Wait & $0.60$ SafeCorridor, $0.40$ Intersection \\
     \end{tabular}
   \end{center}
 
@@ -260,9 +250,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 11
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Reward Is Immediate; Return Is Long-Term}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.47\textwidth}
@@ -290,9 +277,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 12
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Discounted Return}
   \[
     G_t=R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\cdots
@@ -309,9 +293,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 13
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{What Does the Discount Factor Mean for the Robot?}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.30\textwidth}
@@ -320,8 +301,8 @@
       \end{block}
     \end{column}
     \begin{column}{0.30\textwidth}
-      \begin{block}{Future uncertainty}
-        Very distant predictions may be less trustworthy.
+      \begin{block}{Planning emphasis}
+        A smaller $\gamma$ emphasizes nearer rewards. Transition probabilities represent uncertain outcomes.
       \end{block}
     \end{column}
     \begin{column}{0.30\textwidth}
@@ -336,9 +317,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 14
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{A Policy Is Not a Path}
   \[
     \pi(s)=a
@@ -358,7 +336,7 @@
 
         If crowd high $\rightarrow$ detour.
 
-        If localization poor $\rightarrow$ scan.
+        If battery low $\rightarrow$ dock.
       \end{block}
     \end{column}
   \end{columns}
@@ -368,35 +346,31 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 15
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{A Tiny Campus MDP}
+\begin{frame}{Possible Next States from the Intersection}
+  \small
   \begin{center}
-    \begin{tikzpicture}[>=Stealth,every node/.style={draw,rounded corners,align=center,minimum width=1.4in,minimum height=0.5in}]
+    \begin{tikzpicture}[>=Stealth,
+      every node/.style={draw,rounded corners,align=center,minimum width=2.6cm,minimum height=0.7cm,font=\small},
+      branch/.style={->,thick},
+      edgelabel/.style={draw=none,fill=white,inner sep=1pt,font=\scriptsize,minimum width=0cm,minimum height=0cm}]
       \node (i) at (0,0) {Intersection};
-      \node (n) at (3,1.2) {Near Goal};
-      \node (c) at (3,-1.2) {Crowded Plaza};
-      \node (s) at (6,0) {Safe Corridor};
-      \node (g) at (8.6,1.2) {Goal};
-      \draw[->,thick,CalPolyGold] (i)--node[draw=none,above,sloped]{\scriptsize shortcut} (n);
-      \draw[->,thick,CalPolyGold] (i)--(c);
-      \draw[->,thick,CalPolyGreen] (i)--node[draw=none,above]{\scriptsize detour} (s);
-      \draw[->,thick,CalPolyGreen] (n)--(g);
-      \draw[->,thick,CalPolyGreen] (s)--(g);
+      \node (n) at (5,1.2) {Near Goal};
+      \node (s) at (5,0) {Safe Corridor};
+      \node (c) at (5,-1.2) {Crowded Plaza};
+      \draw[branch,CalPolyGold] (i) -- node[edgelabel,above,sloped] {shortcut: 0.70} (n);
+      \draw[branch,CalPolyGold] (i) -- node[edgelabel,below,sloped] {shortcut: 0.30} (c);
+      \draw[branch,CalPolyGreen] (i) -- node[edgelabel,above] {detour: 0.95} (s);
+      \draw[branch,CalPolyGreen] (i.south) to[bend right=30] node[edgelabel,below] {detour: 0.05} (c.south);
     \end{tikzpicture}
   \end{center}
-
+  Each reached state has its own later decisions and rewards. The figure shows the two movement actions; waiting and later transitions are omitted.
   \begin{keyidea}
-    An MDP graph represents possible state transitions; probabilities and rewards determine how attractive each branch is.
+    Observe the state reached, then follow the policy from there. The probabilities for each action sum to one.
   \end{keyidea}
 \end{frame}
 
 \section{Long-Term Value}
 
-% -----------------------------------------------------------------------------
-% Slide 16
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Immediate Reward Can Choose the Wrong Action}
   Shortcut:
   \[
@@ -412,14 +386,12 @@
   But if the shortcut often enters a terrible future state, the correct long-run decision can reverse.
 
   \begin{keyidea}
-    One-step expected utility becomes insufficient once the next state affects future opportunity.
+    Scoring only the immediate reward omits the future decisions available from the next state.
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 17
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Action Value Adds the Future}
+  Given continuation values $V(s')$ for the next states:
   \[
     Q(s,a)=\sum_{s'}T(s,a,s')\left[R(s,a,s')+\gamma V(s')\right]
   \]
@@ -435,9 +407,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 18
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Bellman Optimality: The Core Recursion}
   \[
     V^*(s)=\max_a\sum_{s'}T(s,a,s')
@@ -458,34 +427,31 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 19
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Worked Comparison: Shortcut vs. Detour}
-  Assume $\gamma=0.9$.
-
-  Shortcut:
+\begin{frame}{Worked Comparison: Immediate Reward Plus Future Value}
+  \small
+  Use the transition probabilities from the intersection and $\gamma=0.9$.
+  Suppose our current continuation-value estimates are:
+  \begin{center}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{l|r}
+      \textbf{Next state} & \textbf{Estimated future value} \\\hline
+      Near Goal & $20$ \\
+      Safe Corridor & $17$ \\
+      Crowded Plaza & $-25$
+    \end{tabular}
+  \end{center}
+  The immediate reward is $6$ for shortcut and $2$ for detour, regardless of the next state.
   \[
-    Q=6+0.9[0.70(20)+0.30(-25)]=11.85
+    Q(\text{Intersection},\text{Shortcut})=6+0.9[0.70(20)+0.30(-25)]=11.85
   \]
-
-  Detour:
   \[
-    Q=2+0.9[0.95(17)+0.05(-25)]=15.41
+    Q(\text{Intersection},\text{Detour})=2+0.9[0.95(17)+0.05(-25)]=15.41
   \]
-
-  \[
-    \boxed{15.41>11.85}
-  \]
-
   \begin{keyidea}
-    The detour loses on immediate reward but wins after future consequences are included.
+    The detour loses on immediate reward but wins when these continuation values are included. Value iteration will update estimates like these.
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 20
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{What Is a Value Function?}
   \[
     V^\pi(s)=\mathbb{E}_\pi\left[G_t\mid S_t=s\right]
@@ -503,9 +469,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 21
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Value Iteration: Repeated Bellman Backups}
   \[
     V_{k+1}(s)=\max_a\sum_{s'}T(s,a,s')
@@ -523,32 +486,30 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 22
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{Intuition: Reward Propagates Backward}
+\begin{frame}{Intuition: Reward Propagates Backward}
   \begin{center}
-    \begin{tikzpicture}[node distance=0.65in,every node/.style={draw,rounded corners,align=center,minimum width=1.5in,minimum height=0.55in}]
+    \resizebox{0.96\linewidth}{!}{%
+    \begin{tikzpicture}[node distance=0.6cm,
+      every node/.style={draw,rounded corners,align=center,minimum width=2.7cm,minimum height=1cm,font=\small}]
       \node (i) {Intersection\\$V_0=0$};
       \node[right=of i] (c) {Corridor\\$V_0=0$};
       \node[right=of c] (n) {Near Goal\\$V_0=0$};
-      \node[right=of n] (g) {Goal\\$V=20$};
+      \node[right=of n] (g) {Terminal Goal\\$V=0$};
       \draw[-{Stealth},thick] (i)--(c);
       \draw[-{Stealth},thick] (c)--(n);
-      \draw[-{Stealth},thick] (n)--(g);
-    \end{tikzpicture}
+      \draw[-{Stealth},thick] (n)--node[above,draw=none,minimum width=0cm,minimum height=0cm] {$+20$} (g);
+    \end{tikzpicture}}
   \end{center}
-
-  Sweep 1 gives value to states near the goal. Later sweeps propagate that value farther backward.
-
+  In this separate, deterministic chain, all other rewards are zero and delivery pays $+20$ on entering the terminal goal.
+  \begin{itemize}
+    \item First sweep: Near Goal learns the value of delivering.
+    \item Later sweeps carry discounted value back through Corridor and Intersection.
+  \end{itemize}
   \begin{keyidea}
-    Dynamic programming reuses downstream value estimates instead of enumerating every complete route.
+    The terminal state has no future reward. Dynamic programming reuses downstream values rather than enumerating every complete route.
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 23
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Extract the Policy from the Values}
   \[
     \pi^*(s)=\arg\max_a\sum_{s'}T(s,a,s')
@@ -568,9 +529,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 24
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Policy Iteration: Another Route to the Same Goal}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.47\textwidth}
@@ -592,9 +550,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 25
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{What an MDP Quietly Assumes}
   Standard MDP planning assumes:
   \begin{itemize}
@@ -610,28 +565,26 @@
 
 \section{Partial Observability}
 
-% -----------------------------------------------------------------------------
-% Slide 26
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{And Here Is the Problem: The Robot Does Not Know the True State}
-  \begin{itemize}
-    \item the camera can miss pedestrians;
-    \item LiDAR can be partially occluded;
-    \item localization can drift;
-    \item two hallways may look nearly identical;
-    \item a door may be hidden around a corner.
-  \end{itemize}
-
-  \lectureimage[1.8in]{slide26.png}
-
+\begin{frame}{Part 2: What If the Current State Is Hidden?}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      So far we have assumed the current modeled state is observed. In practice:
+      \begin{itemize}
+        \item localization can drift;
+        \item two hallways may look alike;
+        \item a camera may miss an occluded pedestrian;
+        \item a door may be hidden around a corner.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \lectureimage[1.8in]{slide26.png}
+    \end{column}
+  \end{columns}
   \begin{keyidea}
-    The state that matters for planning can be hidden even when the robot has excellent sensors.
+    Uncertain action outcomes and an uncertain current state are different issues. A POMDP models both.
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 27
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Full Observability Was Doing More Work Than It Looked Like}
   An MDP policy is
   \[
@@ -652,9 +605,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 28
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{But Lecture 21 Already Gave Us the Missing Object}
   \[
     b_t(s)=P(S_t=s\mid o_{1:t},a_{1:t-1})
@@ -673,9 +623,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 29
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Partially Observable Markov Decision Process}
   \[
     \boxed{POMDP=(S,A,T,R,\Omega,O,\gamma)}
@@ -692,32 +639,34 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 30
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{The POMDP as a Dynamic Bayes Network}
+\begin{frame}{The POMDP as a Dynamic Bayes Network}
   \begin{center}
-    \begin{tikzpicture}[>=Stealth,node distance=0.9in,every node/.style={draw,rounded corners,align=center,minimum width=1.1in,minimum height=0.55in}]
-      \node (s) {$S_t$};
-      \node[right=of s] (a) {$A_t$};
-      \node[right=of a] (sp) {$S_{t+1}$};
-      \node[above right=0.5in and 0.9in of sp] (o) {$O_{t+1}$};
-      \node[below right=0.5in and 0.9in of sp] (r) {$R_{t+1}$};
-      \draw[->,thick] (s)--(sp);
-      \draw[->,thick] (a)--(sp);
-      \draw[->,thick] (sp)--(o);
-      \draw[->,thick] (sp)--(r);
+    \begin{tikzpicture}[>=Stealth,
+      chance/.style={draw,ellipse,fill=CalPolyMint,minimum width=1.8cm,minimum height=0.7cm},
+      choice/.style={draw,rectangle,fill=CalPolyBeige,minimum width=1.8cm,minimum height=0.7cm},
+      reward/.style={draw,diamond,aspect=2.2,minimum width=1.8cm},
+      edge/.style={->,thick}]
+      \node[chance] (s) at (0,0) {$S_t$};
+      \node[choice] (a) at (3,1.25) {$A_t$};
+      \node[chance] (sp) at (6,0) {$S_{t+1}$};
+      \node[chance] (o) at (9,1.25) {$O_{t+1}$};
+      \node[reward] (r) at (3,-1.25) {$R_{t+1}$};
+      \draw[edge] (s)--(sp);
+      \draw[edge] (a)--(sp);
+      \draw[edge] (sp)--(o);
+      \draw[edge] (a)--(o);
+      \draw[edge] (s)--(r);
+      \draw[edge] (a)--(r);
+      \draw[edge] (sp)--(r);
     \end{tikzpicture}
   \end{center}
-
+  \small
+  States are hidden; sensor readings are observed. Reward scores transitions; in this model we do not use a separate reward observation as evidence.
   \begin{keyidea}
-    The hidden state evolves, actions influence that evolution, and observations provide noisy evidence about the new state.
+    Actions influence future states and sensor evidence. Planning must anticipate both, using the transition and observation models.
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 31
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{The Belief State Becomes the Planning State}
   Physical state:
   \begin{quote}
@@ -740,9 +689,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 32
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Belief Update: Predict, Then Correct}
   Prediction after action $a_t$:
   \[
@@ -755,16 +701,13 @@
   \]
 
   \begin{keyidea}
-    The POMDP belief update is the same predict--correct structure from filtering, now embedded inside decision making.
+    Use the transition model to predict, then the observation likelihood to correct. This is filtering inside a sequential decision model.
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 33
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{The Elegant Trick: A POMDP Becomes an MDP over Beliefs}
   \begin{center}
-    \begin{tikzpicture}[node distance=0.6in,every node/.style={draw,rounded corners,align=center,minimum width=1.55in,minimum height=0.65in}]
+    \begin{tikzpicture}[node distance=0.65cm,every node/.style={draw,rounded corners,align=center,minimum width=2.5cm,minimum height=1.0cm,font=\small}]
       \node (b) {Belief\\$b_t$};
       \node[right=of b] (a) {Action\\$a_t$};
       \node[right=of a] (o) {Observation\\$o_{t+1}$};
@@ -784,9 +727,6 @@
 
 \section{Why POMDPs Blow Up}
 
-% -----------------------------------------------------------------------------
-% Slide 34
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Problem \#1: The Belief Space Is Continuous}
   Suppose there are only two possible hidden states: $A$ and $B$.
 
@@ -806,10 +746,8 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 35
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{With Three Hidden States, Beliefs Fill a Triangle}
+\begin{frame}{With Three Hidden States, Beliefs Fill a Triangle}
+  \small
   For three hidden states,
   \[
     b=[p_1,p_2,p_3],
@@ -820,14 +758,14 @@
   \begin{center}
     \begin{tikzpicture}
       \coordinate (a) at (0,0);
-      \coordinate (b) at (6,0);
-      \coordinate (c) at (3,3.5);
+      \coordinate (b) at (5,0);
+      \coordinate (c) at (2.5,2.5);
       \draw[thick,CalPolyGreen] (a)--(b)--(c)--cycle;
-      \fill[CalPolyGold] (3.1,1.6) circle (2.2pt);
+      \fill[CalPolyGold] (2.25,1.0) circle (2.2pt);
       \node[below] at (a) {Corridor A};
       \node[below] at (b) {Corridor B};
       \node[above] at (c) {Plaza};
-      \node[right] at (3.1,1.6) {$[0.35,0.25,0.40]$};
+      \node[right] at (2.25,1.0) {$[0.35,0.25,0.40]$};
     \end{tikzpicture}
   \end{center}
 
@@ -836,9 +774,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 36
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{A POMDP Policy Maps Beliefs to Actions}
   Different belief regions can prefer different actions:
   \begin{itemize}
@@ -852,9 +787,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 37
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Problem \#2: Future Observations Create Branching Contingencies}
   POMDP planning must reason about plans like:
   \begin{quote}
@@ -874,9 +806,6 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 38
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{How Fast Does That Branching Grow?}
   A rough action--observation branching count is
   \[
@@ -897,9 +826,6 @@
 
 \section{Back to Monte Carlo}
 
-% -----------------------------------------------------------------------------
-% Slide 39
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{So We End Up Back at a Familiar Question}
   \begin{center}
     \Large\textbf{Do we really need to enumerate every possible future?}
@@ -923,28 +849,22 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 40
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{Monte Carlo Rollouts for Decision Making}
-  A hand-wavy online planner can:
+  A simulation-based online planner can:
   \begin{enumerate}
     \item sample a physical state from the current belief;
     \item try a candidate action;
     \item sample the next state and observation;
-    \item continue simulating a plausible future;
+    \item continue with a rollout policy that uses only the simulated observations or beliefs;
     \item accumulate discounted reward;
     \item repeat many times and average the return.
   \end{enumerate}
 
   \begin{keyidea}
-    Monte Carlo planning estimates long-term action value from sampled futures instead of summing over all futures exactly.
+    Average sampled returns to estimate action value. The simulated controller must not use the hidden state as if it were observed.
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 41
-% -----------------------------------------------------------------------------
 \begin{frame}[shrink=10]{The Pieces We Already Learned Can Be Reused}
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.30\textwidth}
@@ -969,30 +889,44 @@
   \end{keyidea}
 \end{frame}
 
-% -----------------------------------------------------------------------------
-% Slide 42
-% -----------------------------------------------------------------------------
-\begin{frame}[shrink=10]{The Unit Has Come Full Circle}
+\begin{frame}{The Unit Has Come Full Circle}
   \begin{center}
-    \begin{tikzpicture}[node distance=0.18in,every node/.style={draw,rounded corners,align=center,minimum width=0.9in,minimum height=0.55in,font=\scriptsize}]
-      \node (p) {Pathfinding};
-      \node[right=of p] (pr) {Probability};
-      \node[right=of pr] (bn) {Bayes\\nets};
-      \node[right=of bn] (samp) {Sampling};
-      \node[right=of samp] (f) {Filtering};
-      \node[right=of f] (u) {Utility};
-      \node[right=of u] (m) {MDP};
-      \node[right=of m] (po) {POMDP};
-      \node[right=of po] (mc) {Monte\\Carlo};
-      \foreach \x/\y in {p/pr,pr/bn,bn/samp,samp/f,f/u,u/m,m/po,po/mc}{\draw[-{Stealth},thick,CalPolyGold] (\x)--(\y);}
+    \begin{tikzpicture}[
+      every node/.style={draw,rounded corners,align=center,minimum width=2.1cm,minimum height=0.9cm,font=\small},
+      link/.style={-{Stealth[length=2mm]},thick,CalPolyGold}]
+      \node (p) at (0,0) {Pathfinding};
+      \node (pr) at (2.5,0) {Probability};
+      \node (bn) at (5,0) {Bayes nets};
+      \node (samp) at (7.5,0) {Sampling};
+      \node (f) at (10,0) {Filtering};
+      \node (u) at (10,-1.6) {Utility};
+      \node (m) at (7.5,-1.6) {MDP};
+      \node (po) at (5,-1.6) {POMDP};
+      \node (mc) at (2.5,-1.6) {Monte Carlo\\planning};
+      \foreach \x/\y in {p/pr,pr/bn,bn/samp,samp/f,f/u,u/m,m/po,po/mc}{\draw[link] (\x)--(\y);}
     \end{tikzpicture}
   \end{center}
-
-  Each new model relaxes an assumption from the previous one---then pays for that flexibility with more computation.
-
+  We reuse earlier ideas as the agent handles more uncertainty and a longer decision horizon.
   \begin{keyidea}
-    AI repeatedly trades exactness, model simplicity, and computational cost to make rational decisions under real-world uncertainty.
+    Beliefs describe possible worlds; rewards score consequences; planning selects actions over time. Sampling makes large planning problems more tractable.
   \end{keyidea}
+\end{frame}
+
+
+\begin{frame}{What Each Model Adds}
+  \small
+  \begin{center}
+    \renewcommand{\arraystretch}{1.6}
+    \begin{tabular}{l|p{0.25\textwidth}|p{0.40\textwidth}}
+      \textbf{Model} & \textbf{Decision input} & \textbf{Problem we solved} \\\hline
+      Lecture 22 examples & Current beliefs and utilities & Compare one route choice, with optional information before choosing. \\
+      MDP & Observed current state & Choose actions for expected accumulated reward over time. \\
+      POMDP & Belief over hidden states & Choose actions for accumulated reward, anticipating future observations and belief updates.
+    \end{tabular}
+  \end{center}
+  \begin{activity}
+    A robot is unsure which hallway it is in and can pay to scan before continuing. Explain why a POMDP policy can favor scanning even though it earns no immediate delivery reward.
+  \end{activity}
 \end{frame}
 
 \end{document}

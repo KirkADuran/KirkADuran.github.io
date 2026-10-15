@@ -1,54 +1,732 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-22/}}
+
+\newcommand{\lectureimage}[2][1.75in]{%
+  \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{22}
-\lecturetitle{Iteration I -- for and range}
-\lecturedate{October 16, 2026}
+\lecturetitle{Iteration I --- \texttt{for} and \texttt{range}}
+\lecturedate{Fall 2026}
 \courseunit{9. Iteration}
 
+% Python semantics checked against:
+% https://docs.python.org/3/reference/compound_stmts.html#the-for-statement
+% https://docs.python.org/3/library/stdtypes.html#ranges
 \begin{document}
 
 \makedecktitle
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Iteration I -- for and range
-    \item Placeholder for announcements and context.
+    \item Explain why repeated computation needs a new control-flow structure.
+    \item Trace a \texttt{for} loop one iteration at a time.
+    \item Treat the loop variable as a name that is repeatedly rebound.
+    \item Use \texttt{range} to describe integer sequences for iteration.
+    \item Distinguish direct iteration over values from iteration over indexes.
+    \item Introduce an \textbf{accumulator} as state updated across iterations.
   \end{itemize}
+
+  \begin{keyidea}
+    A loop does not execute ``all at once.'' It repeatedly binds a loop variable, executes the body, and then advances to the next value.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\sectionframe{Part 1: Why Programs Need Iteration}
+
+\begin{frame}{Repeated Statements Do Not Scale}
+  Suppose we want to display four values from a list.
+
+  \begin{block}{Without iteration}
+    \texttt{print(values[0])}\\
+    \texttt{print(values[1])}\\
+    \texttt{print(values[2])}\\
+    \texttt{print(values[3])}
+  \end{block}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item The same operation is written repeatedly.
+    \item The code is tied to one specific list length.
+    \item A larger input requires more source code.
   \end{itemize}
+
+  \begin{keyidea}
+    Iteration lets the \emph{program} repeat a computation instead of requiring the programmer to repeat source code.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Definition: Iteration}
+  \textbf{Iteration} is repeated execution of a block of code according to a control structure.
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      For today's \texttt{for} loops:
+      \begin{enumerate}
+        \item Get the next supplied value, if one exists.
+        \item Bind the loop variable to it.
+        \item Execute the body, then request the next value.
+      \end{enumerate}
+      When no values remain, continue after the loop.
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \lectureimage[1.95in]{for-loop-cycle.png}
+    \end{column}
+  \end{columns}
+  Expressions, assignments, calls, and conditionals retain their usual meanings.
+\end{frame}
+
+\begin{frame}{Anatomy of a \texttt{for} Loop}
+  \begin{block}{General form}
+    \texttt{for variable in sequence:}\\
+    \hspace{0.20in}\texttt{statement}\\
+    \hspace{0.20in}\texttt{statement}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Part} & \textbf{Role} \\\hline
+      \texttt{for} & begins the loop \\
+      loop variable & receives one value at a time \\
+      sequence & supplies values to the loop \\
+      indented body & executes once for each supplied value
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{The Execution Model}
+  Consider:
+
+  \begin{block}{Code}
+    \texttt{for value in [4, 9, 2]:}\\
+    \hspace{0.20in}\texttt{print(value)}
+  \end{block}
+
+  Python conceptually performs:
+  \begin{enumerate}
+    \item bind \texttt{value} to \texttt{4}; execute the body;
+    \item bind \texttt{value} to \texttt{9}; execute the body;
+    \item bind \texttt{value} to \texttt{2}; execute the body;
+    \item no values remain, so execution continues after the loop.
+  \end{enumerate}
+
+  \begin{keyidea}
+    One loop body can execute many times, but each individual execution still follows ordinary statement-by-statement evaluation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace a Simple Loop}
+  \begin{block}{Code}
+    \texttt{values = [4, 9, 2]}\\
+    \texttt{for value in values:}\\
+    \hspace{0.20in}\texttt{answer = value + 1}\\
+    \hspace{0.20in}\texttt{print(answer)}
+  \end{block}
+
+  \begin{activity}
+    Before revealing the trace, predict the three values printed and the sequence of bindings for \texttt{value} and \texttt{answer}.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Trace Table}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|c|c|c}
+      \textbf{Iteration} & \textbf{\texttt{value}} & \textbf{\texttt{value + 1}} & \textbf{\texttt{answer}} \\\hline
+      1 & 4 & 5 & 5 \\
+      2 & 9 & 10 & 10 \\
+      3 & 2 & 3 & 3
+    \end{tabular}
+  \end{center}
+
+  \begin{block}{Printed output}
+    \texttt{5}\\
+    \texttt{10}\\
+    \texttt{3}
+  \end{block}
+
+  The body is evaluated three separate times using three different bindings for \texttt{value}.
+\end{frame}
+
+\begin{frame}{The Loop Variable Is a Normal Binding}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.43\textwidth}
+      \begin{block}{Code}
+        \texttt{for value in [4, 9, 2]:}\\
+        \hspace{0.18in}\texttt{print(value)}
+      \end{block}
+      The picture shows three moments in time. Each supplied element takes over the \texttt{value} binding; the list stays unchanged.
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \lectureimage[1.8in]{loop-variable-rebinding.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Each iteration \textbf{rebinds} the loop variable to the next supplied value. It does not replace a position in the list.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Indentation Defines the Loop Body}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Inside the loop}
+        \texttt{for x in [1, 2, 3]:}\\
+        \hspace{0.18in}\texttt{print(x)}\\
+        \hspace{0.18in}\texttt{print("again")}
+      \end{block}
+
+      Both prints execute three times.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{After the loop}
+        \texttt{for x in [1, 2, 3]:}\\
+        \hspace{0.18in}\texttt{print(x)}\\
+        \texttt{print("done")}
+      \end{block}
+
+      \texttt{"done"} prints once.
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Tracing rule}
+    Before tracing a loop, mark exactly which statements belong to its indented body.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 2: Iterating Directly Over Sequential Data}
+
+\begin{frame}{Direct Iteration Over Values}
+  Lists already contain the values we often want to process.
+
+  \begin{block}{Code}
+    \texttt{temperatures = [68, 71, 74]}\\
+    \texttt{for temperature in temperatures:}\\
+    \hspace{0.20in}\texttt{print(temperature)}
+  \end{block}
+
+  The loop variable receives the list elements directly:
+
+  \begin{center}
+    \texttt{68} $\rightarrow$ \texttt{71} $\rightarrow$ \texttt{74}
+  \end{center}
+
+  \begin{keyidea}
+    If a computation needs the values themselves, direct iteration usually expresses that intent most clearly.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Prediction: Expressions Inside a Loop}
+  \begin{block}{Code}
+    \texttt{values = [2, 5, 8]}\\
+    \texttt{for value in values:}\\
+    \hspace{0.20in}\texttt{result = value * 2}\\
+    \hspace{0.20in}\texttt{print(result)}\\
+    \texttt{print("done")}
+  \end{block}
+
+  \begin{activity}
+    Predict the complete output. How many times is \texttt{value * 2} evaluated? How many times is \texttt{"done"} printed?
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Prediction: Reveal}
+  \begin{block}{Output}
+    \texttt{4}\\
+    \texttt{10}\\
+    \texttt{16}\\
+    \texttt{done}
+  \end{block}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item The loop body executes once for each of the three list elements.
+    \item \texttt{result} is rebound during each iteration.
+    \item The final print is outside the loop, so it executes once.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Rebinding the Loop Variable Does Not Mutate the List}
+  \begin{block}{Code}
+    \texttt{values = [2, 5, 8]}\\
+    \texttt{for value in values:}\\
+    \hspace{0.20in}\texttt{value = value * 2}\\
+    \texttt{print(values)}
+  \end{block}
+  \textbf{Output:} \texttt{[2, 5, 8]}
+  Each multiplication rebinds \texttt{value} to a new integer. The next iteration then binds it to the next original element.
+  \begin{keyidea}
+    As in Lecture 21, rebinding a name differs from mutating a list. This code never assigns to \texttt{values[index]}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Same Mechanism Applies to Other Sequences}
+  A \texttt{for} loop can receive values from sequential data other than lists.
+
+  \begin{block}{Example}
+    \texttt{for character in "cat":}\\
+    \hspace{0.20in}\texttt{print(character)}
+  \end{block}
+
+  The bindings are:
+  \begin{center}
+    \texttt{character} $\rightarrow$ \texttt{"c"}\qquad
+    \texttt{"a"}\qquad
+    \texttt{"t"}
+  \end{center}
+
+  \begin{alertblock}{For now}
+    Today the emphasis is the loop execution model. We will use iteration over lists and strings more systematically in the next lecture.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{A Loop Inside a Function}
+  \begin{block}{Code}
+    \texttt{def display(values: list[int]) -> None:}\\
+    \hspace{0.20in}\texttt{for value in values:}\\
+    \hspace{0.40in}\texttt{print(value)}
+  \end{block}
+
+  Function-call reasoning still applies:
+  \begin{enumerate}
+    \item evaluate the argument;
+    \item bind the parameter \texttt{values};
+    \item execute the body: the loop repeatedly binds \texttt{value} and prints it;
+    \item the call ends after the loop completes.
+  \end{enumerate}
+
+  \begin{keyidea}
+    Iteration happens \emph{inside} the existing call frame; it does not create a new function call for each iteration.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Integer Sequences with \texttt{range}}
+
+\begin{frame}{Why \texttt{range}?}
+  Sometimes we want integer values that are not already stored in a list.
+
+  \begin{block}{Example goal}
+    Repeat a computation for the integers \texttt{0}, \texttt{1}, \texttt{2}, and \texttt{3}.
+  \end{block}
+
+  Python's \texttt{range} describes a sequence of integers suitable for iteration.
+
+  \begin{block}{Code}
+    \texttt{for i in range(4):}\\
+    \hspace{0.20in}\texttt{print(i)}
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{\texttt{range(stop)}}
+  \begin{block}{General form}
+    \texttt{range(stop)}
+  \end{block}
+
+  It begins at \texttt{0} and stops \textbf{before} \texttt{stop}.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|l}
+      \textbf{Expression} & \textbf{Integer values supplied} \\\hline
+      \texttt{range(4)} & \texttt{0, 1, 2, 3} \\
+      \texttt{range(1)} & \texttt{0} \\
+      \texttt{range(6)} & \texttt{0, 1, 2, 3, 4, 5}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{The Stop Value Is Exclusive}
+  You have already seen this convention in slicing.
+
+  \begin{center}
+    \texttt{values[1:4]} \qquad indexes \texttt{1, 2, 3}\\[0.18in]
+    \texttt{range(1, 4)} \qquad integers \texttt{1, 2, 3}
+  \end{center}
+
+  \begin{keyidea}
+    In both slicing and \texttt{range}, the start is included and the stop is excluded.
+  \end{keyidea}
+
+  This makes \texttt{range(len(values))} naturally line up with valid list indexes from \texttt{0} through \texttt{len(values) - 1}.
+\end{frame}
+
+\begin{frame}{\texttt{range(start, stop)}}
+  \begin{block}{General form}
+    \texttt{range(start, stop)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|l}
+      \textbf{Expression} & \textbf{Integer values supplied} \\\hline
+      \texttt{range(2, 6)} & \texttt{2, 3, 4, 5} \\
+      \texttt{range(5, 8)} & \texttt{5, 6, 7} \\
+      \texttt{range(3, 4)} & \texttt{3}
+    \end{tabular}
+  \end{center}
+
+  The default step is \texttt{1}.
+\end{frame}
+
+\begin{frame}{\texttt{range(start, stop, step)}}
+  \begin{block}{General form}
+    \texttt{range(start, stop, step)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|l}
+      \textbf{Expression} & \textbf{Integer values supplied} \\\hline
+      \texttt{range(0, 8, 2)} & \texttt{0, 2, 4, 6} \\
+      \texttt{range(1, 10, 3)} & \texttt{1, 4, 7} \\
+      \texttt{range(2, 9, 2)} & \texttt{2, 4, 6, 8}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The step controls how the current integer changes before the next iteration.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Negative Steps}
+  A negative step describes decreasing integer values.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|l}
+      \textbf{Expression} & \textbf{Integer values supplied} \\\hline
+      \texttt{range(4, 0, -1)} & \texttt{4, 3, 2, 1} \\
+      \texttt{range(6, 1, -2)} & \texttt{6, 4, 2}
+    \end{tabular}
+  \end{center}
+
+  The stop remains exclusive even when the sequence decreases.
+\end{frame}
+
+
+\begin{frame}{A Valid \texttt{range} Can Be Empty}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l}
+      \textbf{Expression} & \textbf{Why it supplies no values} \\\hline
+      \texttt{range(0)} & Start equals stop. \\
+      \texttt{range(3, 3)} & Start equals stop. \\
+      \texttt{range(5, 2)} & Positive step, but start is already past stop. \\
+      \texttt{range(1, 5, -1)} & Negative step moves away from stop.
+    \end{tabular}
+  \end{center}
+  An empty sequence means the body executes \textbf{zero times}; execution continues after the loop.
+  \begin{alertblock}{Different case: an invalid step}
+    \texttt{range(0, 5, 0)} raises \texttt{ValueError}. A zero step is invalid, not an empty range.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Predict the Values from \texttt{range}}
+  Without running Python, write the values supplied by each expression:
+
+  \begin{enumerate}
+    \item \texttt{range(5)}
+    \item \texttt{range(2, 7)}
+    \item \texttt{range(1, 8, 2)}
+    \item \texttt{range(5, 1, -1)}
+  \end{enumerate}
+
+  \begin{activity}
+    For each one, identify the start, stop, and step before listing the values.
+  \end{activity}
+\end{frame}
+
+
+\begin{frame}{\texttt{range} Practice: Reveal}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.5}
+    \begin{tabular}{l|r|r|r|l}
+      \textbf{Expression} & \textbf{Start} & \textbf{Stop} & \textbf{Step} & \textbf{Values supplied} \\\hline
+      \texttt{range(5)} & 0 & 5 & 1 & \texttt{0, 1, 2, 3, 4} \\
+      \texttt{range(2, 7)} & 2 & 7 & 1 & \texttt{2, 3, 4, 5, 6} \\
+      \texttt{range(1, 8, 2)} & 1 & 8 & 2 & \texttt{1, 3, 5, 7} \\
+      \texttt{range(5, 1, -1)} & 5 & 1 & $-1$ & \texttt{5, 4, 3, 2}
+    \end{tabular}
+  \end{center}
+  \begin{keyidea}
+    Identify the defaults first. Stop remains exclusive for both increasing and decreasing progressions.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace a Loop Driven by \texttt{range}}
+  \begin{block}{Code}
+    \texttt{for i in range(1, 5):}\\
+    \hspace{0.20in}\texttt{value = i * 10}\\
+    \hspace{0.20in}\texttt{print(value)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{c|c|c}
+      \textbf{Iteration} & \textbf{\texttt{i}} & \textbf{\texttt{value}} \\\hline
+      1 & 1 & 10 \\
+      2 & 2 & 20 \\
+      3 & 3 & 30 \\
+      4 & 4 & 40
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{A \texttt{range} Describes the Integers}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Code}
+        \texttt{numbers = range(0, 8, 2)}
+      \end{block}
+      It supplies \texttt{0, 2, 4, 6}.
+      \begin{itemize}
+        \item Start at \texttt{0}.
+        \item Advance by \texttt{2}.
+        \item Stop before \texttt{8}.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.53\textwidth}
+      \lectureimage[2.0in]{range-exclusive-stop.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    A \texttt{range} describes an integer progression without constructing a list of all its values.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Using \texttt{range(len(...))} for Indexes}
+  Sometimes the computation needs an element's \textbf{index}.
+
+  \begin{block}{Code}
+    \texttt{values = [8, 3, 6]}\\
+    \texttt{for idx in range(len(values)):}\\
+    \hspace{0.20in}\texttt{print(idx, values[idx])}
+  \end{block}
+
+  Since \texttt{len(values)} is \texttt{3}:
+  \begin{center}
+    \texttt{range(3)} $\Rightarrow$ \texttt{0, 1, 2}
+  \end{center}
+
+  Those are exactly the valid indexes for the list.
+\end{frame}
+
+\begin{frame}{Values or Indexes?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Need each value}
+        \texttt{for value in values:}\\
+        \hspace{0.18in}\texttt{print(value)}
+      \end{block}
+
+      Loop variable: \textbf{element value}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Need each index}
+        \texttt{for idx in range(len(values)):}\\
+        \hspace{0.18in}\texttt{print(idx)}
+      \end{block}
+
+      Loop variable: \textbf{integer index}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Do not introduce indexes unless the computation actually needs the position. Direct iteration is simpler when only the values matter.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: State That Changes Across Iterations}
+
+\begin{frame}{Some Computations Need Memory Across Iterations}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.43\textwidth}
+      Each iteration adds one value from \texttt{[4, 9, 2, 1]} to the sum so far.
+      \begin{block}{Required state}
+        \texttt{total}: the sum of the values processed so far.
+      \end{block}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      \lectureimage[1.8in]{accumulator-running-total.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    The boxes show successive values of \textbf{one} variable, not separate accumulators. Each update uses the previous total.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Definition: Accumulator}
+  \begin{cpdefinition}
+    An \textbf{accumulator} is a variable that stores a partial result and is updated repeatedly as a loop executes.
+  \end{cpdefinition}
+
+  A common structure is:
+
+  \begin{block}{Pattern}
+    initialize accumulator\\
+    \texttt{for value in sequence:}\\
+    \hspace{0.20in}update accumulator using \texttt{value}\\
+    use the completed accumulator after the loop
+  \end{block}
+
+  Today we use summation only to understand the mechanics. We will study additional loop patterns next lecture.
+\end{frame}
+
+\begin{frame}{The Lab Example: \texttt{tally}}
+  \begin{block}{Code}
+    \texttt{def tally(nums: list[int]) -> int:}\\
+    \hspace{0.20in}\texttt{total = 0}\\
+    \hspace{0.20in}\texttt{for num in nums:}\\
+    \hspace{0.40in}\texttt{total = total + num}\\
+    \hspace{0.20in}\texttt{return total}
+  \end{block}
+
+  For the call:
+  \begin{center}
+    \texttt{tally([4, 9, 2, 1])}
+  \end{center}
+
+  \begin{activity}
+    Predict the values bound to \texttt{num} and the value of \texttt{total} after each iteration.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Tracing the Accumulator}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|c|c|c}
+      \textbf{Iteration} & \textbf{\texttt{num}} & \textbf{\texttt{total} before} & \textbf{\texttt{total} after} \\\hline
+      -- & -- & -- & 0 \\
+      1 & 4 & 0 & 4 \\
+      2 & 9 & 4 & 13 \\
+      3 & 2 & 13 & 15 \\
+      4 & 1 & 15 & 16
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The next iteration begins with the accumulator value produced by the previous iteration.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Initialization Determines the Starting State}
+  Why does \texttt{tally} begin with:
+  \begin{center}
+    \texttt{total = 0}?
+  \end{center}
+
+  Before any elements have been processed, the sum-so-far should be zero.
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item initialization happens once, before the loop;
+    \item updating happens once per iteration;
+    \item the final value is used after all iterations complete.
   \end{itemize}
+
+  \begin{alertblock}{Tracing discipline}
+    Record the initial value before tracing. With an empty input, \texttt{tally([])} returns \texttt{0}: no updates occur.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Return Placement Matters}
+  Both fragments are inside a function, after \texttt{total = 0}.
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{After the loop}
+        \texttt{for num in nums:}\\
+        \hspace{0.18in}\texttt{total = total + num}\\
+        \texttt{return total}
+      \end{block}
+
+      All elements are processed before returning.
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Inside the loop}
+        \texttt{for num in nums:}\\
+        \hspace{0.18in}\texttt{total = total + num}\\
+        \hspace{0.18in}\texttt{return total}
+      \end{block}
+
+      For nonempty input, the first iteration returns immediately. Empty input reaches the function end and returns \texttt{None}.
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    \texttt{return} keeps its old meaning: it immediately ends the current function call, even when it appears inside a loop.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Integrating the Model}
+
+\begin{frame}{Prediction Challenge}
+  \begin{block}{Code}
+    \texttt{def compute(start: int, stop: int) -> int:}\\
+    \hspace{0.20in}\texttt{total = 0}\\
+    \hspace{0.20in}\texttt{for value in range(start, stop):}\\
+    \hspace{0.40in}\texttt{total = total + value}\\
+    \hspace{0.20in}\texttt{return total}\\[0.08in]
+    \texttt{answer = compute(2, 6)}
+  \end{block}
+
+  \begin{activity}
+    Determine the values successively bound to \texttt{value}, the value of \texttt{total} after each iteration, and the final value bound to \texttt{answer}.
+  \end{activity}
+\end{frame}
+
+
+\begin{frame}{Prediction Challenge: Reveal}
+  For \texttt{compute(2, 6)}, the loop receives \texttt{2, 3, 4, 5}.
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{c|c|c|c}
+      \textbf{Iteration} & \textbf{\texttt{value}} & \textbf{\texttt{total} before} & \textbf{\texttt{total} after} \\\hline
+      1 & 2 & 0 & 2 \\
+      2 & 3 & 2 & 5 \\
+      3 & 4 & 5 & 9 \\
+      4 & 5 & 9 & 14
+    \end{tabular}
+  \end{center}
+  \begin{block}{After the loop}
+    \texttt{return total} returns \texttt{14}, so \texttt{answer} is bound to \texttt{14}.
+  \end{block}
+  \begin{activity}
+    What would \texttt{compute(6, 2)} return? Explain using the range and the initial total.
+  \end{activity}
+  % Answer: 0, because range(6, 2) is empty with its default positive step.
+\end{frame}
+
+\begin{frame}{Where We Stop Today}
+  Today's responsibility is the mechanics of iteration:
+  \begin{itemize}
+    \item how a \texttt{for} loop repeatedly executes;
+    \item how the loop variable is rebound;
+    \item how \texttt{range} supplies integer values;
+    \item when to iterate over values versus indexes;
+    \item how one accumulator can preserve state across iterations.
+  \end{itemize}
+
+  \begin{alertblock}{Next lectures}
+    \textbf{Lecture 23:} common loop patterns such as counting, building results, and combining loops with conditionals.\\[0.06in]
+    \textbf{Lecture 24:} higher-level sequence patterns, including comprehensions and map/filter-style reasoning.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{enumerate}
+    \item A \texttt{for} loop processes one supplied value at a time.
+    \item The loop variable is repeatedly rebound to the next value.
+    \item The indented body executes once per supplied value.
+    \item \texttt{range} describes integer values using start, exclusive stop, and optional step.
+    \item Use direct iteration when you need values; use indexes when you need positions.
+    \item An accumulator stores a partial result across iterations.
+    \item Existing rules still apply: expressions evaluate normally, assignment rebinds names, and \texttt{return} immediately ends a function call.
+  \end{enumerate}
 \end{frame}
 
 \end{document}
