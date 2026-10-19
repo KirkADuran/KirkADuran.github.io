@@ -24,6 +24,20 @@
   \end{center}%
 }
 
+% Keep notation beside the equation or diagram that uses it.
+\newcommand{\equationlegend}[1]{%
+  \par\smallskip
+  \begingroup
+    \setlength{\fboxsep}{4pt}%
+    \noindent\colorbox{DeckSoft}{%
+      \parbox{\dimexpr\linewidth-2\fboxsep\relax}{%
+        \footnotesize\textbf{Symbols:} #1%
+      }%
+    }\par
+  \endgroup
+  \smallskip
+}
+
 \setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 4880}
@@ -141,6 +155,7 @@
       \draw[-{Stealth},thick,CalPolyGold] (sp.south) |- ++(0,-0.6) -| (s.south);
     \end{tikzpicture}
   \end{center}
+  \equationlegend{$t$: current time step; $s_t$: current state; $a_t$: chosen action; $s_{t+1}$: resulting next state; $r_{t+1}$: reward received for that transition.}
 
   \begin{keyidea}
     A Markov Decision Process formalizes repeated decision making when actions have uncertain consequences and future rewards matter.
@@ -185,6 +200,7 @@
     P(s_{t+1}\mid s_t,a_t,\text{history})
     =P(s_{t+1}\mid s_t,a_t).
   \]
+  \equationlegend{$P$: probability; $s_t,s_{t+1}$: states at successive time steps; $a_t$: current action; $\mid$: given. History means earlier states and actions; the current state and action suffice to predict the next state.}
 
   \begin{keyidea}
     ``State'' is an engineering abstraction: include what matters for predicting the future, omit what does not.
@@ -233,6 +249,7 @@
   \[
     T(s,a,s')=P(s_{t+1}=s'\mid s_t=s,a_t=a)
   \]
+  \equationlegend{$s$: current state; $a$: action; $s'$: candidate next state (the prime means next, not a derivative); $T(s,a,s')$: its transition probability. $t$: time step; $P(\cdot\mid\cdot)$: conditional probability.}
 
   Example from the campus intersection:
   \begin{center}
@@ -272,6 +289,7 @@
     \end{column}
   \end{columns}
 
+  \equationlegend{$t$: current time step; $R_t$: reward for one transition; $G_t$: accumulated future reward starting at time $t$. Return means accumulated reward, not a single immediate reward.}
   \begin{keyidea}
     MDPs optimize a trajectory of consequences, not the next reward in isolation.
   \end{keyidea}
@@ -281,6 +299,7 @@
   \[
     G_t=R_{t+1}+\gamma R_{t+2}+\gamma^2R_{t+3}+\cdots
   \]
+  \equationlegend{$G_t$: return from time $t$; $R_{t+1}$: next reward; $R_{t+2},R_{t+3}$: later rewards; $\gamma$: discount factor; powers of $\gamma$ reduce the weight of progressively later rewards; $\cdots$: continue the pattern.}
 
   \begin{itemize}
     \item $\gamma=0$: only the next reward matters.
@@ -321,6 +340,7 @@
   \[
     \pi(s)=a
   \]
+  \equationlegend{$\pi$: policy (decision rule); $s$: observed current state; $a$: action selected by the policy. $\pi(s)=a$ means choose action $a$ in state $s$.}
 
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.47\textwidth}
@@ -380,6 +400,7 @@
   \[
     R=+2
   \]
+  \equationlegend{$R$: immediate reward for the chosen action in this toy comparison. The values $+6$ and $+2$ do not include the rewards from later decisions.}
 
   A one-step agent prefers the shortcut immediately.
 
@@ -395,6 +416,7 @@
   \[
     Q(s,a)=\sum_{s'}T(s,a,s')\left[R(s,a,s')+\gamma V(s')\right]
   \]
+  \equationlegend{$Q(s,a)$: action value given continuation values $V$; $s,a,s'$: current state, action, next state; $T$: transition probability; $R$: immediate transition reward; $\gamma$: discount factor; $V(s')$: continuation value; $\sum_{s'}$: sum over next states.}
 
   \begin{itemize}
     \item $T$: how likely is each next state?
@@ -412,6 +434,7 @@
     V^*(s)=\max_a\sum_{s'}T(s,a,s')
     \left[R(s,a,s')+\gamma V^*(s')\right]
   \]
+  \equationlegend{$V^*(s)$: optimal expected return from state $s$; $*$: optimal; $a$: candidate action; $s'$: next state; $T$: transition probability; $R$: immediate reward; $\gamma$: discount; $\sum_{s'}$: sum over next states; $\max_a$: take the greatest action value.}
 
   Read it procedurally:
   \begin{enumerate}
@@ -429,8 +452,7 @@
 
 \begin{frame}{Worked Comparison: Immediate Reward Plus Future Value}
   \small
-  Use the transition probabilities from the intersection and $\gamma=0.9$.
-  Suppose our current continuation-value estimates are:
+  Use $\gamma=0.9$ and these current continuation-value estimates:
   \begin{center}
     \renewcommand{\arraystretch}{1.2}
     \begin{tabular}{l|r}
@@ -440,15 +462,16 @@
       Crowded Plaza & $-25$
     \end{tabular}
   \end{center}
-  The immediate reward is $6$ for shortcut and $2$ for detour, regardless of the next state.
   \[
     Q(\text{Intersection},\text{Shortcut})=6+0.9[0.70(20)+0.30(-25)]=11.85
   \]
   \[
     Q(\text{Intersection},\text{Detour})=2+0.9[0.95(17)+0.05(-25)]=15.41
   \]
+  \equationlegend{$Q(s,a)$: immediate reward plus discounted expected continuation value; $\gamma=0.9$: discount. $0.70,0.30,0.95,0.05$: transition probabilities; $20,17,-25$: values from the table; $6,2$: immediate rewards for shortcut and detour, independent of next state.}
+
   \begin{keyidea}
-    The detour loses on immediate reward but wins when these continuation values are included. Value iteration will update estimates like these.
+    With these continuation values, detour wins despite its smaller immediate reward.
   \end{keyidea}
 \end{frame}
 
@@ -456,6 +479,7 @@
   \[
     V^\pi(s)=\mathbb{E}_\pi\left[G_t\mid S_t=s\right]
   \]
+  \equationlegend{$V^\pi(s)$: expected return when following policy $\pi$ from state $s$; $\mathbb{E}_\pi$: average over trajectories generated by that policy; $G_t$: discounted return; $S_t=s$: start in state $s$ at time $t$; $V^*$: optimal value.}
 
   $V^\pi(s)$ asks:
   \begin{quote}
@@ -474,6 +498,7 @@
     V_{k+1}(s)=\max_a\sum_{s'}T(s,a,s')
     \left[R(s,a,s')+\gamma V_k(s')\right]
   \]
+  \equationlegend{$k$: update sweep, not a time step; $V_k,V_{k+1}$: old and new value estimates; $s,a,s'$: state, action, next state; $T$: transition probability; $R$: immediate reward; $\gamma$: discount; $\sum_{s'}$: sum over next states; $\max_a$: best action value.}
 
   \begin{enumerate}
     \item initialize values, often $V_0(s)=0$;
@@ -500,6 +525,8 @@
       \draw[-{Stealth},thick] (n)--node[above,draw=none,minimum width=0cm,minimum height=0cm] {$+20$} (g);
     \end{tikzpicture}}
   \end{center}
+  \equationlegend{$V_0$: initial value estimate before any update sweep; $V$: future return from a state; $+20$: reward on entering the goal. The terminal goal has $V=0$ because no rewards remain after arrival.}
+
   In this separate, deterministic chain, all other rewards are zero and delivery pays $+20$ on entering the terminal goal.
   \begin{itemize}
     \item First sweep: Near Goal learns the value of delivering.
@@ -515,6 +542,7 @@
     \pi^*(s)=\arg\max_a\sum_{s'}T(s,a,s')
     \left[R(s,a,s')+\gamma V^*(s')\right]
   \]
+  \equationlegend{$\pi^*(s)$: optimal action in state $s$; $V^*(s')$: optimal next-state value; $T$: transition probability; $R$: immediate reward; $\gamma$: discount. $\sum_{s'}$: sum over next states; $\arg\max_a$: return a maximizing action, not its numerical value.}
 
   Example policy:
   \begin{itemize}
@@ -597,6 +625,7 @@
     \qquad
     P(CorridorB)=0.45.
   \]
+  \equationlegend{$\pi(s)$: action prescribed for a known state $s$; $P(\text{CorridorA}),P(\text{CorridorB})$: current probabilities of being in those two locations. Neither location is known with certainty.}
 
   Which state should we plug into the MDP policy?
 
@@ -616,7 +645,9 @@
   \[
     b_t=[0.55,\;0.35,\;0.10]
   \]
+
   for Corridor A, Corridor B, and Plaza.
+  \equationlegend{$b_t(s)$: belief probability for state $s$ at time $t$; $S_t$: hidden state variable; $o_{1:t}$: observations through $t$; $a_{1:t-1}$: earlier actions; $P(\cdot\mid\cdot)$: probability given that history. Vector entries follow the listed state order.}
 
   \begin{keyidea}
     State estimation and sequential decision making meet at the belief state.
@@ -627,6 +658,7 @@
   \[
     \boxed{POMDP=(S,A,T,R,\Omega,O,\gamma)}
   \]
+  \equationlegend{$S$: states; $A$: actions; $T$: transition model; $R$: reward model; $\gamma$: discount; $\Omega$: observation set; $O(o\mid s',a)$: probability of reading $o$ after action $a$ reaches next state $s'$.}
 
   Relative to an MDP we add:
   \begin{itemize}
@@ -647,10 +679,10 @@
       reward/.style={draw,diamond,aspect=2.2,minimum width=1.8cm},
       edge/.style={->,thick}]
       \node[chance] (s) at (0,0) {$S_t$};
-      \node[choice] (a) at (3,1.25) {$A_t$};
+      \node[choice] (a) at (3,0.9) {$A_t$};
       \node[chance] (sp) at (6,0) {$S_{t+1}$};
-      \node[chance] (o) at (9,1.25) {$O_{t+1}$};
-      \node[reward] (r) at (3,-1.25) {$R_{t+1}$};
+      \node[chance] (o) at (9,0.9) {$O_{t+1}$};
+      \node[reward] (r) at (3,-0.9) {$R_{t+1}$};
       \draw[edge] (s)--(sp);
       \draw[edge] (a)--(sp);
       \draw[edge] (sp)--(o);
@@ -660,6 +692,8 @@
       \draw[edge] (sp)--(r);
     \end{tikzpicture}
   \end{center}
+  \equationlegend{$S_t,S_{t+1}$: hidden states; $A_t$: action; $O_{t+1}$: observation variable; $R_{t+1}$: reward; $t$: time step. The function $O(o\mid s',a)$ denotes the observation likelihood.}
+
   \small
   States are hidden; sensor readings are observed. Reward scores transitions; in this model we do not use a separate reward observation as evidence.
   \begin{keyidea}
@@ -682,7 +716,9 @@
   \[
     \pi(b)
   \]
+
   instead of $\pi(s)$.
+  \equationlegend{$b$: belief vector over Corridor A, Corridor B, and Plaza, in that order; $\pi(b)$: action chosen from the belief; $\pi(s)$: action chosen from a known physical state $s$.}
 
   \begin{keyidea}
     The robot plans from a probability distribution rather than pretending one hidden state is certainly true.
@@ -699,6 +735,7 @@
   \[
     b_{t+1}(s')\propto O(o_{t+1}\mid s',a_t)b^-_{t+1}(s').
   \]
+  \equationlegend{$b_t$: current belief; $b^-_{t+1}$: predicted belief before sensing; $b_{t+1}$: corrected belief; $s,s'$: current and next states; $a_t$: action; $o_{t+1}$: new reading; $T$: transition model; $O$: observation likelihood; $\sum_s$: sum over current states; $\propto$: proportional to; normalize over next states to sum to one.}
 
   \begin{keyidea}
     Use the transition model to predict, then the observation likelihood to correct. This is filtering inside a sequential decision model.
@@ -717,6 +754,7 @@
       \draw[-{Stealth},thick] (o)--(bp);
     \end{tikzpicture}
   \end{center}
+  \equationlegend{$b_t$: current belief distribution; $a_t$: chosen action; $o_{t+1}$: new observation; $b_{t+1}$: updated belief after acting and observing; $t$: time step.}
 
   The full action/observation history can be compressed into the current belief.
 
@@ -739,7 +777,9 @@
   \[
     0\le P(A)\le1
   \]
+
   defines a different belief state.
+  \equationlegend{$b$: belief vector; $P(A)$: probability of hidden state A; $1-P(A)$: probability of hidden state B. Here A and B label states, not action sets; $\le$: less than or equal to.}
 
   \begin{keyidea}
     Two physical states already create infinitely many possible beliefs.
@@ -754,18 +794,19 @@
     \qquad
     p_1+p_2+p_3=1.
   \]
+  \equationlegend{$b$: belief vector; $p_1,p_2,p_3$: nonnegative probabilities of Corridor A, Corridor B, and Plaza; their sum is $1$. $n$: number of hidden states; $n-1$: independent probability coordinates.}
 
   \begin{center}
     \begin{tikzpicture}
       \coordinate (a) at (0,0);
       \coordinate (b) at (5,0);
-      \coordinate (c) at (2.5,2.5);
+      \coordinate (c) at (2.5,2.0);
       \draw[thick,CalPolyGreen] (a)--(b)--(c)--cycle;
-      \fill[CalPolyGold] (2.25,1.0) circle (2.2pt);
+      \fill[CalPolyGold] (2.25,0.8) circle (2.2pt);
       \node[below] at (a) {Corridor A};
       \node[below] at (b) {Corridor B};
       \node[above] at (c) {Plaza};
-      \node[right] at (2.25,1.0) {$[0.35,0.25,0.40]$};
+      \node[right] at (2.25,0.8) {$[0.35,0.25,0.40]$};
     \end{tikzpicture}
   \end{center}
 
@@ -816,6 +857,7 @@
   \[
     (4\cdot3)^6=12^6\approx2.99\times10^6.
   \]
+  \equationlegend{$|A|$: number of actions; $|\Omega|$: number of observation categories; vertical bars mean set size; $H$: planning horizon in steps. $(|A||\Omega|)^H$ counts possible length-$H$ action--observation sequences; $\approx$: approximately.}
 
   And every branch carries a continuously valued belief distribution.
 
@@ -911,7 +953,6 @@
     Beliefs describe possible worlds; rewards score consequences; planning selects actions over time. Sampling makes large planning problems more tractable.
   \end{keyidea}
 \end{frame}
-
 
 \begin{frame}{What Each Model Adds}
   \small
