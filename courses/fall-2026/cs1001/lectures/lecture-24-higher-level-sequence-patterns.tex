@@ -1,11 +1,35 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-24/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-24/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-24/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{24}
 \lecturetitle{Higher-Level Sequence Patterns}
-\lecturedate{October 21, 2026}
+\lecturedate{Fall 2026}
 \courseunit{9. Iteration}
 
 \begin{document}
@@ -14,41 +38,662 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Higher-Level Sequence Patterns
-    \item Placeholder for announcements and context.
+    \item Move from reasoning about \textbf{loop mechanics} to reasoning about \textbf{sequence-level intent}.
+    \item Give formal names to transformation and selection patterns already implemented with loops.
+    \item Refactor suitable loop-based list construction into list comprehensions.
+    \item Trace comprehensions using the same binding, condition, and evaluation model used for \texttt{for} loops.
+    \item Distinguish computations that fit a comprehension from those that remain clearer as explicit loops.
+    \item Look briefly at the runtime mechanism that allows \texttt{for} to traverse a sequence.
   \end{itemize}
+
+  \begin{keyidea}
+    Lecture 24 does not introduce a new kind of computation. It introduces a \textbf{higher-level representation} for some computations students already know how to express with loops.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\begin{frame}{The Boundary for This Lecture}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Today}
+        \begin{itemize}
+          \item map / transformation as a pattern
+          \item filter / selection as a pattern
+          \item list comprehensions
+          \item semantic equivalence with simple loops
+          \item choosing a readable representation
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Not today}
+        \begin{itemize}
+          \item \texttt{map()} or \texttt{filter()} built-ins
+          \item a catalog of sequence built-ins
+          \item nested comprehensions
+          \item nested data structures
+          \item searching or sorting algorithms
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 1: From Loop Mechanics to Computational Intent}
+
+\begin{frame}{The Iteration Unit Has Three Levels}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l}
+      \textbf{Lecture} & \textbf{Primary question} & \textbf{Level} \\\hline
+      22 & How does a \texttt{for} loop execute? & mechanism \\
+      23 & What recurring loop structures solve common tasks? & construction \\
+      24 & What computation does this loop represent? & abstraction
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    We are moving upward in abstraction, not replacing the execution model from Lecture 22.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{From Mechanism to Intent}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Mechanistic description}
+        Create an empty list, visit each input value, compute a result, append that result, repeat until the input is exhausted.
+      \end{block}
+
+      \begin{block}{Intent-level description}
+        Produce one transformed output value for each input value.
+      \end{block}
+
+      \begin{keyidea}
+        Both descriptions are correct. They answer different questions.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: ladder from statement-level loop mechanics to sequence-level intent.
+      \lectureimage[2.25in]{abstraction-ladder.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Formal Names for Familiar Patterns}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l}
+      \textbf{Pattern} & \textbf{Relationship} & \textbf{Typical result} \\\hline
+      transformation / map & each input produces a related output & new sequence \\
+      selection / filter & only qualifying inputs remain & new sequence \\
+      accumulation & repeated updates summarize the input & one value
+    \end{tabular}
+  \end{center}
+
+  \begin{alertblock}{Terminology}
+    \textbf{Map} and \textbf{filter} name computational patterns here. We are not introducing Python's \texttt{map()} or \texttt{filter()} functions.
+  \end{alertblock}
+
+  Naming the pattern lets us recognize the same computational relationship even when the particular arithmetic or data changes.
+\end{frame}
+
+\begin{frame}{Refactoring Should Preserve Meaning}
+  \begin{cpdefinition}
+    A \textbf{refactoring} changes how code is expressed while preserving its intended observable behavior.
+  \end{cpdefinition}
+
+  When we replace a simple list-building loop with a comprehension, we should preserve:
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item which input values are examined;
+    \item which conditions are checked;
+    \item which result values are produced;
+    \item the order of the produced values; and
+    \item whether the original input is mutated.
   \end{itemize}
+
+  \begin{keyidea}
+    Shorter syntax is useful only when it preserves both behavior and clarity.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\sectionframe{Part 2: List Comprehensions as Refactored List Construction}
+
+\begin{frame}{The Same Relationship as a List Comprehension}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.51\textwidth}
+      \begin{block}{Explicit construction}
+        \texttt{result = []}\\
+        \texttt{for value in values:}\\
+        \hspace{0.18in}\texttt{result.append(value * 2)}
+      \end{block}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \begin{block}{Comprehension}
+        \texttt{result = [value * 2}\\
+        \hspace{0.45in}\texttt{for value in values]}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The comprehension removes bookkeeping that is predictable from the pattern: creating the empty list and explicitly calling \texttt{append}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A List Comprehension Is an Expression}
+  \begin{cpdefinition}
+    A \textbf{list comprehension} is an expression that constructs a new list by repeatedly evaluating an output expression over values obtained from an input sequence.
+  \end{cpdefinition}
+
+  \begin{block}{General form}
+    \centering
+    \texttt{[output\_expression for name in sequence]}
+  \end{block}
+
+  Because it is an expression, the completed list can be:
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item assigned to a name;
+    \item returned from a function; or
+    \item used as part of another expression.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Anatomy of a Comprehension}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{Example}
+        \centering
+        \texttt{[x + 1 for x in values]}
+      \end{block}
+
+      \begin{center}
+        \renewcommand{\arraystretch}{1.28}
+        \begin{tabular}{l|l}
+          \textbf{Part} & \textbf{Role} \\\hline
+          \texttt{values} & source sequence \\
+          \texttt{x} & repeatedly bound name \\
+          \texttt{x + 1} & output expression
+        \end{tabular}
+      \end{center}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      % Intended visual: input values flowing through a transform box into a new list.
+      \lectureimage[2.45in]{comprehension-pipeline.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[t]{Trace It Using the Old Loop Model}
+  \small
+  For:
+  \begin{block}{Expression}
+    \centering
+    \texttt{[x + 1 for x in [1, 2, 3, 4]]}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{c|c|c}
+      \textbf{Step} & \textbf{x} & \textbf{Produced value} \\\hline
+      1 & 1 & 2 \\
+      2 & 2 & 3 \\
+      3 & 3 & 4 \\
+      4 & 4 & 5
+    \end{tabular}
+  \end{center}
+
+  Final value: \texttt{[2, 3, 4, 5]}
+
+  \begin{keyidea}
+    The compact syntax does not change the binding model: obtain a value, bind the name, evaluate the output expression, and add the produced value to the new list.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Output Expression Can Call a Function}
+  \begin{block}{Code}
+    \texttt{def square(n: int) -> int:}\\
+    \hspace{0.20in}\texttt{return n * n}\\[0.10in]
+    \texttt{squares = [square(x) for x in [1, 2, 3, 4]]}
+  \end{block}
+
+  The comprehension causes four separate calls:
+
+  \begin{center}
+    \texttt{square(1)} $\rightarrow$ \texttt{1}\qquad
+    \texttt{square(2)} $\rightarrow$ \texttt{4}\qquad
+    \texttt{square(3)} $\rightarrow$ \texttt{9}\qquad
+    \texttt{square(4)} $\rightarrow$ \texttt{16}
+  \end{center}
+\end{frame}
+
+\begin{frame}{The Input Is Not the Output}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Input}
+        \texttt{values = [2, 4, 6]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Comprehension}
+        \texttt{doubled = [x * 2 for x in values]}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  Afterwards:
+  \begin{center}
+    \texttt{values} $\rightarrow$ \texttt{[2, 4, 6]}\\
+    \texttt{doubled} $\rightarrow$ \texttt{[4, 8, 12]}
+  \end{center}
+
+  \begin{keyidea}
+    A list comprehension constructs a \textbf{new list}. It does not implicitly mutate the source list.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Selection and Conditional Production}
+
+\begin{frame}{Selection Has the Same Refactoring Idea}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.51\textwidth}
+      \begin{block}{Explicit loop}
+        \texttt{result = []}\\
+        \texttt{for x in values:}\\
+        \hspace{0.18in}\texttt{if x > 0:}\\
+        \hspace{0.36in}\texttt{result.append(x)}
+      \end{block}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      \begin{block}{Filtered comprehension}
+        \texttt{result = [x for x in values}\\
+        \hspace{0.48in}\texttt{if x > 0]}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  The condition determines whether a candidate contributes a value to the result.
+\end{frame}
+
+\begin{frame}{General Form with a Condition}
+  \begin{block}{Filtered comprehension}
+    \centering
+    \texttt{[output\_expression for name in sequence if condition]}
+  \end{block}
+
+  For each candidate:
+  \begin{enumerate}
+    \item bind the candidate to \texttt{name};
+    \item evaluate \texttt{condition};
+    \item if the condition is \texttt{True}, evaluate the output expression;
+    \item otherwise produce nothing for that candidate.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Trace Selection Explicitly}
+  \begin{block}{Expression}
+    \centering
+    \texttt{[x for x in [-2, 5, 0, 7] if x > 0]}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.22}
+    \begin{tabular}{c|c|c}
+      \textbf{x} & \textbf{x > 0} & \textbf{Produced value} \\\hline
+      -2 & False & --- \\
+      5 & True & 5 \\
+      0 & False & --- \\
+      7 & True & 7
+    \end{tabular}
+  \end{center}
+
+  Final value: \texttt{[5, 7]}
+
+  Selected values appear in the same relative order in which they were encountered.
+\end{frame}
+
+\begin{frame}{Selection and Transformation Can Be Combined}
+  \begin{block}{Example}
+    \centering
+    \texttt{[x * 2 for x in values if x > 0]}
+  \end{block}
+
+  Conceptually:
+  \begin{center}
+    \textbf{candidate} $\longrightarrow$ \textbf{condition} $\longrightarrow$ \textbf{transform if selected}
+  \end{center}
+
+  \begin{itemize}
+    \item some candidates produce no output value;
+    \item selected candidates can be transformed before entering the result;
+    \item the result is still a newly constructed list.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Written Order Is Not Evaluation Order}
+  Consider:
+  \begin{block}{Expression}
+    \centering
+    \texttt{[transform(x) for x in values if check(x)]}
+  \end{block}
+
+  For each \texttt{x}, Python conceptually does:
+  \begin{enumerate}
+    \item evaluate \texttt{check(x)};
+    \item if it is \texttt{True}, evaluate \texttt{transform(x)};
+    \item place the transformed value into the result.
+  \end{enumerate}
+
+  \begin{alertblock}{Common reading mistake}
+    The output expression appears first syntactically, but it is not evaluated for candidates rejected by the condition. If \texttt{check(x)} is false, \texttt{transform(x)} is not called for that candidate.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{A Reliable Mental Expansion}
+  When a comprehension feels dense, expand it mentally.
+
+  \begin{block}{Comprehension}
+    \texttt{result = [f(x) for x in values if p(x)]}
+  \end{block}
+
+  \begin{block}{Equivalent reasoning structure}
+    \texttt{result = []}\\
+    \texttt{for x in values:}\\
+    \hspace{0.18in}\texttt{if p(x):}\\
+    \hspace{0.36in}\texttt{result.append(f(x))}
+  \end{block}
+
+  \begin{keyidea}
+    The explicit loop remains the tracing model even when the program uses compact syntax.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: How Do Loops Work ``Under the Engine''?}
+
+\begin{frame}[t]{The Surface Syntax Hides a Runtime Conversation}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      When Python executes:
+      \begin{block}{Surface syntax}
+        \texttt{for value in sequence:}\\
+        \hspace{0.20in}\texttt{use(value)}
+      \end{block}
+
+      it needs a runtime mechanism that can answer two questions repeatedly:
+      \begin{enumerate}
+        \item Is there another value?
+        \item If so, what is it?
+      \end{enumerate}
+
+      \begin{alertblock}{Flavor, not required syntax}
+        You are not expected to write the lower-level mechanism yourself in this course.
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: a sequence feeding values through an iterator state into a loop variable.
+      \lectureimage[2.25in]{iterator-engine.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Conceptual Runtime Model}
+  At a high level, Python behaves approximately like this:
+
+  \begin{block}{Conceptual model}
+    \texttt{iterator = iter(sequence)}\\
+    \texttt{while another value is available:}\\
+    \hspace{0.20in}\texttt{value = next(iterator)}\\
+    \hspace{0.20in}\texttt{execute loop body}
+  \end{block}
+
+  Internally, the iterator maintains enough state to know which value should come next. When no next value exists, the runtime reports \texttt{StopIteration}; the \texttt{for} statement handles that termination automatically.
+
+  \begin{keyidea}
+    The \texttt{for} statement is a high-level control structure built on a lower-level mechanism for requesting successive values.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Why \texttt{range} Works Naturally with \texttt{for}}
+  A \texttt{range} value represents a numerical progression using a start, stop, and step.
+
+  \begin{block}{Example}
+    \centering
+    \texttt{for i in range(2, 8, 2):}
+  \end{block}
+
+  The loop receives:
+  \begin{center}
+    \texttt{2} $\rightarrow$ \texttt{4} $\rightarrow$ \texttt{6}
+  \end{center}
+
+  The range value can support iteration without first constructing a list containing every integer in the progression.
+\end{frame}
+
+\begin{frame}[t]{Comprehensions Use the Same Iteration Machinery}
+  \small
+  A comprehension does not remove iteration from the computation.
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Source}
+        \texttt{[x * 2 for x in values if x > 0]}
+      \end{block}
+
+      Conceptually, Python still:
+      \begin{itemize}
+        \item obtains successive source values;
+        \item performs repeated bindings;
+        \item checks the condition;
+        \item evaluates the output expression;
+        \item constructs a new list.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      % Intended visual: same iterator feeding either an explicit loop body or a comprehension pipeline.
+      \lectureimage[2.00in]{loop-and-comprehension-runtime.png}
+    \end{column}
+  \end{columns}
+
+  The abstraction hides predictable bookkeeping while preserving the same underlying traversal.
+\end{frame}
+
+\sectionframe{Part 5: Choosing the Right Representation}
+
+\begin{frame}{A Comprehension Has a Narrow Job}
+  A comprehension is usually a strong fit when all of the following are true:
+  \begin{itemize}
+    \item the goal is to construct one new list;
+    \item values come from one straightforward source sequence;
+    \item each selected candidate produces at most one output value;
+    \item the transformation is short enough to understand locally;
+    \item the condition, if present, is similarly simple.
+  \end{itemize}
+
+  \begin{block}{Good fit}
+    \centering
+    \texttt{[word.lower() for word in words if word != ""]}
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{An Explicit Loop Is Better for Richer State Changes}
+  Prefer a normal loop when the body coordinates several pieces of state or several actions.
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item multiple accumulators;
+    \item several independent updates;
+    \item complex conditional branching;
+    \item intentional mutation of existing data;
+    \item multiple side effects;
+    \item intermediate states that matter for debugging or explanation.
   \end{itemize}
+
+  \begin{keyidea}
+    A comprehension is not an ``advanced loop.'' It is a specialized expression for constructing a list.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{Shorter Is Not Automatically Clearer}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Compact and clear}
+        \texttt{[x * 2 for x in values if x > 0]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Too much hidden in one expression}
+        several conditions + several calls + several transformations
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{center}
+    \lectureimage[1.05in]{readability-spectrum.png}
+  \end{center}
+
+  \begin{keyidea}
+    Choose the representation that makes the computation easiest to verify, explain, and maintain.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Debugging Can Favor the Explicit Form}
+  Suppose a comprehension produces the wrong list.
+
+  One useful debugging move is to temporarily expand it:
+
+  \begin{block}{Compact version}
+    \texttt{result = [f(x) for x in values if p(x)]}
+  \end{block}
+
+  \begin{block}{Debugging version}
+    \texttt{result = []}\\
+    \texttt{for x in values:}\\
+    \hspace{0.18in}\texttt{if p(x):}\\
+    \hspace{0.36in}\texttt{result.append(f(x))}
+  \end{block}
+
+  The expanded form exposes intermediate state and gives the debugger more obvious stopping points.
+\end{frame}
+
+\begin{frame}{Semantic Equivalence Checklist}
+  Before replacing a loop with a comprehension, verify:
+
+  \begin{enumerate}
+    \item Is the same source sequence traversed?
+    \item Are candidates examined in the same order?
+    \item Is the same condition applied to each candidate?
+    \item Is the same transformation applied to selected candidates?
+    \item Is a fresh result list produced?
+    \item Is the original input left unchanged when that is the intended contract?
+  \end{enumerate}
+\end{frame}
+
+\sectionframe{Part 6: Synthesis}
+
+\begin{frame}{One Problem, Three Levels of Description}
+  Consider producing the lengths of every word.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l}
+      \textbf{Level} & \textbf{Description} \\\hline
+      execution & repeatedly bind a word and execute statements \\
+      loop pattern & build a new list by transforming each input \\
+      sequence pattern & map each word to its length
+    \end{tabular}
+  \end{center}
+
+  \begin{block}{Comprehension representation}
+    \centering
+    \texttt{[len(word) for word in words]}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Map, Filter, and Accumulate Are Different Relationships}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{l|l|l}
+      \textbf{Pattern} & \textbf{Input-to-output relationship} & \textbf{Natural representation} \\\hline
+      map & one output per input & loop or comprehension \\
+      filter & zero or one output per input & loop or comprehension \\
+      accumulate & many inputs update shared summary state & explicit loop
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Not every repeated computation should become a comprehension.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Integrated Prediction}
+  Do not treat this as one opaque expression.
+
+  \begin{block}{Code}
+    \texttt{def adjust(n: int) -> int:}\\
+    \hspace{0.20in}\texttt{return n * 3}\\[0.08in]
+    \texttt{values = [-2, 0, 1, 4]}\\
+    \texttt{result = [adjust(x) for x in values if x > 0]}
+  \end{block}
+
+  Predict:
+  \begin{enumerate}
+    \item every value bound to \texttt{x};
+    \item every result of \texttt{x > 0};
+    \item exactly which calls to \texttt{adjust} occur;
+    \item the final value of \texttt{result}.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Integrated Trace}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|c|c}
+      \textbf{x} & \textbf{x > 0} & \textbf{adjust(x)} \\\hline
+      -2 & False & not called \\
+      0 & False & not called \\
+      1 & True & 3 \\
+      4 & True & 12
+    \end{tabular}
+  \end{center}
+
+  Therefore:
+  \begin{center}
+    \texttt{result = [3, 12]}
+  \end{center}
+
+  The compressed syntax still obeys the same rules for bindings, conditions, function calls, and returned values.
+\end{frame}
+
+\begin{frame}{Iteration Unit: The Complete Picture}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.32}
+    \begin{tabular}{l|l}
+      \textbf{Lecture} & \textbf{Core responsibility} \\\hline
+      22 & execution mechanics of \texttt{for} and \texttt{range} \\
+      23 & constructing useful computations with recurring loop patterns \\
+      24 & recognizing intent and selecting a higher-level representation
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The strongest mental model works at multiple levels: understand the mechanism, recognize the pattern, then choose the clearest representation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{enumerate}
+    \item Map and filter name relationships between an input sequence and a result sequence.
+    \item A list comprehension is an expression for constructing a new list from those relationships.
+    \item Comprehensions still rely on repeated binding and iteration; they hide bookkeeping rather than eliminate computation.
+    \item Conditions are evaluated before the output expression for a candidate is produced.
+    \item Explicit loops remain preferable when the computation manages richer state or several actions.
+    \item Understanding the lower-level iteration mechanism explains why the same \texttt{for} syntax works across different iterable values.
+  \end{enumerate}
+
+  \begin{block}{Next}
+    We leave sequential data as the primary structure and introduce \textbf{dictionaries and associative data}.
+  \end{block}
 \end{frame}
 
 \end{document}
