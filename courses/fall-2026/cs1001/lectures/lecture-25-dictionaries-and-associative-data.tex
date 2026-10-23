@@ -1,54 +1,1113 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-25/}}
+
+% If an image file is not yet available, the slide displays a labeled
+% placeholder using the intended filename. Place the matching file in
+% ../assets/lecture-25/ to replace the placeholder automatically.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \IfFileExists{../assets/lecture-25/#2}{%
+    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+  }{%
+    \fbox{%
+      \parbox[c][#1][c]{0.94\linewidth}{%
+        \centering
+        \small\textbf{Image Placeholder}\\[0.08in]
+        \scriptsize\texttt{\detokenize{#2}}
+      }%
+    }%
+  }%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{25}
 \lecturetitle{Dictionaries and Associative Data}
-\lecturedate{October 23, 2026}
+\lecturedate{Fall 2026}
 \courseunit{10. Structured Data}
 
+% Iteration coverage review across Lectures 22--25:
+% 22: for/range, bindings, indentation, empty ranges, accumulator mechanics.
+% 23: totals/counts/build/filter, while/sentinels, progress and boundary bugs.
+% 24: comprehensions, evaluation order, iterable machinery, refactoring.
+% 25: break/continue/else, guarded traversal, stable traversal sources,
+%     pair unpacking/enumerate, best-so-far state, dictionary accumulation.
+% Optional backup: zip, any/all early-return patterns, boundary-case checklist.
+% Formal loop-invariant proofs remain in Lecture 32; nested loops are excluded here.
+% Python references:
+% https://docs.python.org/3/tutorial/controlflow.html
+% https://docs.python.org/3/tutorial/datastructures.html#looping-techniques
+% https://docs.python.org/3/library/stdtypes.html#dictionary-view-objects
 \begin{document}
 
 \makedecktitle
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Dictionaries and Associative Data
-    \item Placeholder for announcements and context.
+    \item Explain why sequential position is not always the natural way to organize data.
+    \item Model a dictionary as a collection of \textbf{key--value associations}.
+    \item Create dictionaries, retrieve values, add new associations, and update existing ones.
+    \item Control early exits and skips, preserve progress, and traverse collections safely.
+    \item Iterate over keys, values, and pairs; keep the best entry seen so far.
+    \item Combine iteration and dictionaries to construct a character-frequency map.
   \end{itemize}
+
+  \begin{keyidea}
+    Dictionaries change how data is identified; loop-control statements change how repeated processing proceeds.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\begin{frame}{The Boundary for This Lecture}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Today}
+        \begin{itemize}
+          \item dictionary literals
+          \item keys and values
+          \item lookup by key
+          \item adding and updating entries
+          \item membership
+          \item loop control and safe traversal
+          \item dictionary iteration and best-so-far state
+          \item frequency maps
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Not today}
+        \begin{itemize}
+          \item hash-function design
+          \item collision-resolution algorithms
+          \item asymptotic complexity analysis
+          \item nested dictionaries
+          \item large catalogs of dictionary methods
+          \item implementing a hash table from scratch
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 1: Why Associative Data?}
+
+\begin{frame}{Sequences Organize Values by Position}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{A list}
+        \centering
+        \texttt{scores = [88, 94, 79, 91]}
+      \end{block}
+
+      \begin{itemize}
+        \item Each value is identified by an integer index.
+        \item Position is useful when order itself matters.
+        \item The natural question is: \textbf{which position do I want?}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      % Intended visual: a row of indexed list slots labeled 0, 1, 2, 3.
+      \lectureimage[2.35in]{sequence-position-model.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Sometimes Position Is the Wrong Question}
+  Suppose each score belongs to a particular student.
+
+  \begin{block}{Parallel information}
+    \texttt{names  = ["Ada", "Grace", "Linus", "Edsger"]}\\
+    \texttt{scores = [88, 94, 79, 91]}
+  \end{block}
+
+  To find Grace's score, we must first determine Grace's position and then use the same position in \texttt{scores}.
+
+  \begin{center}
+    \textbf{name} $\longrightarrow$ \textbf{position} $\longrightarrow$ \textbf{score}
+  \end{center}
+
+  \begin{keyidea}
+    The data relationship we care about is not really ``index 1 has value 94.'' It is ``Grace has score 94.''
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Associative Data Stores the Relationship Directly}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Dictionary}
+        \texttt{scores = \{"Ada": 88, "Grace": 94,}\\
+        \hspace{0.78in}\texttt{"Linus": 79, "Edsger": 91\}}
+      \end{block}
+
+      Now the lookup relationship is direct:
+
+      \begin{center}
+        \textbf{"Grace"} $\longrightarrow$ \textbf{94}
+      \end{center}
+
+      The name is not merely stored as another value. It identifies the associated score.
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: arrows from meaningful keys (names) to score values.
+      \lectureimage[2.35in]{key-value-associations.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Definition: Dictionary}
+  \begin{cpdefinition}
+    A \textbf{dictionary} is a mutable mapping from \textbf{keys} to \textbf{values}. Each key identifies one associated value.
+  \end{cpdefinition}
+
+  \begin{center}
+    \textbf{key} $\longrightarrow$ \textbf{value}
+  \end{center}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item A key is used to identify an association.
+    \item A value is the data stored for that key.
+    \item The complete association is often called a \textbf{key--value pair}.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Anatomy of a Dictionary}
+  \begin{block}{Example}
+    \centering
+    \texttt{inventory = \{"bolts": 120, "washers": 75, "nuts": 90\}}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{l|l}
+      \textbf{Key} & \textbf{Associated value} \\\hline
+      \texttt{"bolts"} & \texttt{120} \\
+      \texttt{"washers"} & \texttt{75} \\
+      \texttt{"nuts"} & \texttt{90}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    A dictionary is organized by association, not by numerical position.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Dictionary Keys Are Unique}
+  A dictionary cannot contain two independent entries for the same key.
+
+  \begin{block}{Conceptual state}
+    \texttt{"Ada"} $\rightarrow$ \texttt{88}\\
+    \texttt{"Grace"} $\rightarrow$ \texttt{94}
+  \end{block}
+
+  If we later associate \texttt{"Ada"} with \texttt{95}, the existing association is updated.
+
+  \begin{center}
+    \texttt{"Ada"} $\rightarrow$ \texttt{95}
+  \end{center}
+
+  \begin{keyidea}
+    One key identifies one current value.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Dictionary Properties}
+  For our purposes, a Python dictionary has four important properties.
+
+  \begin{enumerate}
+    \item It stores \textbf{key--value associations}.
+    \item Each key is \textbf{unique} within the dictionary.
+    \item It is \textbf{mutable}: associations can be added or updated.
+    \item Values are retrieved using a \textbf{key}, not a positional index.
+  \end{enumerate}
+
+  \begin{alertblock}{Mental-model shift}
+    Do not ask ``what is element 2?'' Ask ``what value is associated with this key?''
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 2: Creating, Reading, and Updating Dictionaries}
+
+\begin{frame}{Creating Dictionaries}
+  \begin{block}{Dictionary literal}
+    \texttt{ages = \{"Ada": 36, "Grace": 85, "Alan": 41\}}
+  \end{block}
+
+  \begin{block}{Empty dictionary}
+    \texttt{counts = \{\}}
+  \end{block}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item A colon separates each key from its value.
+    \item Commas separate key--value pairs.
+    \item An empty pair of braces creates an empty dictionary.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Retrieving a Value by Key}
+  \begin{block}{Dictionary lookup}
+    \texttt{ages = \{"Ada": 36, "Grace": 85, "Alan": 41\}}\\[0.08in]
+    \texttt{age = ages["Grace"]}
+  \end{block}
+
+  The lookup expression evaluates to the associated value:
+
+  \begin{center}
+    \texttt{ages["Grace"]} $\longrightarrow$ \texttt{85}
+  \end{center}
+
+  \begin{keyidea}
+    Square brackets still mean ``retrieve something,'' but the selector is now a key rather than a positional index.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Membership Tests Keys}
+  The \texttt{in} operator asks whether a key is present.
+
+  \begin{block}{Example}
+    \texttt{ages = \{"Ada": 36, "Grace": 85\}}\\[0.08in]
+    \texttt{"Ada" in ages} $\longrightarrow$ \texttt{True}\\
+    \texttt{"Alan" in ages} $\longrightarrow$ \texttt{False}
+  \end{block}
+
+  \begin{alertblock}{Important}
+    For a dictionary, \texttt{in} tests \textbf{keys}, not values.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Guarding a Lookup}
+  Looking up a key that is not present causes a \texttt{KeyError}.
+
+  \begin{block}{Safe pattern}
+    \texttt{if name in ages:}\\
+    \hspace{0.20in}\texttt{age = ages[name]}
+  \end{block}
+
+  This uses a familiar conditional structure:
+
+  \begin{center}
+    \textbf{check whether the key exists} $\longrightarrow$ \textbf{retrieve only when valid}
+  \end{center}
+
+  We will use this same idea when constructing a frequency map.
+\end{frame}
+
+\begin{frame}{Adding a New Association}
+  Assignment through a new key adds a key--value pair.
+
+  \begin{block}{Example}
+    \texttt{ages = \{\}}\\
+    \texttt{ages["Ada"] = 36}\\
+    \texttt{ages["Grace"] = 85}
+  \end{block}
+
+  Afterwards:
+
+  \begin{center}
+    \texttt{ages} $\rightarrow$ \texttt{\{"Ada": 36, "Grace": 85\}}
+  \end{center}
+
+  \begin{keyidea}
+    Dictionary assignment binds a value to a key inside the dictionary.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Updating an Existing Association}
+  Assignment through an existing key replaces the old associated value.
+
+  \begin{block}{Example}
+    \texttt{scores = \{"Ada": 88, "Grace": 94\}}\\
+    \texttt{scores["Ada"] = 95}
+  \end{block}
+
+  Afterwards:
+
+  \begin{center}
+    \texttt{scores} $\rightarrow$ \texttt{\{"Ada": 95, "Grace": 94\}}
+  \end{center}
+
+  No second \texttt{"Ada"} entry is created.
+\end{frame}
+
+\begin{frame}{Add or Update Depends on the Key}
+  The same syntax has two possible effects.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l}
+      \textbf{Statement} & \textbf{Effect} \\\hline
+      \texttt{d[new\_key] = value} & add a new association \\
+      \texttt{d[existing\_key] = value} & update the existing association
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The dictionary remains a mapping with one current value per key.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Dictionaries Are Mutable}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{block}{Aliasing example}
+        \texttt{first = \{"x": 1\}}\\
+        \texttt{second = first}\\
+        \texttt{second["x"] = 9}
+      \end{block}
+
+      Afterwards, both names refer to the same changed dictionary.
+
+      \begin{center}
+        \texttt{first["x"]} $\longrightarrow$ \texttt{9}
+      \end{center}
+    \end{column}
+    \begin{column}{0.41\textwidth}
+      % Intended visual: first and second both point to one dictionary before and after mutation.
+      \lectureimage[2.30in]{dictionary-aliasing-mutation.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Length Means Number of Associations}
+  \begin{block}{Example}
+    \texttt{inventory = \{"bolts": 120, "washers": 75, "nuts": 90\}}
+  \end{block}
+
+  Then:
+
+  \begin{center}
+    \texttt{len(inventory)} $\longrightarrow$ \texttt{3}
+  \end{center}
+
+  The length is the number of key--value pairs, not the sum of the values and not the largest possible key.
+\end{frame}
+
+\begin{frame}{What Can Be a Key?}
+  Dictionary keys must be suitable for stable identification.
+
+  \begin{itemize}
+    \item Strings are common keys: \texttt{"Ada"}, \texttt{"banana"}, \texttt{"CA"}.
+    \item Integers can also be keys: \texttt{101}, \texttt{202}, \texttt{404}.
+    \item Mutable lists cannot be dictionary keys.
+  \end{itemize}
+
+  \begin{alertblock}{For this course}
+    We will primarily use immutable primitive values such as strings and integers as keys. The precise requirement is called \textbf{hashability}; implementation details belong in a later data structures course.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 3: Controlling Loop Execution}
+
+\begin{frame}{Normal Iteration Runs the Body to Completion}
+  In the loops from Lectures 22--24, each iteration normally follows the same control path.
+
+  \begin{center}
+    \textbf{bind next value} $\longrightarrow$ \textbf{execute body} $\longrightarrow$ \textbf{request next value}
+  \end{center}
+
+  Sometimes the current value changes what should happen next.
+
+  \begin{itemize}
+    \item We may want to \textbf{skip the rest of this iteration}.
+    \item We may know enough to \textbf{stop the loop entirely}.
+    \item We may want special code to run only when the loop \textbf{finishes normally}.
+  \end{itemize}
+
+  \begin{keyidea}
+    \texttt{continue}, \texttt{break}, and loop \texttt{else} refine the control flow of an existing \texttt{for} loop; they do not create a new kind of iteration.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{\texttt{continue}: Skip the Rest of This Iteration}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{Example}
+        \texttt{words = ["cat", "", "dog"]}\\[0.08in]
+        \texttt{for word in words:}\\
+        \hspace{0.20in}\texttt{if word == "":}\\
+        \hspace{0.40in}\texttt{continue}\\
+        \hspace{0.20in}\texttt{print(word)}
+      \end{block}
+
+      When \texttt{word == ""}, Python skips the remaining statements in the body and requests the next value.
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      % Intended visual: loop path where continue jumps from the condition directly to the next binding.
+      \lectureimage[2.30in]{continue-control-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Trace \texttt{continue}}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|c|c|c}
+      \textbf{Iteration} & \textbf{word} & \textbf{word == ""} & \textbf{Printed?} \\\hline
+      1 & \texttt{"cat"} & False & \texttt{cat} \\
+      2 & \texttt{""} & True & no \\
+      3 & \texttt{"dog"} & False & \texttt{dog}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    \texttt{continue} ends only the \textbf{current iteration}. The loop itself remains active.
+  \end{keyidea}
+\end{frame}
+
+
+\begin{frame}{With \texttt{while}, \texttt{continue} Can Skip the Update}
+  \small
+  Both examples start with \texttt{values = [0, 5]}.
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Incorrect: stuck at index 0}
+        \texttt{i = 0}\\
+        \texttt{while i < len(values):}\\
+        \hspace{0.18in}\texttt{if values[i] == 0:}\\
+        \hspace{0.36in}\texttt{continue}\\
+        \hspace{0.18in}\texttt{print(values[i])}\\
+        \hspace{0.18in}\texttt{i = i + 1}
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Advance before a possible skip}
+        \texttt{i = 0}\\
+        \texttt{while i < len(values):}\\
+        \hspace{0.18in}\texttt{value = values[i]}\\
+        \hspace{0.18in}\texttt{i = i + 1}\\
+        \hspace{0.18in}\texttt{if value == 0:}\\
+        \hspace{0.36in}\texttt{continue}\\
+        \hspace{0.18in}\texttt{print(value)}
+      \end{block}
+    \end{column}
+  \end{columns}
+  The corrected loop prints \texttt{5} and stops. The left loop never reaches its update.
+  \begin{keyidea}
+    \texttt{continue} returns to a \texttt{while} condition; it does not advance your index. A \texttt{for} loop requests its next item automatically.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Check the Boundary Before Reading the Element}
+  \small
+  \begin{block}{Walk until a match or the end}
+    \texttt{values = [4, 9, 2]}\\
+    \texttt{target = 7}\\
+    \texttt{i = 0}\\
+    \texttt{while i < len(values) and values[i] != target:}\\
+    \hspace{0.20in}\texttt{i = i + 1}
+  \end{block}
+  \begin{itemize}
+    \item \texttt{and} checks its left side first. If it is false, Python skips the right side.
+    \item At \texttt{i == len(values)}, the boundary test prevents an invalid lookup.
+    \item Reversing the two tests can raise \texttt{IndexError}, including on an empty list.
+  \end{itemize}
+  \begin{activity}
+    Final \texttt{i}: target \texttt{7} $\rightarrow$ \texttt{3}; target \texttt{9} $\rightarrow$ \texttt{1}; empty list $\rightarrow$ \texttt{0}. Which results identify a valid matching index?
+  \end{activity}
+  % A match exists only if i < len(values) after the loop.
+\end{frame}
+
+\begin{frame}{\texttt{break}: Terminate the Loop Immediately}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{Example}
+        \texttt{values = [4, 9, -2, 7]}\\[0.08in]
+        \texttt{for value in values:}\\
+        \hspace{0.20in}\texttt{if value < 0:}\\
+        \hspace{0.40in}\texttt{break}\\
+        \hspace{0.20in}\texttt{print(value)}
+      \end{block}
+
+      The loop prints \texttt{4} and \texttt{9}. When \texttt{-2} is encountered, the loop terminates; \texttt{7} is never bound to \texttt{value} by this loop.
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      % Intended visual: loop path where break exits the loop body and continues after the loop.
+      \lectureimage[2.30in]{break-control-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{\texttt{continue}, \texttt{break}, and \texttt{return} Are Different}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l}
+      \textbf{Statement} & \textbf{Control effect} \\\hline
+      \texttt{continue} & stop the current iteration; request the next value \\
+      \texttt{break} & terminate the nearest loop \\
+      \texttt{return} & terminate the current function call
+    \end{tabular}
+  \end{center}
+
+  \begin{alertblock}{Tracing question}
+    After the statement executes, ask: \textbf{where does control continue?} At the next iteration, after the loop, or back in the caller?
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{A \texttt{for} Loop Can Have an \texttt{else} Clause}
+  The \texttt{else} clause runs only when the loop reaches its end \textbf{without executing \texttt{break}}.
+
+  \begin{block}{Search pattern}
+    \texttt{target = 7}\\
+    \texttt{for value in values:}\\
+    \hspace{0.20in}\texttt{if value == target:}\\
+    \hspace{0.40in}\texttt{print("found")}\\
+    \hspace{0.40in}\texttt{break}\\
+    \texttt{else:}\\
+    \hspace{0.20in}\texttt{print("not found")}
+  \end{block}
+
+  \begin{keyidea}
+    The \texttt{else} belongs to the \textbf{loop}. It means ``the loop exhausted its input without being terminated by \texttt{break}.''
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Reasoning About Loop \texttt{else}}
+  Suppose \texttt{values = [4, 9, 2, 7]}.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.28}
+    \begin{tabular}{l|l|l}
+      \textbf{Target} & \textbf{How loop ends} & \textbf{Does \texttt{else} run?} \\\hline
+      \texttt{7} & \texttt{break} executes & no \\
+      \texttt{5} & input is exhausted normally & yes
+    \end{tabular}
+  \end{center}
+
+  \begin{itemize}
+    \item \texttt{continue} does not suppress the loop \texttt{else}; the loop may still finish normally later.
+    \item An empty input also completes normally, so the loop \texttt{else} runs.
+    \item A \texttt{while} loop can also have an \texttt{else}: it runs when the condition becomes false without a \texttt{break}.
+  \end{itemize}
+
+  \begin{alertblock}{Why this form exists}
+    It is useful when the interesting distinction is \textbf{found something and stopped} versus \textbf{examined everything and never found it}.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 4: Iterating over Dictionaries}
+
+\begin{frame}{A \texttt{for} Loop over a Dictionary Visits Keys}
+  \begin{block}{Example}
+    \texttt{scores = \{"Ada": 88, "Grace": 94, "Linus": 79\}}\\[0.08in]
+    \texttt{for name in scores:}\\
+    \hspace{0.20in}\texttt{print(name)}
+  \end{block}
+
+  During iteration, \texttt{name} is repeatedly bound to dictionary keys.
+
+  \begin{keyidea}
+    The basic dictionary iteration model is: \textbf{one key per iteration}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Use the Key to Retrieve Its Value}
+  \begin{block}{Code}
+    \texttt{for name in scores:}\\
+    \hspace{0.20in}\texttt{score = scores[name]}\\
+    \hspace{0.20in}\texttt{print(name, score)}
+  \end{block}
+
+  Conceptually, each iteration does two things:
+
+  \begin{enumerate}
+    \item bind the next key to \texttt{name},
+    \item use that key to retrieve its associated value.
+  \end{enumerate}
+
+  \begin{center}
+    \textbf{key} $\longrightarrow$ \textbf{dictionary lookup} $\longrightarrow$ \textbf{value}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Tracing Dictionary Iteration}
+  Suppose:
+
+  \begin{block}{Dictionary}
+    \texttt{scores = \{"Ada": 88, "Grace": 94, "Linus": 79\}}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|c|c}
+      \textbf{Iteration} & \textbf{name} & \textbf{scores[name]} \\\hline
+      1 & \texttt{"Ada"} & \texttt{88} \\
+      2 & \texttt{"Grace"} & \texttt{94} \\
+      3 & \texttt{"Linus"} & \texttt{79}
+    \end{tabular}
+  \end{center}
+
+  The exact loop body determines what computation is performed with each association.
+\end{frame}
+
+\begin{frame}{Explicit Key Iteration with \texttt{keys()}}
+  Python also provides an explicit view of the keys.
+
+  \begin{block}{Equivalent styles}
+    \texttt{for key in data:}\\
+    \hspace{0.20in}\texttt{...}\\[0.12in]
+    \texttt{for key in data.keys():}\\
+    \hspace{0.20in}\texttt{...}
+  \end{block}
+
+  For ordinary key iteration, the shorter first form is usually sufficient.
+\end{frame}
+
+\begin{frame}{Iterating over Values}
+  Use \texttt{values()} when the keys themselves are not needed.
+
+  \begin{block}{Example}
+    \texttt{for score in scores.values():}\\
+    \hspace{0.20in}\texttt{print(score)}
+  \end{block}
+
+  Repeated bindings are values rather than keys:
+
+  \begin{center}
+    \texttt{88} $\rightarrow$ \texttt{94} $\rightarrow$ \texttt{79}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Iterating over Key--Value Pairs}
+  Use \texttt{items()} when both parts of each association are needed.
+
+  \begin{block}{Example}
+    \texttt{for name, score in scores.items():}\\
+    \hspace{0.20in}\texttt{print(name, score)}
+  \end{block}
+
+  Each iteration provides one key--value pair.
+
+  \begin{center}
+    \texttt{("Ada", 88)} $\rightarrow$ \texttt{("Grace", 94)} $\rightarrow$ \texttt{("Linus", 79)}
+  \end{center}
+\end{frame}
+
+
+\begin{frame}{Two Loop Variables Unpack One Supplied Pair}
+  \small
+  \begin{block}{One pair, two bindings}
+    \texttt{name, score = ("Ada", 88)}
+  \end{block}
+  In \texttt{for name, score in scores.items():}, each supplied pair is unpacked in the same way. It is still \textbf{one loop}.
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Need a position and a value?}
+        \texttt{names = ["Ada", "Grace"]}\\
+        \texttt{for index, name in enumerate(names):}\\
+        \hspace{0.18in}\texttt{print(index, name)}
+      \end{block}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Output}
+        \texttt{0 Ada}\\
+        \texttt{1 Grace}
+      \end{block}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    \texttt{items()} supplies key--value pairs; \texttt{enumerate()} supplies index--value pairs, starting at index \texttt{0} by default.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Updating Values Without Changing Membership}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Replace list elements by index}
+        \texttt{values = [2, 5, 8]}\\
+        \texttt{for index, value in enumerate(values):}\\
+        \hspace{0.18in}\texttt{values[index] = value * 2}
+      \end{block}
+      The same list now contains \texttt{[4, 10, 16]}. Its length stays the same.
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Replace values for existing keys}
+        \texttt{scores = \{"Ada": 88, "Grace": 94\}}\\
+        \texttt{for name in scores:}\\
+        \hspace{0.18in}\texttt{scores[name] = scores[name] + 1}
+      \end{block}
+      Result: \texttt{\{"Ada": 89, "Grace": 95\}}. No keys are added or removed.
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    These statements assign through an index or key. Rebinding the loop variable alone would not replace a stored element. Existing aliases observe these intentional mutations.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Keep the Collection You Traverse Stable}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Removing during list traversal}
+        \texttt{values = [0, 0, 1]}\\
+        \texttt{for value in values:}\\
+        \hspace{0.18in}\texttt{if value == 0:}\\
+        \hspace{0.36in}\texttt{values.remove(value)}
+      \end{alertblock}
+      Result: \texttt{[0, 1]}. The second zero shifts left and is skipped.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Build a separate result}
+        \texttt{values = [0, 0, 1]}\\
+        \texttt{kept = [value for value in values}\\
+        \hspace{0.60in}\texttt{if value != 0]}
+      \end{block}
+      \texttt{kept} is \texttt{[1]}; \texttt{values} remains \texttt{[0, 0, 1]}.
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Do not add or remove dictionary keys while iterating that dictionary; it can raise \texttt{RuntimeError}. Updating values for existing keys is allowed. Read one collection and build another when membership must change.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Another Accumulator: The Best Entry Seen So Far}
+  \small
+  \begin{block}{Return the name with the highest score, or None for empty input}
+    \texttt{def highest\_name(scores: dict[str, int]):}\\
+    \hspace{0.20in}\texttt{best = None}\\
+    \hspace{0.20in}\texttt{for name, score in scores.items():}\\
+    \hspace{0.40in}\texttt{if best is None or score > scores[best]:}\\
+    \hspace{0.60in}\texttt{best = name}\\
+    \hspace{0.20in}\texttt{return best}
+  \end{block}
+  \begin{itemize}
+    \item \texttt{best} identifies the highest-scoring entry processed so far.
+    \item \texttt{or} skips the lookup while \texttt{best is None}; the first entry establishes a real candidate.
+    \item This handles negative scores too. Equal scores keep the first encountered name because the comparison uses \texttt{>}.
+  \end{itemize}
+  \begin{activity}
+    Predict the result for \texttt{\{"Ada": -8, "Grace": -2, "Linus": -2\}} and for \texttt{\{\}}.
+  \end{activity}
+  % Answers: "Grace" (first highest-scoring entry), and None.
+\end{frame}
+
+\begin{frame}{Choose the Iteration Form That Matches the Task}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{l|l}
+      \textbf{Need} & \textbf{Typical form} \\\hline
+      keys only & \texttt{for key in d:} \\
+      values only & \texttt{for value in d.values():} \\
+      both key and value & \texttt{for key, value in d.items():}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Choose the view of the dictionary that directly supplies the information the loop body needs.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Association Is More Important Than Position}
+  Modern Python dictionaries preserve insertion order, but their semantic purpose is still association by key.
+
+  \begin{itemize}
+    \item \texttt{d[0]} looks up the key \texttt{0}; it does not mean ``first entry.
+    \item We test membership with a key.
+    \item We design dictionary algorithms around relationships between keys and values.
+  \end{itemize}
+
+  \begin{alertblock}{Design principle}
+    Do not choose a dictionary because you need ``the third item.'' Choose it because a meaningful key should identify a value.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 5: From Counting to a Frequency Map}
+
+\begin{frame}{Review: Counting One Character}
+  With one target character, a single counter works well.
+
+  \begin{block}{Count the letter \texttt{"a"}}
+    \texttt{count = 0}\\
+    \texttt{for char in word:}\\
+    \hspace{0.20in}\texttt{if char == "a":}\\
+    \hspace{0.40in}\texttt{count = count + 1}
+  \end{block}
+
+  The state is one integer because we are answering one counting question.
+\end{frame}
+
+\begin{frame}{What If We Want Every Character Count?}
+  We could create one variable per possible character:
+
+  \begin{block}{Poorly scaling idea}
+    \texttt{count\_a = 0}\\
+    \texttt{count\_b = 0}\\
+    \texttt{count\_c = 0}\\
+    \texttt{...}
+  \end{block}
+
+  But the set of characters appearing in the input is data. We should not need a separate variable written in advance for every possible character.
+
+  \begin{keyidea}
+    We need a collection in which the \textbf{character itself} can identify its current count.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Dictionary Can Store Many Counters}
+  Let each character be a key and its observed frequency be the value.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{c|c}
+      \textbf{Character key} & \textbf{Count value} \\\hline
+      \texttt{"b"} & \texttt{1} \\
+      \texttt{"a"} & \texttt{3} \\
+      \texttt{"n"} & \texttt{2}
+    \end{tabular}
+  \end{center}
+
+  For the word \texttt{"banana"}:
+
+  \begin{center}
+    \texttt{\{"b": 1, "a": 3, "n": 2\}}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Frequency-Map Algorithm}
+  Begin with no observed characters:
+
+  \begin{block}{Initial state}
+    \texttt{counts = \{\}}
+  \end{block}
+
+  For each character:
+
+  \begin{enumerate}
+    \item if the character is already a key, increase its count;
+    \item otherwise, create the key with initial count \texttt{1}.
+  \end{enumerate}
+
+  \begin{keyidea}
+    The dictionary grows only when a character is observed for the first time. Later occurrences update an existing association.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace: Building the Map for \texttt{"banana"}}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.22}
+    \begin{tabular}{c|c|l}
+      \textbf{Step} & \textbf{char} & \textbf{counts after iteration} \\\hline
+      1 & \texttt{"b"} & \texttt{\{"b": 1\}} \\
+      2 & \texttt{"a"} & \texttt{\{"b": 1, "a": 1\}} \\
+      3 & \texttt{"n"} & \texttt{\{"b": 1, "a": 1, "n": 1\}} \\
+      4 & \texttt{"a"} & \texttt{\{"b": 1, "a": 2, "n": 1\}} \\
+      5 & \texttt{"n"} & \texttt{\{"b": 1, "a": 2, "n": 2\}} \\
+      6 & \texttt{"a"} & \texttt{\{"b": 1, "a": 3, "n": 2\}}
+    \end{tabular}
+  \end{center}
+
+  \begin{center}
+    \textbf{new character} $\rightarrow$ add key \qquad
+    \textbf{seen character} $\rightarrow$ update value
+  \end{center}
+\end{frame}
+
+\begin{frame}{The Complete Frequency-Map Function}
+  \begin{block}{Function}
+    \texttt{def frequency\_map(word: str) -> dict[str, int]:}\\
+    \hspace{0.20in}\texttt{counts = \{\}}\\
+    \hspace{0.20in}\texttt{for char in word:}\\
+    \hspace{0.40in}\texttt{if char in counts:}\\
+    \hspace{0.60in}\texttt{counts[char] = counts[char] + 1}\\
+    \hspace{0.40in}\texttt{else:}\\
+    \hspace{0.60in}\texttt{counts[char] = 1}\\
+    \hspace{0.20in}\texttt{return counts}
+  \end{block}
+
+  \begin{keyidea}
+    This function combines iteration, conditionals, dictionary membership, dictionary lookup, and dictionary mutation into one coherent computation.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Prediction Challenge}
+  Without running the code, predict:
+
+  \begin{block}{Call}
+    \centering
+    \texttt{frequency\_map("letter")}
+  \end{block}
+
+  Determine:
+  \begin{enumerate}
+    \item the order in which characters are encountered,
+    \item when a new key is created,
+    \item when an existing value is updated,
+    \item the final key--value associations.
+  \end{enumerate}
+
+  \begin{alertblock}{Do not skip the trace}
+    The final dictionary is useful, but the important reasoning is how the state changes after each character.
+  \end{alertblock}
+\end{frame}
+
+
+\begin{frame}{Check the Meaning of the State, Including Empty Input}
+  \small
+  After each iteration of \texttt{frequency\_map}, each stored count describes occurrences in the \textbf{prefix processed so far}.
+  \begin{itemize}
+    \item Before the loop, no characters have been processed: \texttt{counts = \{\}}.
+    \item Processing one character increments exactly its count or starts it at \texttt{1}.
+    \item At the end, the counts describe the entire input. The input string is unchanged.
+  \end{itemize}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabular}{l|l}
+      \textbf{Input} & \textbf{Expected result} \\\hline
+      \texttt{""} & \texttt{\{\}} \\
+      \texttt{"a"} & \texttt{\{"a": 1\}} \\
+      \texttt{"aaaa"} & \texttt{\{"a": 4\}} \\
+      \texttt{"letter"} & \texttt{\{"l": 1, "e": 2, "t": 2, "r": 1\}}
+    \end{tabular}
+  \end{center}
+  We iterate over the \textbf{word}, so growing the separate \textbf{counts} dictionary is safe.
+  % This is informal state reasoning. Formal loop invariants remain in Lecture 32.
+\end{frame}
+
+\sectionframe{Part 6: A Preview of the Data Structure Underneath}
+
+\begin{frame}{Why Dictionary Lookup Feels Different from List Search}
+  \small
+  A hash table uses a key to help locate its stored association.
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item Lists fundamentally organize data by position.
+        \item Dictionaries fundamentally organize data by key.
+        \item Python dictionaries are implemented using a \textbf{hash-table} strategy.
+        \item The key is processed to help determine where its association is stored.
+      \end{itemize}
+
+      \begin{alertblock}{Preview only}
+        How hashing works, how collisions are handled, and why the structure is efficient are topics for a later data structures course.
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      % Intended visual: key -> hash operation -> storage location -> key/value pair.
+      \lectureimage[2.15in]{hash-table-preview.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Sequence or Dictionary?}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.32}
+    \begin{tabular}{l|l|l}
+      \textbf{Question} & \textbf{Sequence} & \textbf{Dictionary} \\\hline
+      How is data identified? & position & key \\
+      Typical access & \texttt{values[i]} & \texttt{data[key]} \\
+      Natural use & ordered data & named associations \\
+      Repeated processing & iterate values & iterate keys / values / pairs \\
+      Example & daily temperatures & character frequencies
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Choosing a data structure begins with identifying the relationship the program needs to represent.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Where This Course Stops}
+  In CS 1001, you should be able to \textbf{use} a dictionary accurately:
+
+  \begin{itemize}
+    \item create key--value associations;
+    \item retrieve and update values by key;
+    \item test whether a key exists;
+    \item iterate over keys, values, and pairs;
+    \item use a dictionary to represent naturally associative data.
+  \end{itemize}
+
+  \begin{block}{Later in data structures}
+    You will ask how a hash table represents these associations internally, how operations are implemented, and how performance changes under different conditions.
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Takeaways}
+  \begin{enumerate}
+    \item Dictionaries organize data by \textbf{association} rather than numerical position.
+    \item Assignment through a key either adds a new association or updates an existing one.
+    \item \texttt{continue} skips the remainder of one iteration; \texttt{break} terminates the loop; loop \texttt{else} runs only after normal exhaustion.
+    \item Iterating over a dictionary naturally exposes its keys; \texttt{values()} and \texttt{items()} expose other useful views.
+    \item Guard lookups, preserve loop progress, and keep traversal sources stable; accumulated state can be counts or a best-so-far candidate.
+    \item The same tracing discipline still applies: follow bindings, control flow, mutations, and program state one step at a time.
+  \end{enumerate}
+
+  \begin{block}{Next}
+    Lecture 26 moves from one structured collection to \textbf{nested data and two-dimensional lists}.
+  \end{block}
+\end{frame}
+
+
+
+\appendix
+\sectionframe{Optional Iteration Reference}
+
+\begin{frame}{\texttt{zip}: Traverse Two Sequences Together}
+  \small
+  \begin{block}{Build associations from paired input}
+    \texttt{names = ["Ada", "Grace"]}\\
+    \texttt{marks = [88, 94]}\\
+    \texttt{scores = \{\}}\\
+    \texttt{for name, mark in zip(names, marks):}\\
+    \hspace{0.20in}\texttt{scores[name] = mark}
+  \end{block}
+  Result: \texttt{\{"Ada": 88, "Grace": 94\}}.
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item Each iteration receives one pair: \texttt{("Ada", 88)}, then \texttt{("Grace", 94)}.
+    \item This visits corresponding positions together; it does not visit every possible combination.
+    \item By default, \texttt{zip} stops when the shortest input ends. Check equal lengths first if every value must have a partner.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Any and All Questions Have Different Early Exits}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Does any value satisfy the condition?}
+        \texttt{def any\_negative(values):}\\
+        \hspace{0.16in}\texttt{for value in values:}\\
+        \hspace{0.32in}\texttt{if value < 0:}\\
+        \hspace{0.48in}\texttt{return True}\\
+        \hspace{0.16in}\texttt{return False}
+      \end{block}
+      One matching value proves \texttt{True}; \texttt{False} requires exhausting the input.
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Do all values satisfy the condition?}
+        \texttt{def all\_nonnegative(values):}\\
+        \hspace{0.16in}\texttt{for value in values:}\\
+        \hspace{0.32in}\texttt{if value < 0:}\\
+        \hspace{0.48in}\texttt{return False}\\
+        \hspace{0.16in}\texttt{return True}
+      \end{block}
+      One counterexample proves \texttt{False}; \texttt{True} requires exhausting the input.
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    On \texttt{[]}, these return \texttt{False} and \texttt{True}, respectively. ``No value violates the rule'' does not imply the input contained a value.
+  \end{keyidea}
+  These are loop patterns; Python also provides the built-ins \texttt{any} and \texttt{all}.
+\end{frame}
+
+\begin{frame}{Boundary Cases to Check for a Loop Function}
+  \begin{itemize}
+    \item \textbf{No iterations:} empty input or an initially false \texttt{while} condition.
+    \item \textbf{Exactly one iteration:} does initialization produce the right answer?
+    \item \textbf{Conditional processing:} no matches, all matches, first match, and last match.
+    \item \textbf{Extremum selection:} negative values and tied best values.
+    \item \textbf{Early control transfer:} does each skip preserve progress, and where does each exit continue?
+    \item \textbf{Input contract:} is the source left unchanged when a fresh result is promised?
+  \end{itemize}
+  \begin{keyidea}
+    Trace the meaning of the state as well as the statements. A loop can terminate and still compute the wrong result.
+  \end{keyidea}
 \end{frame}
 
 \end{document}
