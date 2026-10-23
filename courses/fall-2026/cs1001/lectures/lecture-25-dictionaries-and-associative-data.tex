@@ -8,21 +8,10 @@
 
 \graphicspath{{../assets/lecture-25/}}
 
-% If an image file is not yet available, the slide displays a labeled
-% placeholder using the intended filename. Place the matching file in
-% ../assets/lecture-25/ to replace the placeholder automatically.
+% Generated teaching diagrams; prompts are recorded alongside the assets.
 \newcommand{\lectureimage}[2][1.75in]{%
-  \IfFileExists{../assets/lecture-25/#2}{%
-    \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
-  }{%
-    \fbox{%
-      \parbox[c][#1][c]{0.94\linewidth}{%
-        \centering
-        \small\textbf{Image Placeholder}\\[0.08in]
-        \scriptsize\texttt{\detokenize{#2}}
-      }%
-    }%
-  }%
+  \centering
+  \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
 }
 
 \setbeamersize{text margin left=0.42in,text margin right=0.42in}
