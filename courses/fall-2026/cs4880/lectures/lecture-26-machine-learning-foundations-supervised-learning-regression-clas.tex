@@ -21,960 +21,724 @@
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{26}
-\lecturetitle{Learning Agents: Regression and Classification}
+\lecturetitle{Learning Agents: From Experience to Prediction}
 \lecturedate{October 26, 2026}
 \courseunit{Learning Agents and Machine Learning}
 
 
-% Content references checked during review:
-% https://scikit-learn.org/stable/modules/linear_model.html#ordinary-least-squares
+% Narrative adapted from the instructor-supplied Copy of 19_480_Winter26.pdf:
+% pp.1-5: learning, approximation, supervised targets, curve fitting, least squares;
+% p.6: BMI/diabetes Python demonstration; pp.7-8: classification/regression metrics;
+% pp.9-10: polynomial features and limits of smooth fits.
+% The supplied California-housing example motivates the polynomial pipeline;
+% we retain one fixed synthetic print-job sample to make comparison controlled.
+% Primary checks:
+% https://aima.cs.berkeley.edu/4th-ed/pdfs/newchap02.pdf (learning-agent architecture)
+% https://www.teach.cs.toronto.edu/~csc311notes/neural_networks/expressiveness.html
+% https://scikit-learn.org/stable/modules/linear_model.html
+% https://scikit-learn.org/stable/modules/model_evaluation.html
 % https://scikit-learn.org/stable/common_pitfalls.html
-% https://scikit-learn.org/stable/modules/model_evaluation.html#r2-score
-% https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_diabetes.html
-% Additional content references:
-% https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
-% https://scikit-learn.org/stable/modules/calibration.html
-% https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
-% Pacing for 50 minutes: motivation/task formulation 7; loss and fitting 12;
-% optimization/curve flexibility 10; generalization/evaluation 8;
-% classification 10; synthesis 3. The appendix is optional reference.
-% Examples deliberately differ from the lab: print jobs and email filtering.
-% Existing image filenames retain their original slot identifiers.
-
-
+% All material is in the main 50-minute lecture; no appendix or optional slides.
+% Timing: agent loop / approximation / targets 10; line + Python demo 4;
+% least squares + gradient descent 10; regression evaluation 5;
+% classification + evaluation 8; polynomial fits / complexity 7;
+% polynomial classification 3; limits / synthesis 3. Total 50 minutes.
+% Concepts transfer to the lab; all worked data and predictions differ from it.
+% Reproducible diagrams/results: generate-lecture-foundations.py and
+% generate-narrative-charts.py in ../assets/lecture-26/.
 
 \begin{document}
-
 \makedecktitle
+\section{From Logical Agents to Learning Agents}
 
-\section{From Acting to Learning}
-
-\begin{frame}{Today: From Route Logs to a Useful Predictor}
-  \begin{enumerate}
-    \item Turn an agent's experience into labeled examples and a prediction task.
-    \item Define a model family and loss; fit and interpret a least-squares line.
-    \item Explain how optimization and feature transformations affect the fit.
-    \item Compare regression and classification: outputs, losses, and held-out evaluation.
-  \end{enumerate}
-  \begin{keyidea}
-    Our running question: can past deliveries improve the travel-time estimates used by a planner?
-  \end{keyidea}
-  \small Detailed derivations, regularization, and a code example are optional reference material.
-\end{frame}
-
-\begin{frame}{An Agent Should Improve with Experience}
+\begin{frame}{Logical Agents: Correct Relative to Their Knowledge}
   \small
-  Our robot can plan routes, but its travel-time estimates may be inaccurate.
-
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.53\textwidth}
-      \begin{itemize}
-        \item A fixed rule might assume $2$ minutes per block.
-        \item Actual time varies with congestion and surface conditions.
-        \item Completed deliveries pair route inputs with actual times.
-        \item Use those examples to revise future predictions.
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.41\textwidth}
-      \lecturevisual[1.75in]{slide2.png}{Delivery robot and route log with observed outcomes.}
-    \end{column}
-  \end{columns}
-  \begin{keyidea}
-    A learning agent improves a model from experience to support future decisions.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Where Learning Fits Inside an Agent}
-  \small
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.54\textwidth}
-      \begin{itemize}
-        \item \textbf{Performance element:} selects actions using current predictions.
-        \item \textbf{Learning element:} updates a predictive model from examples.
-        \item \textbf{Observed feedback:} records actual travel times after actions.
-      \end{itemize}
-      \medskip
-      This is a simplified feedback loop. Prediction supports planning; it is not itself an action policy.
-    \end{column}
-    \begin{column}{0.40\textwidth}
-      \lecturevisual[1.6in]{slide3.png}{Predictive model, planner, environment, and labeled-route feedback.}
-    \end{column}
-  \end{columns}
-  \begin{keyidea}
-    A learning element can predict a number or a category from known inputs.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{From Hand-Coded Relationships to Learned Functions}
-  A traditional model specifies a relationship in advance:
+  A logical agent can justify conclusions through a sound inference procedure:
   \[
-    \widehat{t}=2\cdot \text{distance}.
+    \mathrm{KB}\vdash\alpha\quad\Longrightarrow\quad\mathrm{KB}\models\alpha.
   \]
-  A learned model chooses parameters from data:
-  \[
-    \widehat{t}=f_{\boldsymbol\theta}(\mathbf{x}),
-    \qquad \mathbf{x}=\bigl(\text{distance},\text{traffic},\ldots\bigr).
-  \]
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Specified by the designer}
-        Relevant input features, model family, and learning objective.
-      \end{block}
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Estimated from experience}
-        Numerical parameters $\boldsymbol\theta$ that minimize the chosen training objective.
-      \end{block}
-    \end{column}
-  \end{columns}
-  \begin{keyidea}
-    Learning estimates a model from examples; it does not remove modeling assumptions.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Learning Needs a Measurable Target}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.53\textwidth}
-      Each recorded delivery creates a training example:
-      \[
-        (\mathbf{x}_i,y_i),
-      \]
-      where
-      \begin{itemize}
-        \item $\mathbf{x}_i$ contains known route features;
-        \item $y_i$ is the observed travel time;
-        \item $\widehat{y}_i=f_{\boldsymbol\theta}(\mathbf{x}_i)$ is the prediction.
-      \end{itemize}
-      Inputs must be available \emph{before} the outcome occurs. The goal is to predict $y$ for \emph{new} routes, not merely reproduce old records.
-    \end{column}
-    \begin{column}{0.41\textwidth}
-      \lecturevisual[2.4in]{slide5.png}{Image: sample labeled dataset: route distance and traffic features paired with actual time.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Examples, Models, and New Observations}
-  Consider an email service that learns how to process incoming messages.
-  \begin{description}
-    \item[Training example] Features of one historical message, paired with its observed target: $(\mathbf x_i,y_i)$.
-    \item[Learned model] A fitted function $f_{\widehat{\boldsymbol\theta}}$, shared across messages; its parameters were estimated from many examples.
-    \item[New observation] Features $\mathbf x_{\rm new}$ available when a message arrives; its target is not yet known.
-  \end{description}
-  \begin{keyidea}
-    Training uses observed targets to adjust parameters. Inference applies the fitted model to a new input.
-  \end{keyidea}
-\end{frame}
-
-\section{The Supervised Learning Problem}
-
-\begin{frame}{What Makes Learning ``Supervised''?}
-  \small
-  \begin{cpdefinition}
-    \textbf{Supervised learning} uses examples $\mathcal D=\{(\mathbf{x}_i,y_i)\}_{i=1}^{n}$ with observed targets $y_i$ to learn a mapping from inputs to outputs.
-  \end{cpdefinition}
-
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Regression}
-        Predict a real-valued outcome: travel time, battery usage, or a measured distance.
-        \[ f:\mathbb R^d\rightarrow\mathbb R. \]
-      \end{block}
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Classification}
-        Predict a discrete category: obstacle versus clear path, or safe versus unsafe.
-        \[ f:\mathbb R^d\rightarrow\{1,\ldots,K\}. \]
-      \end{block}
-    \end{column}
-  \end{columns}
-  \begin{keyidea}
-    $n$: labeled examples; $d$: input features; $K$: categories. We develop \textbf{regression} first, then a \textbf{binary classifier}.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{The Same Inputs Can Support Different Targets}
-  Email features could include message length, link count, a known-sender indicator, and attachment size.
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Regression task}
-        Predict handling time in seconds.\\[0.05in]
-        Target: a measured duration.\\
-        Output: a numerical estimate.\\
-        Loss: squared or absolute error.
-      \end{block}
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Classification task}
-        Predict spam versus legitimate.\\[0.05in]
-        Target: $1$ for spam, $0$ otherwise.\\
-        Output: a score, then a class.\\
-        Loss: a classification objective.
-      \end{block}
-    \end{column}
-  \end{columns}
-  \begin{keyidea}
-    The target and loss define the task. A later moderator's verdict can be a label, but cannot be an input available on arrival.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Data Are Samples, Not the Whole World}
-  In statistical learning, assume examples arise from an unknown distribution:
-  \[
-    (\mathbf X,Y)\sim P_{X,Y},
-    \qquad
-    \mathcal D=\{(\mathbf x_i,y_i)\}_{i=1}^{n}.
-  \]
-  A common starting assumption is independent, identically distributed (i.i.d.) samples.
-
+  $\mathrm{KB}$ is the knowledge base; $\vdash$ means ``derivable'' and $\models$ means ``true in every model satisfying the knowledge base.''
   \begin{itemize}
-    \item Training examples reveal only part of the relationship.
-    \item Measurement noise and unobserved variables affect outcomes.
-    \item Repeated measurements of the same route may be correlated; a random split can then be misleading.
+    \item This is a precise form of correctness: the conclusion follows from the stated assumptions.
+    \item The designer must supply useful facts, rules, action models, and goals. Inference can derive actions rather than enumerate every behavior.
+    \item Incorrect or incomplete assumptions can still produce poor real-world behavior.
   \end{itemize}
   \begin{keyidea}
-    Generalization claims depend on how future examples relate to the training sample. A new campus or weather regime may shift that distribution.
+    The bottleneck is specifying enough of the world. Could an agent learn some of those relationships from experience?
   \end{keyidea}
 \end{frame}
 
-\begin{frame}{Hypothesis Classes Express Inductive Bias}
-  We choose a family of candidate predictors:
-  \[
-    \mathcal H=\{f_{\boldsymbol\theta}:\boldsymbol\theta\in\Theta\}.
-  \]
-  Examples of curve-fitting models include
-  \begin{itemize}
-    \item straight lines: $f(x)=w_0+w_1x$;
-    \item polynomial curves: $f(x)=\sum_{j=0}^{p}w_jx^j$;
-    \item linear combinations of chosen basis functions:
-      $f(x)=\sum_j w_j\phi_j(x)$.
-  \end{itemize}
-  \begin{block}{Inductive bias}
-    $\mathcal H$ is the hypothesis class; $\Theta$ is its allowed parameter set. These restrictions guide generalization but can exclude useful relationships.
-  \end{block}
-\end{frame}
-
-\begin{frame}{A Loss Function Defines What ``Good'' Means}
-  For one prediction, define a cost $\ell(\widehat y,y)$.
-  \[
-    \ell_{\mathrm{sq}}(\widehat y,y)=(y-\widehat y)^2,
-    \qquad
-    \ell_{\mathrm{abs}}(\widehat y,y)=|y-\widehat y|.
-  \]
+\begin{frame}{From Writing Relationships to Learning Them}
+  \small
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Squared loss}
-        Differentiable; penalizes a large miss disproportionately more.
-      \end{block}
+    \begin{column}{0.53\textwidth}
+      A robot's planner needs predictions about the consequences of its actions.
+      \begin{itemize}
+        \item Hand-authoring a reliable rule for every operating condition is difficult.
+        \item Actions produce observations and outcomes that can become examples.
+        \item A learned predictor can improve the information used by an existing planner.
+      \end{itemize}
+      Learning and logical reasoning can coexist: learning supplies an empirical model; reasoning uses it to choose actions.
     \end{column}
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Absolute loss}
-        Measures error in original units; less sensitive to extreme residuals.
-      \end{block}
+    \begin{column}{0.42\textwidth}
+      \lecturevisual[1.8in]{slide2.png}{A robot records the outcomes of experience.}
     \end{column}
   \end{columns}
   \begin{keyidea}
-    Fitting a model means optimizing a precisely stated objective, not merely drawing a visually appealing line.
+    Specify the goal and learning framework; estimate some of the relationships from data.
   \end{keyidea}
 \end{frame}
 
-\section{Linear Regression and Least Squares}
+\begin{frame}{The Learning-Agent Loop}
+  \lecturevisual[1.9in]{learning-agent-loop.png}{Learning-agent architecture adapted from AIMA: performance element, critic, learning element, problem generator, sensors and actuators.}
+  \small
+  The agent acts, receives percepts and feedback, changes its performance mechanism, and acts again. Learning is part of this feedback loop.
+\end{frame}
 
-\begin{frame}{First Model: A Straight Line}
+\begin{frame}{What Each Part Learns or Does}
+  \begin{itemize}
+    \item \textbf{Performance element:} chooses actions using its current knowledge and predictive models.
+    \item \textbf{Critic:} evaluates experience against a performance standard and supplies feedback.
+    \item \textbf{Learning element:} uses feedback to modify knowledge or model parameters.
+    \item \textbf{Problem generator:} suggests exploratory actions that could produce useful new experience.
+  \end{itemize}
+  \begin{keyidea}
+    Today we study supervised prediction inside this architecture: learning an input--output relationship from labeled experience. A predictor supports an agent; it is not by itself an entire agent.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Model Approximates an Input--Output Relationship}
+  \small
+  Write an unknown numerical relationship as
+  \[
+    Y=g(\mathbf X)+\varepsilon,\qquad
+    \widehat Y=f_{\boldsymbol\theta}(\mathbf X).
+  \]
+  \begin{itemize}
+    \item $\mathbf X$: input features; $Y$: observed target; $g$: underlying trend.
+    \item $\varepsilon$: noise or effects omitted from the inputs; $\boldsymbol\theta$: model parameters.
+    \item Choose a hypothesis class $\mathcal H=\{f_{\boldsymbol\theta}\}$ and use examples to find a useful member.
+  \end{itemize}
+  \begin{keyidea}
+    Before asking how to learn a function, ask whether the chosen family can represent it. Approximation, optimization, and generalization are different questions.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Universal Approximation: An Existence Result}
+  \small
+  One standard theorem: if $g:K\to\mathbb R$ is continuous on a compact (closed and bounded) set $K\subset\mathbb R^d$, then for every $\delta>0$ there exists a sufficiently wide, single-hidden-layer sigmoid network $h$ such that
+  \[
+    \sup_{\mathbf x\in K}|h(\mathbf x)-g(\mathbf x)|<\delta.
+  \]
+  \begin{itemize}
+    \item $h$ is the approximating function; $\delta$ is a desired uniform error tolerance.
+    \item The theorem says suitable parameters \emph{exist}; it does not provide them or promise that finite training data will identify them.
+    \item It does not say a straight line, a fixed-degree polynomial, or any fitted model approximates every relationship.
+  \end{itemize}
+  \begin{keyidea}
+    Expressive models make learning plausible. They do not remove noise, optimization difficulty, or the need for held-out evaluation.
+  \end{keyidea}
+\end{frame}
+
+\section{Define the Learning Problem}
+\begin{frame}{Supervised Learning: Examples Become a Predictor}
+  \lecturevisual[1.45in]{training-inference.png}{Separate paths for learning from labeled examples and predicting from new observations.}
+  \small
+  \[
+    \widehat{\boldsymbol\theta}=\arg\min_{\boldsymbol\theta}
+       \underbrace{\frac1n\sum_{i=1}^n\ell(f_{\boldsymbol\theta}(\mathbf x_i),y_i)}_{\text{training loss}},
+    \qquad \widehat y_{\rm new}=f_{\widehat{\boldsymbol\theta}}(\mathbf x_{\rm new}).
+  \]
+  A training example is a recorded pair $(\mathbf x_i,y_i)$; a model is a fitted function; a new observation supplies inputs before its target is known. Labels come from recorded outcomes or annotation.
+\end{frame}
+
+\begin{frame}{The Same Features Can Support Different Targets}
+  \small
+  For a printer, inputs known before starting could be
+  \[
+    \mathbf x=(\text{page count},\text{ink coverage},\text{queue length},\text{temperature}).
+  \]
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.45\textwidth}
-      A separate example: predict a print job's completion time from its size.
-      \[ \widehat y=w_0+w_1x. \]
-      \begin{itemize}
-        \item $x$: number of ten-page batches;
-        \item $w_0$: predicted setup time;
-        \item $w_1$: additional minutes per batch.
-      \end{itemize}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Regression: one numerical value}
+        Target $y^{(r)}\in\mathbb R$: completion time in minutes.\\
+        Prediction $\widehat y=f_{\mathbf w}(\mathbf x)$.\\
+        Example loss: $(\widehat y-y^{(r)})^2$.
+      \end{block}
     \end{column}
     \begin{column}{0.49\textwidth}
-      \lecturevisual[2.0in]{slide11.png}{Synthetic print-job sizes and times, with their least-squares line.}
+      \begin{block}{Binary classification: a category}
+        Target $y^{(c)}\in\{0,1\}$: completes or fails.\\
+        Estimate $p\approx P(Y^{(c)}=1\mid\mathbf x)$, then assign a label using a threshold.\\
+        Example loss: binary cross-entropy.
+      \end{block}
     \end{column}
   \end{columns}
-  \begin{keyidea}
-    Linear regression is linear in its fitted coefficients $w_0,w_1$.
-  \end{keyidea}
+  Targets and losses define different questions about the same situation. A completion timestamp is unavailable before starting: using it as an input would leak outcome information.
 \end{frame}
 
-\begin{frame}{Residuals Measure the Error of Each Prediction}
-  For each observed pair $(x_i,y_i)$, define
+\begin{frame}{Supervised Learning: Predict Print Time}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      A print scheduler needs a duration estimate before accepting a job.
+      \begin{itemize}
+        \item $x_i$: job size in ten-page batches.
+        \item $y_i$: observed completion time in minutes.
+        \item $\mathcal D=\{(x_i,y_i)\}_{i=1}^{n}$: labeled training examples; here $n=12$.
+        \item $\widehat y=f_{\mathbf w}(x)$: prediction from a model with parameters $\mathbf w$.
+      \end{itemize}
+      Training learns $\mathbf w$ from observed targets. Inference predicts a target for a new job.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \lecturevisual[1.95in]{case-data.png}{Twelve synthetic print jobs used throughout the regression example.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Curve Fitting: Start with a Line}
+  \small
+  Curve fitting chooses a function whose predictions match numerical observations under a specified loss. Start with
   \[
-    e_i=y_i-\widehat y_i=y_i-(w_0+w_1x_i).
+    \widehat y=w_0+w_1x
   \]
   \begin{columns}[T,onlytextwidth]
     \begin{column}{0.48\textwidth}
       \begin{itemize}
-        \item Positive residual: the model underpredicted.
-        \item Negative residual: the model overpredicted.
-        \item Residuals retain their sign and units.
-        \item The opposite convention $r_i=\widehat y_i-y_i=-e_i$ gives identical squared and absolute errors.
+        \item $w_0$: intercept, in minutes.
+        \item $w_1$: slope, in minutes per ten-page batch.
+        \item A family of lines is a \textbf{hypothesis class}: each choice of weights gives one candidate predictor.
+        \item Which line should we prefer? We need a numerical objective.
+      \end{itemize}
+      A line assumes a constant change in predicted time per added batch.
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \lecturevisual[1.85in]{case-candidate-lines.png}{Two candidate lines on the same training jobs.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{A Python Fit: BMI and a Progression Score}
+  \small
+  Use the diabetes benchmark's BMI feature to predict a numerical progression score. Hold out the final 20 cases for this demonstration.
+{\footnotesize
+\begin{verbatim}
+from sklearn.datasets import load_diabetes
+from sklearn.linear_model import LinearRegression
+
+X, y = load_diabetes(return_X_y=True)
+X = X[:, [2]]                  # BMI; keep a 2D feature matrix
+X_train, X_test = X[:-20], X[-20:]
+y_train, y_test = y[:-20], y[-20:]
+model = LinearRegression().fit(X_train, y_train)
+y_pred = model.predict(X_test)
+\end{verbatim}
+}
+  \begin{keyidea}
+    \texttt{fit} estimates parameters using labeled training examples; \texttt{predict} applies the fixed model to new inputs. Test targets are not passed to \texttt{fit}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{What Did \texttt{fit} Actually Learn?}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      On 422 training cases, the example learns
+      \[
+        \widehat y\approx152.919+938.238x,
+      \]
+      where $x$ is the dataset-scaled BMI feature.
+      \begin{itemize}
+        \item The model is the fitted relationship, not a copy of a single patient record.
+        \item Points show 20 held-out outcomes; departures from the line are prediction errors.
+        \item Software gave us coefficients. What objective selected them, and how can an algorithm find them?
       \end{itemize}
     \end{column}
-    \begin{column}{0.46\textwidth}
-      \lecturevisual[2.15in]{slide12.png}{Print-job residuals: vertical observed-minus-predicted differences.}
+    \begin{column}{0.48\textwidth}
+      \lecturevisual[1.95in]{instructor-diabetes-fit.png}{The instructor's BMI example rerun with its exact feature and split.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Ordinary Least Squares}
+\section{How Fitting Works}
+
+\begin{frame}{Fit the Line by Minimizing Squared Error}
   \small
-  Choose coefficients to minimize the sum of squared residuals:
-  \[
-    S(w_0,w_1)=\sum_{i=1}^{n}\bigl[y_i-(w_0+w_1x_i)\bigr]^2.
-  \]
-  Mean squared error is $\mathrm{MSE}=S/n$, with the same minimizing coefficients.
-  \begin{block}{Geometry of the objective}
-    In $w_0,w_1$, the objective is a convex quadratic. A stationary point is a global minimum; distinct input values make the fitted line unique.
-  \end{block}
-  \begin{keyidea}
-    Curve fitting has become an optimization problem: find the parameters that minimize aggregate error.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Measuring Numerical Prediction Error}
-  For $n$ examples in the set being evaluated:
-  \[
-    \mathrm{MSE}=\frac1n\sum_i(y_i-\widehat y_i)^2,
-    \qquad
-    \mathrm{RMSE}=\sqrt{\mathrm{MSE}},
-  \]
-  \[
-    \mathrm{MAE}=\frac1n\sum_i|y_i-\widehat y_i|.
-  \]
-  \begin{itemize}
-    \item If the target is in minutes, MSE is in minutes squared; RMSE and MAE are in minutes.
-    \item MSE and RMSE emphasize large errors more than MAE.
-    \item Compare models on the \emph{same examples} using the \emph{same metric}.
-  \end{itemize}
-  \begin{keyidea}
-    Parameters define the predictor. A loss evaluates predictions and supplies the quantity minimized during fitting.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{The Least-Squares Coefficients}
-  For a line with an intercept, the minimizing coefficients are
-  \[
-    \boxed{w_1=\frac{\sum_i(x_i-\overline x)(y_i-\overline y)}
-                       {\sum_i(x_i-\overline x)^2}},
-    \qquad \boxed{w_0=\overline y-w_1\overline x}.
-  \]
-  \begin{itemize}
-    \item $\overline x=\frac1n\sum_i x_i$ and $\overline y=\frac1n\sum_i y_i$ are sample means.
-    \item The numerator measures how inputs and targets vary together.
-    \item The denominator measures input spread; it must be nonzero.
-    \item The fitted line passes through $(\overline x,\overline y)$.
-  \end{itemize}
-  \begin{keyidea}
-    Solve the optimization problem by setting both partial derivatives to zero. The derivation is in the reference slides; now apply the result.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Worked Example: Four Print Jobs}
-  \begin{center}
-    \renewcommand{\arraystretch}{1.25}
-    \begin{tabular}{c|rrrr}
-      \textbf{Job} $i$ & 1 & 2 & 3 & 4 \\ \hline
-      \textbf{Size (ten-page batches)} $x_i$ & 1 & 2 & 3 & 4 \\
-      \textbf{Time (min)} $y_i$ & 3 & 5 & 4 & 8
-    \end{tabular}
-  \end{center}
-  \[
-    \overline x=2.5,\qquad \overline y=5,
-  \]
-  \[
-    \sum_i(x_i-\overline x)(y_i-\overline y)=7,
-    \qquad \sum_i(x_i-\overline x)^2=5.
-  \]
-  \begin{keyidea}
-    Job size does not determine every observed time. The synthetic data include variation the single input cannot explain.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Worked Example: Fit and Predict}
-  \[
-    w_1=\frac{7}{5}=1.4,\qquad w_0=5-(1.4)(2.5)=1.5,
-  \]
-  \[
-    \boxed{\widehat y=1.5+1.4x}.
-  \]
-  At $x=5$ batches, $\widehat y=8.5$ min. This is \textbf{extrapolation}: the observed sizes span only $1$--$4$ batches.
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Observed training times}
-        $3,\ 5,\ 4,\ 8$
-      \end{block}
+    \begin{column}{0.52\textwidth}
+      Use the residual convention predicted minus observed:
+      \[
+        r_i=\widehat y_i-y_i=(w_0+w_1x_i)-y_i.
+      \]
+      Ordinary least squares chooses weights to minimize
+      \[
+        L(\mathbf w)=\frac1n\sum_{i=1}^{n}r_i^2,
+        \qquad \widehat{\mathbf w}=\arg\min_{\mathbf w}L(\mathbf w).
+      \]
+      Weights are the learned parameters; loss is the scalar objective. Squaring prevents signed errors from canceling and emphasizes large misses.
     \end{column}
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Fitted training times}
-        $2.9,\ 4.3,\ 5.7,\ 7.1$
-      \end{block}
+    \begin{column}{0.44\textwidth}
+      \lecturevisual[1.9in]{case-line-errors.png}{Vertical residual segments from the least-squares line to observations.}
     \end{column}
   \end{columns}
-  \begin{keyidea}
-    The fitted line need not pass through the observations. A prediction beyond the observed range needs additional evidence.
-  \end{keyidea}
+  \medskip
+  Minimizing the sum or the mean of squared errors gives the same fitted line.
+  \smallskip
+
+  The other common convention is $e_i=y_i-\widehat y_i=-r_i$.
+  Since $e_i^2=r_i^2$ and $|e_i|=|r_i|$, both conventions give the same MSE, RMSE, and MAE.
 \end{frame}
 
-\begin{frame}{Numerical Check: How Good Was Our Line?}
-  For the four print jobs, observed-minus-predicted residuals are
+\begin{frame}{The Least-Squares Solution and a Prediction}
+  \small
+  With $\overline x$ and $\overline y$ the training-sample means,
   \[
-    \mathbf e=(0.1,\ 0.7,\ -1.7,\ 0.9)\ \text{min}.
+    \widehat w_1=\frac{\sum_i(x_i-\overline x)(y_i-\overline y)}
+                         {\sum_i(x_i-\overline x)^2},
+    \qquad \widehat w_0=\overline y-\widehat w_1\overline x.
   \]
-  \[
-    \mathrm{MSE}=\frac{0.01+0.49+2.89+0.81}{4}=1.05\ \text{min}^2,
-  \]
-  \[
-    \mathrm{RMSE}=\sqrt{1.05}\approx1.025\ \text{min},
-    \qquad \mathrm{MAE}=\frac{3.4}{4}=0.85\ \text{min}.
-  \]
-  \begin{block}{Interpretation}
-    The third observation dominates squared error. These are \emph{training-fit} measures; they do not estimate accuracy on unseen jobs.
-  \end{block}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      For our 12 jobs: $\overline x=6.5$, $\overline y\approx17.405$.
+      \[
+        \boxed{\widehat y\approx4.130+2.042x}
+      \]
+      A new 60-page job has $x=6$:
+      \[
+        \widehat y\approx16.38\text{ minutes}.
+      \]
+      The slope requires distinct training inputs. The intercept at $x=0$ is outside our observed range.
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      \lecturevisual[1.55in]{case-line.png}{The fitted straight line on the twelve training jobs.}
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Multiple Input Features: Still Linear Regression}
-  Route time might depend on several measurements:
+\begin{frame}{How the Gradient Comes from the Loss}
+  \small
+  For $r_i=w_0+w_1x_i-y_i$ and $L=\frac1n\sum_i r_i^2$, the chain rule gives
   \[
-    \widehat y=w_0+w_1x_1+w_2x_2+\cdots+w_dx_d.
-  \]
-  With a leading constant feature $x_0=1$, write
-  \[
-    \widehat y=\mathbf w^{\mathsf T}\widetilde{\mathbf x},
+    \frac{\partial r_i^2}{\partial w_0}=2r_i,
     \qquad
-    \widetilde{\mathbf x}=(1,x_1,\ldots,x_d)^{\mathsf T}.
+    \frac{\partial r_i^2}{\partial w_1}=2r_ix_i.
   \]
-  \begin{itemize}
-    \item One coefficient per feature, plus an intercept.
-    \item Each slope describes an additive change in the prediction with other features held fixed.
-    \item Coefficients alone do not establish causal effects.
-  \end{itemize}
-  \begin{keyidea}
-    ``Linear'' refers to dependence on the coefficients, not necessarily to one input variable.
-  \end{keyidea}
-\end{frame}
-
-\section{Optimization and Curve Flexibility}
-
-\begin{frame}{From Residuals to a Parameter Update}
-  Use the prediction-minus-observation convention $r_i=w_0+w_1x_i-y_i$.
+  Therefore
   \[
-    L=\frac1n\sum_i r_i^2,\qquad
     g_0=\frac{\partial L}{\partial w_0}=\frac2n\sum_i r_i,
     \qquad
     g_1=\frac{\partial L}{\partial w_1}=\frac2n\sum_i x_i r_i.
   \]
   \begin{itemize}
-    \item $g_0$: changing the intercept shifts every prediction equally.
-    \item $g_1$: the slope change is weighted by each input $x_i$.
-    \item The gradient points toward locally increasing loss; subtract it to descend.
+    \item Each partial derivative measures sensitivity of loss to one parameter.
+    \item The gradient $\nabla L=(g_0,g_1)$ points in the direction of steepest local increase.
+    \item Changing the residual convention changes derivative signs in the derivation, but not the squared-loss objective or its optimum.
   \end{itemize}
-  \begin{keyidea}
-    Compute both gradients from the \emph{same current parameters}, then update $w_0\leftarrow w_0-\eta g_0$ and $w_1\leftarrow w_1-\eta g_1$ simultaneously.
-  \end{keyidea}
 \end{frame}
 
-\begin{frame}{One Gradient Step on the Print Jobs}
+\begin{frame}{Gradient Descent Updates the Whole Parameter Vector}
   \small
-  Start from $(w_0,w_1)=(0.5,1)$ and learning rate $\eta=0.05$.
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.53\textwidth}
-      \begin{block}{All residuals use the old line}
-        Predictions: $1.5,\ 2.5,\ 3.5,\ 4.5$.\\
-        $\widehat y-y$: $-1.5,\ -2.5,\ -0.5,\ -3.5$.
-        \[
-          g_0=-4,\qquad g_1=-11.
-        \]
-        New parameters: $(0.7,1.55)$.\\
-        MSE: $5.25\longrightarrow1.25875$.
-      \end{block}
-      $\mathbf w^{(k+1)}=\mathbf w^{(k)}-\eta\nabla L(\mathbf w^{(k)})$; $k$ counts updates.
-    \end{column}
-    \begin{column}{0.41\textwidth}
-      \lecturevisual[1.8in]{slide20.png}{Actual gradient-descent steps on the print-job loss surface.}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Optimization Has Practical Failure Modes}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Step size too large}
-        Updates may overshoot the optimum or diverge.
-      \end{block}
-      \begin{block}{Step size too small}
-        Optimization progresses slowly.
-      \end{block}
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \lecturevisual[2.0in]{slide21.png}{Image: three loss-vs-iteration curves: divergent, slow, and well-tuned learning rates.}
-    \end{column}
-  \end{columns}
+  Starting from $\mathbf w^{(0)}$, repeatedly evaluate the gradient and move downhill:
+  \[
+    \boxed{\mathbf w^{(t+1)}=\mathbf w^{(t)}-\eta\nabla L(\mathbf w^{(t)})},
+    \qquad \eta>0.
+  \]
+  Equivalently, for a line,
+  \[
+    w_0^{(t+1)}=w_0^{(t)}-\eta g_0^{(t)},\qquad
+    w_1^{(t+1)}=w_1^{(t)}-\eta g_1^{(t)}.
+  \]
   \begin{itemize}
-    \item Standardize inputs with very different scales; estimate scaling from training data only.
-    \item Track the training objective during optimization.
-    \item Distinguish failure to \emph{optimize} from failure to \emph{generalize}.
+    \item $t$ counts iterations; $\eta$ is the learning rate; $g_j^{(t)}$ is evaluated at the current weights.
+    \item Compute \emph{both} derivatives before modifying either weight: this is a simultaneous update.
+    \item A small enough step decreases this smooth loss away from a stationary point. An arbitrary step size need not do so.
   \end{itemize}
+  Linear least squares has a convex loss: any stationary point is a global minimum; uniqueness additionally requires sufficient independent inputs.
 \end{frame}
 
-\begin{frame}{What If the Relationship Is Not a Straight Line?}
+\begin{frame}{One Worked Update on Four Different Print Jobs}
   \small
-  A robot's energy use might increase nonlinearly with speed.
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.49\textwidth}
-      \lecturevisual[1.65in]{slide22.png}{Synthetic energy-use data: the straight line misses curvature.}
-    \end{column}
-    \begin{column}{0.45\textwidth}
-      \begin{block}{Linear-model mismatch}
-        No choice of $w_0,w_1$ can bend a straight line to follow curved data.
-      \end{block}
-      \begin{block}{Next step}
-        Transform the inputs; keep the model linear in its parameters.
-      \end{block}
-    \end{column}
-  \end{columns}
+  For this arithmetic example only, use $(x,y)=(1,3),(2,5),(3,4),(4,8)$. Start at $(w_0,w_1)=(0.5,1)$ and use $\eta=0.05$.
+  \begin{center}
+    \renewcommand{\arraystretch}{1.18}
+    \begin{tabular}{lrrrr}
+      $x$ & 1 & 2 & 3 & 4 \\\hline
+      Observed $y$ & 3 & 5 & 4 & 8 \\
+      Predicted $\widehat y$ & 1.5 & 2.5 & 3.5 & 4.5 \\
+      $r=\widehat y-y$ & $-1.5$ & $-2.5$ & $-0.5$ & $-3.5$
+    \end{tabular}
+  \end{center}
+  \[
+    g_0=\frac24(-8)=-4,\qquad g_1=\frac24(-22)=-11,
+    \qquad (w_0',w_1')=(0.7,1.55).
+  \]
+  The updated predictions are $(2.25,3.80,5.35,6.90)$. Training MSE drops from $5.25$ to $1.25875$ min$^2$.
   \medskip
-  A poor fit may reflect an inadequate \textbf{hypothesis class}, not an inadequate optimizer.
+
+  This verifies one downhill step on known data. It does not establish future prediction accuracy.
 \end{frame}
 
-\begin{frame}{Polynomial Regression Is Linear in the Coefficients}
-  Transform one input into multiple basis functions:
-  \[
-    \boldsymbol\phi(x)=(1,x,x^2,\ldots,x^p)^{\mathsf T}.
-  \]
-  Then fit
-  \[
-    \widehat y=\mathbf w^{\mathsf T}\boldsymbol\phi(x)
-    =w_0+w_1x+\cdots+w_px^p.
-  \]
-  \begin{itemize}
-    \item The curve is nonlinear in $x$ but remains linear in $\mathbf w$.
-    \item Least squares still applies using transformed feature columns.
-    \item Degree $p$: $0$ is constant, $1$ a line, $2$ quadratic; larger $p$ adds flexibility.
-  \end{itemize}
-  \begin{keyidea}
-    For $p=0$, least squares predicts the training mean $\widehat y=\overline y_{\rm tr}$. This is a simple baseline that ignores the input.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Model Capacity: Degree One, Three, and Ten}
-  \lecturevisual[1.85in]{slide24.png}{Image: three panels fitting the same noisy data with degree-1, degree-3, and degree-10 polynomials.}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.30\textwidth}
-      \begin{block}{Underfitting}
-        Limited flexibility; may miss important structure.
-      \end{block}
-    \end{column}
-    \begin{column}{0.30\textwidth}
-      \begin{block}{Useful structure}
-        May capture the stable underlying pattern.
-      \end{block}
-    \end{column}
-    \begin{column}{0.30\textwidth}
-      \begin{block}{Overfitting risk}
-        Can chase noise and behave erratically between points.
-      \end{block}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\section{Generalization and Evaluation}
-
-\begin{frame}{Training Error and Generalization Error Differ}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.52\textwidth}
-      We fit parameters using training examples, but judge usefulness on unseen examples.
-      \begin{itemize}
-        \item For nested model families, the best achievable training error cannot increase.
-        \item Validation error need not decrease with complexity; its shape is data-dependent.
-        \item The plot uses the same synthetic training sample for each polynomial degree.
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.42\textwidth}
-      \lecturevisual[2.05in]{slide25.png}{Actual training and validation errors for nested polynomial models on one synthetic dataset.}
-    \end{column}
-  \end{columns}
-  \begin{keyidea}
-    The target is low error \emph{on the distribution of future examples}, not the smallest possible training error.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Train, Validation, and Test Have Different Jobs}
-  \begin{itemize}
-    \item \textbf{Parameters} are fitted: coefficients $\mathbf w$.
-    \item \textbf{Hyperparameters} are selected: degree $p$, penalty $\lambda$.
-  \end{itemize}
-  \lecturevisual[1.25in]{slide26.png}{Separate training, validation and test sets with distinct roles.}
-  \begin{keyidea}
-    Repeatedly choosing models based on test results makes the test set part of training and biases the reported result.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{A Useful Evaluation Must Resemble Deployment}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Prevent information leakage}
-        \begin{itemize}
-          \item Use inputs available at prediction time: not the delivery's eventual arrival timestamp.
-          \item Split first; fit scaling, imputation, and feature selection on training data only.
-          \item Apply the same fitted transformations to validation and test data.
-        \end{itemize}
-      \end{block}
-    \end{column}
-    \begin{column}{0.47\textwidth}
-      \begin{block}{Match the intended prediction task}
-        \begin{itemize}
-          \item Future deliveries: consider a chronological split.
-          \item Unseen routes: hold out entire route groups.
-          \item New conditions can cause distribution shift even with a careful split.
-        \end{itemize}
-      \end{block}
-    \end{column}
-  \end{columns}
-\end{frame}
-
-\begin{frame}{Why More Flexibility Does Not Always Help}
-  \begin{itemize}
-    \item \textbf{Bias:} a restricted family systematically misses the conditional trend.
-    \item \textbf{Variance:} a fitted curve changes substantially when the training sample changes.
-    \item \textbf{Irreducible noise:} unobserved factors still make outcomes vary at a fixed input.
-  \end{itemize}
-  \begin{block}{Connect this to the polynomial fits}
-    A line may miss curvature. A high-degree fit can follow this sample's noise. Neither a lower training error nor a higher degree proves better future performance.
-  \end{block}
-  \begin{keyidea}
-    More training data can reduce variance; greater noise makes chasing sample details more hazardous. Select flexibility using held-out data.
-  \end{keyidea}
-  \small The formal squared-error decomposition is in the reference slides.
-\end{frame}
-
-\begin{frame}{Residual Diagnostics Reveal Model Weaknesses}
+\begin{frame}{Step Size Controls the Optimization Trajectory}
+  \lecturevisual[1.65in]{gradient-geometry.png}{Exact four-job squared-loss contours and learning-rate trajectories.}
   \small
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.51\textwidth}
-      Plot residuals $e_i=y_i-\widehat y_i$ against fitted values or inputs.
-      \begin{itemize}
-        \item Curved pattern: missing systematic nonlinear structure.
-        \item Increasing spread: non-constant noise variance.
-        \item Extreme residuals: possible outliers or exceptional conditions.
-        \item Time dependence or abrupt shifts: structure not captured by one smooth curve.
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.43\textwidth}
-      \lecturevisual[2.1in]{slide33.png}{Image: side-by-side well-behaved residual cloud and visibly patterned residuals.}
-    \end{column}
-  \end{columns}
-  \begin{keyidea}
-    The magnitude of error tells us \emph{how much} the fit misses; its structure can suggest \emph{why}.
-  \end{keyidea}
+  On this example, $\eta=0.05$ moves toward a minimum; $\eta=0.15$ diverges. Very small steps can take many iterations. Feature scale affects a useful step size.
+  \medskip
+
+  Gradient descent is one fitting algorithm; least-squares software can instead solve the problem with numerical linear algebra.
 \end{frame}
 
-\section{From Regression to Binary Classification}
+\section{How Good Are the Predictions?}
 
-\begin{frame}{A Linear Score Can Become a Binary Classifier}
+\begin{frame}{Fitting Data and Predicting Future Experience}
   \small
-  Return to email: $y=1$ means spam; $y=0$ means legitimate.
+  Reserve independent examples before fitting or choosing models.
+  \lecturevisual[0.75in]{slide26.png}{Training fits coefficients, validation chooses settings, and test reports the frozen choice.}
+  \begin{itemize}
+    \item \textbf{Training:} fit weights; our synthetic case uses 12 jobs.
+    \item \textbf{Validation:} compare model choices on 100 different jobs.
+    \item \textbf{Test:} evaluate the frozen choice on 100 untouched jobs.
+  \end{itemize}
+  Our real goal is small expected loss on future examples from distribution $P$:
+  \[
+    R(f)=\mathbb E_{(\mathbf X,Y)\sim P}[\ell(f(\mathbf X),Y)].
+  \]
+  Training minimizes a sample loss; representative held-out data estimate future performance. Neither is a guarantee for every individual prediction.
+\end{frame}
+
+\begin{frame}{Regression Metrics: How Far Are Predictions Off?}
+  \small
+  On an evaluation set of $m$ examples, let $r_i=\widehat y_i-y_i$.
+  \[
+    \operatorname{MSE}=\frac1m\sum_i r_i^2,\qquad
+    \operatorname{RMSE}=\sqrt{\frac1m\sum_i r_i^2},\qquad
+    \operatorname{MAE}=\frac1m\sum_i|r_i|.
+  \]
+  \begin{center}
+    \renewcommand{\arraystretch}{1.22}
+    \begin{tabular}{lrrl}
+      \textbf{Fitted line} & \textbf{Training} & \textbf{Validation} & \textbf{Units} \\\hline
+      MSE  & 2.287 & 1.374 & minutes squared \\
+      RMSE & 1.512 & 1.172 & minutes \\
+      MAE  & 1.241 & 0.971 & minutes
+    \end{tabular}
+  \end{center}
+  Smaller is better on the \emph{same} evaluation set. RMSE emphasizes large errors more than MAE; neither bounds the error of an individual prediction.
+  \medskip
+
+  A two-minute miss contributes $4$ min$^2$ to squared error but $2$ min to absolute error. A four-minute miss contributes $16$ min$^2$ versus $4$ min.
+\end{frame}
+
+\begin{frame}{Relative Performance: Baselines and $R^2$}
+  \small
+  A simple deployable baseline always predicts the \emph{training} mean:
+  \[
+    \widehat y_{\rm baseline}=\overline y_{\rm train}\approx17.405\text{ minutes}.
+  \]
+  The coefficient of determination uses the evaluation-set mean $\overline y_{\rm eval}$:
+  \[
+    R^2=1-\frac{\sum_i(y_i-\widehat y_i)^2}
+                    {\sum_i(y_i-\overline y_{\rm eval})^2}.
+  \]
+  \begin{itemize}
+    \item $R^2=1$: perfect predictions on this set.
+    \item $R^2=0$: same squared error as always predicting this set's mean; $R^2<0$ is possible.
+    \item The evaluation mean is a reference in the metric, \emph{not} a value we use to fit our deployed baseline.
+    \item $R^2$ is unitless; pair it with RMSE or MAE to judge practical error size.
+  \end{itemize}
+  For the BMI demonstration: held-out MSE $2548.07$, RMSE $50.48$ score units, and $R^2\approx0.473$. These interpretations assume nonconstant targets.
+\end{frame}
+
+\section{Classification and Its Evaluation}
+
+\begin{frame}{Change the Target: Will the Printer Fail?}
+  \small
+  Print time was numerical. Now the observed label is $y=1$ for a failed job and $y=0$ for a completed job. Pre-job sensor readings are inputs.
   \[
     z=w_0+\sum_{j=1}^{d}w_jx_j,\qquad
     p_{\mathbf w}(\mathbf x)=\sigma(z)=\frac1{1+e^{-z}}.
   \]
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.48\textwidth}
+    \begin{column}{0.49\textwidth}
       \begin{itemize}
-        \item $z$: unrestricted real-valued score.
-        \item $p$: model estimate of $P(Y=1\mid\mathbf x)$, between $0$ and $1$.
+        \item $z$: unrestricted linear score; $d$: number of input features.
+        \item $p$: estimate of $P(Y=1\mid\mathbf x)$, between $0$ and $1$.
         \item \textbf{Logistic regression} is a classification model despite its name.
       \end{itemize}
     \end{column}
-    \begin{column}{0.46\textwidth}
-      \lecturevisual[1.45in]{sigmoid-score.png}{Exact sigmoid transformation of a linear score.}
+    \begin{column}{0.45\textwidth}
+      \lecturevisual[1.35in]{sigmoid-score.png}{A sigmoid maps a real-valued score to a probability estimate.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Classification Changes the Training Objective}
-  For a binary label $y\in\{0,1\}$ and predicted spam probability $p$:
+\begin{frame}{Fit Class Probabilities with Log Loss}
+  For a binary label $y\in\{0,1\}$ and predicted failure probability $p$,
   \[
     \ell(p,y)=-\bigl[y\log p+(1-y)\log(1-p)\bigr].
   \]
   \begin{itemize}
     \item If $y=1$, loss is $-\log p$; if $y=0$, it is $-\log(1-p)$.
-    \item For a spam message: $p=0.8$ gives loss $0.223$; $p=0.2$ gives $1.609$.
-    \item Fit weights by minimizing average \textbf{binary cross-entropy} (log loss), often with a regularization penalty.
+    \item For a failed job: $p=0.8$ gives loss $0.223$; $p=0.2$ gives $1.609$.
+    \item Fit weights by minimizing average \textbf{binary cross-entropy} (log loss), using numerical optimization; software often adds a weight penalty.
   \end{itemize}
   \begin{keyidea}
-    The same learning recipe remains: choose a model, define a loss, fit parameters, and evaluate on unseen examples. Here the model estimates a class probability rather than a numerical duration.
+    Squared error fits numerical durations; log loss fits binary class probabilities. A confidently wrong probability incurs a large log loss.
   \end{keyidea}
-  \small Logs are natural logarithms. A confidently wrong prediction incurs a large loss.
+  \small Logs are natural. For $x_{i0}=1$, the mean-loss gradient is $\frac{\partial L}{\partial w_j}=\frac1n\sum_i(p_i-y_i)x_{ij}$: optimize the weights using the same update framework.
 \end{frame}
 
-\begin{frame}{A Threshold Turns a Probability into a Label}
-  Predict spam when $p\geq\tau$, otherwise legitimate; $\tau$ is the threshold.
-  For example, $p=0.7$ is labeled spam at $\tau=0.5$, but legitimate at $\tau=0.8$. Suppose the matrix below was measured at $\tau=0.5$:
+\begin{frame}{Evaluate Decisions with a Confusion Matrix}
+  \small
+  Predict failure when $p\geq\tau$, where $\tau$ is a threshold.
+  A score $p=0.7$ predicts failure at $\tau=0.5$, but completion at $\tau=0.8$.
   \begin{center}
-    \renewcommand{\arraystretch}{1.2}
+    \renewcommand{\arraystretch}{1.3}
     \begin{tabular}{l|cc}
-      \textbf{100 hypothetical messages} & \textbf{Predicted legitimate} & \textbf{Predicted spam} \\ \hline
-      \textbf{Actual legitimate} & 64 true negatives & 6 false positives \\
-      \textbf{Actual spam} & 9 false negatives & 21 true positives
+      \textbf{100 hypothetical held-out jobs} & \textbf{Predict completion} & \textbf{Predict failure} \\\hline
+      \textbf{Actual completion} & 64 true negatives & 6 false positives \\
+      \textbf{Actual failure} & 9 false negatives & 21 true positives
     \end{tabular}
   \end{center}
   \begin{itemize}
-    \item A \textbf{confusion matrix} counts actual classes by row, predicted classes by column. Here the positive class is spam.
-    \item A false positive hides useful mail; a false negative lets spam through. Their operational costs can differ.
-    \item Lowering $\tau$ can trade false negatives for false positives. Choose settings with validation data.
+    \item Rows are actual classes; columns are predictions. Failure is the positive class.
+    \item A false positive triggers an unnecessary intervention; a false negative misses a failure.
+    \item Lowering $\tau$ can catch more failures while triggering more false alarms.
   \end{itemize}
+  Choose the threshold on validation data according to the consequences of these errors.
 \end{frame}
 
-\begin{frame}{A Bounded Score Is Not Automatically Calibrated}
-  The sigmoid constrains a score's range. It does not prove the score matches real frequencies.
-  \begin{block}{What calibration means}
-    Among many new messages assigned scores near $0.8$, approximately $80\%$ should actually be spam if those probabilities are well calibrated.
-  \end{block}
-  \begin{itemize}
-    \item \textbf{Classification:} which label does a threshold assign?
-    \item \textbf{Calibration:} do the probability estimates agree with observed frequencies?
-    \item A useful ranking or a good confusion matrix at one threshold does not establish calibration.
-  \end{itemize}
-  \begin{keyidea}
-    Inspect held-out outcomes. A numerical estimate supports a decision, but its range alone is not evidence of reliability.
-  \end{keyidea}
-\end{frame}
-
-\section{Synthesis}
-
-\begin{frame}{Check Your Understanding}
-  \begin{activity}
-    \begin{enumerate}
-      \item A flexible curve lowers training error. What evidence is still missing?
-      \item A spam filter produces $p=0.7$. Is that a label, a guarantee, or a model estimate?
-      \item If useful messages are being hidden, what evaluation evidence would help choose a different threshold?
-    \end{enumerate}
-  \end{activity}
-  \begin{keyidea}
-    Separate the fitted model, the loss used to learn it, and the decisions made from its predictions. Judge usefulness on representative unseen data.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Takeaways: Supervised Prediction}
-  \begin{itemize}
-    \item Training examples pair inputs with observed targets; inference uses a fitted model on new inputs.
-    \item Regression predicts numbers; a binary classifier estimates a probability and uses a threshold to assign a label.
-    \item Loss functions define the objective: squared error and cross-entropy reward different predictions.
-    \item Gradient descent updates all parameters from the same current state.
-    \item Curve flexibility helps only when its gains transfer to new examples.
-    \item Use appropriate metrics, baselines, and held-out data; avoid unavailable inputs.
-  \end{itemize}
-  \begin{keyidea}
-    Fitting observations is an optimization task. Establishing useful future predictions is an empirical evaluation task.
-  \end{keyidea}
-\end{frame}
-
-\appendix
-
-\section{Optional Reference}
-
-\sectionframe{Optional Reference: Theory and Implementation}
-
-\begin{frame}{Empirical Risk Versus Prediction Risk}
-  The quantity we would like to minimize is expected loss on future examples:
-  \[
-    R(f)=\mathbb E_{(\mathbf X,Y)\sim P_{X,Y}}\left[\ell(f(\mathbf X),Y)\right].
-  \]
-  Since the data distribution is unknown, training minimizes its sample analogue:
-  \[
-    \widehat R_{\mathcal D}(f)=\frac1n\sum_{i=1}^{n}\ell(f(\mathbf x_i),y_i),
-    \qquad
-    \widehat f=\arg\min_{f\in\mathcal H}\widehat R_{\mathcal D}(f).
-  \]
-  \begin{keyidea}
-    $R$ is population risk; $\widehat R_{\mathcal D}$ is training risk; $\widehat f$ is a fitted predictor. ERM minimizes the observed average, not a guarantee about future data.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Deriving the Best-Fitting Intercept}
-  At an optimum, differentiate the sum of squares with respect to $w_0$:
-  \[
-    \frac{\partial S}{\partial w_0}
-    =-2\sum_i\bigl[y_i-(w_0+w_1x_i)\bigr]=0.
-  \]
-  Rearranging,
-  \[
-    \sum_i y_i=nw_0+w_1\sum_i x_i,
-    \qquad
-    \boxed{w_0=\overline y-w_1\overline x}.
-  \]
-  \begin{keyidea}
-    The least-squares line with an intercept passes through the sample mean point $(\overline x,\overline y)$.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Deriving the Best-Fitting Slope}
-  Set the derivative with respect to $w_1$ to zero:
-  \[
-    \frac{\partial S}{\partial w_1}
-    =-2\sum_i x_i\bigl[y_i-(w_0+w_1x_i)\bigr]=0.
-  \]
-  Substitute $w_0=\overline y-w_1\overline x$ and simplify:
-  \[
-    \boxed{\displaystyle
-      w_1=\frac{\sum_i(x_i-\overline x)(y_i-\overline y)}
-                    {\sum_i(x_i-\overline x)^2}},
-    \qquad
-    w_0=\overline y-w_1\overline x.
-  \]
-  \begin{block}{Condition}
-    The denominator must be nonzero: at least two training inputs must have distinct values.
-  \end{block}
-\end{frame}
-
-\begin{frame}{Least Squares in Matrix Form}
+\begin{frame}{Accuracy, Precision, Recall, and $F_1$}
   \small
-  Each row of $X\in\mathbb R^{n\times(d+1)}$ is $(1,x_{i1},\ldots,x_{id})$. Here $X$ denotes a \emph{matrix}, not a random input. The vectors $\mathbf y,\widehat{\mathbf y}\in\mathbb R^n$ hold targets and predictions:
+  From the preceding matrix: TP=21, TN=64, FP=6, FN=9. Failure is positive.
   \[
-    \widehat{\mathbf y}=X\mathbf w,
-    \qquad
-    S(\mathbf w)=\lVert\mathbf y-X\mathbf w\rVert_2^2.
-  \]
-  Differentiate and set the gradient to zero:
-  \[
-    \nabla S(\mathbf w)=2X^{\mathsf T}(X\mathbf w-\mathbf y)=0.
+    \text{accuracy}=\frac{\mathrm{TP}+\mathrm{TN}}{\mathrm{TP}+\mathrm{TN}+\mathrm{FP}+\mathrm{FN}}=85\%,
   \]
   \[
-    X^{\mathsf T}X\widehat{\mathbf w}=X^{\mathsf T}\mathbf y.
+    P=\frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FP}}\approx77.8\%,\qquad
+    R=\frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FN}}=70\%,\qquad
+    F_1=\frac{2PR}{P+R}\approx73.7\%.
   \]
-  \begin{block}{Full-column-rank case}
-    If $X^{\mathsf T}X$ is invertible, $\widehat{\mathbf w}=(X^{\mathsf T}X)^{-1}X^{\mathsf T}\mathbf y$.
-  \end{block}
-  \begin{keyidea}
-    Rank deficiency can make coefficients nonunique. Use QR or SVD in software; do not explicitly compute the inverse.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{What Squared Loss Is Really Estimating}
-  For a fixed input $x$ and a constant candidate prediction $a$,
-  \[
-    \mathbb E\bigl[(Y-a)^2\mid X=x\bigr]
-    =\operatorname{Var}(Y\mid X=x)
-    +\bigl(a-\mathbb E[Y\mid X=x]\bigr)^2.
-  \]
-  Therefore the optimal squared-error prediction is
-  \[
-    \boxed{f^*(x)=\mathbb E[Y\mid X=x]}.
-  \]
-  \begin{block}{Interpretation}
-    With finite second moments, squared loss targets the conditional mean. A restricted model class may only approximate it; Gaussian noise is not required to fit least squares.
-  \end{block}
-  \begin{keyidea}
-    An imperfect fit to individual points can still be an excellent estimate of the underlying conditional trend.
-  \end{keyidea}
-\end{frame}
-
-\begin{frame}{Bias, Variance, and Irreducible Noise}
-  With squared error, predictive performance can be understood through
-  \[
-    \mathbb E_{\mathcal D,Y\mid x}\bigl[(Y-\widehat f_{\mathcal D}(x))^2\bigr]
-    =\bigl(\mathbb E_{\mathcal D}[\widehat f_{\mathcal D}(x)]-f^*(x)\bigr)^2
-    +\operatorname{Var}_{\mathcal D}(\widehat f_{\mathcal D}(x))
-    +\sigma^2(x),
-  \]
-  Here $f^*(x)=\mathbb E[Y\mid X=x]$; a fresh test outcome is independent of training set $\mathcal D$ given $x$, and
-  $\sigma^2(x)=\operatorname{Var}(Y\mid X=x)$.
   \begin{itemize}
-    \item The first term is squared bias: systematic error averaged over training sets.
-    \item The second is variation over training sets, not variation in the inputs.
-    \item \textbf{Noise:} uncertainty in $Y$ remains even with the best predictor.
+    \item \textbf{Precision:} how many predicted failures really fail?
+    \item \textbf{Recall:} how many actual failures are detected? $F_1$ combines precision and recall via their harmonic mean.
+    \item Predicting completion for every job gives $70\%$ accuracy but zero failure recall. Accuracy can conceal failure on a rare class.
+  \end{itemize}
+  State the positive class and threshold; choose metrics according to operational costs. A missed failure and a one-minute duration error have different consequences.
+\end{frame}
+
+\begin{frame}{A Class Probability Is Not a Correctness Guarantee}
+  \small
+  Three different evaluation questions:
+  \begin{itemize}
+    \item \textbf{Probability quality:} held-out log loss penalizes confident wrong predictions.
+    \item \textbf{Decision quality:} a confusion matrix and precision/recall describe labels at a stated threshold.
+    \item \textbf{Calibration:} among many cases assigned scores near $0.8$, about $80\%$ should actually fail if those probabilities are reliable.
   \end{itemize}
   \begin{keyidea}
-    Increasing model complexity can reduce bias while increasing sensitivity to sample noise.
+    A sigmoid puts scores in $(0,1)$; it does not prove calibration. Inspect held-out outcomes rather than treating a model score as certainty.
   \end{keyidea}
+  Lowering a threshold changes labels and error tradeoffs, not the underlying probability estimates. Select it on validation data.
 \end{frame}
 
-\begin{frame}{Regularization Prefers Simpler Solutions}
+\section{The Limits of a Line and Polynomial Features}
+
+\begin{frame}{Return to Print Time: What Does the Line Miss?}
   \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      The line minimized training squared error \emph{among straight lines}.
+      \begin{itemize}
+        \item Positive residual: the model predicts too much time.
+        \item Negative residual: actual duration exceeds the prediction.
+        \item Here residuals are negative at the ends and positive in the middle.
+      \end{itemize}
+      This curved pattern suggests a limitation of the model family. Optimization alone cannot bend a straight line.
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \lecturevisual[2in]{case-line-residuals.png}{The fitted line leaves a curved residual pattern.}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Polynomial Regression Adds Curvature}
+  \small
+  A degree-$k$ polynomial uses powers of the input:
   \[
-    \widehat{\mathbf w}
-    =\arg\min_{\mathbf w}\left\{
-      \frac1n\sum_i[y_i-f_{\mathbf w}(\mathbf x_i)]^2
-      +\lambda\sum_{j=1}^{m}w_j^2
-    \right\},\quad\lambda\geq0.
+    \widehat y=w_0+w_1x+w_2x^2+\cdots+w_kx^k.
   \]
   \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.49\textwidth}
-      \begin{itemize}
-        \item $m$: number of nonconstant features; $\lambda$: penalty strength.
-        \item \textbf{Ridge} (L2) penalizes large coefficients.
-        \item The intercept $w_0$ is not penalized here.
-        \item Feature scale matters: fit scaling on training data; choose $\lambda$ on validation data.
-      \end{itemize}
+    \begin{column}{0.51\textwidth}
+      Fit a quadratic ($k=2$) to the \emph{same 12 jobs} by minimizing the same squared loss:
+      \[
+        \widehat y\approx8.028+0.372x+0.1285x^2.
+      \]
+      Training MSE falls from $2.287$ to $0.450$ minutes squared.
+      \medskip
+
+      The marginal change is now $w_1+2w_2x$: added batches need not add a constant amount of time.
     \end{column}
     \begin{column}{0.45\textwidth}
-      \lecturevisual[1.7in]{slide28.png}{The same degree-10 family, with and without a ridge penalty.}
+      \lecturevisual[1.8in]{case-quadratic.png}{A fitted line and fitted quadratic on the same training jobs.}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{Reference: An Additional Regression Metric}
-  On an evaluation set with mean target $\overline y_{\rm ev}$:
+\begin{frame}[fragile]{Polynomial Features Keep the Least-Squares Framework}
+  \small
+  For a fixed degree $k$, construct $\boldsymbol\phi(x)=(1,x,x^2,\ldots,x^k)$:
   \[
-    R^2=1-\frac{\sum_i(y_i-\widehat y_i)^2}
-                   {\sum_i(y_i-\overline y_{\rm ev})^2}.
+    \widehat y=\mathbf w^{\mathsf T}\boldsymbol\phi(x),\qquad
+    \widehat{\mathbf w}=\arg\min_{\mathbf w}\frac1n\sum_i
+       [\mathbf w^{\mathsf T}\boldsymbol\phi(x_i)-y_i]^2.
   \]
+{\footnotesize
+\begin{verbatim}
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+
+def fit_polynomial(X_train, y_train, X_valid, degree=2):
+    model = make_pipeline(PolynomialFeatures(degree, include_bias=False),
+                          LinearRegression())
+    model.fit(X_train, y_train)
+    return model, model.predict(X_valid)
+\end{verbatim}
+}
+  The curve is nonlinear in $x$ but linear in the learned coefficients. The degree is a hyperparameter selected using validation; coefficients are fitted on training. No new test data are used to choose degree.
+\end{frame}
+
+\begin{frame}{More Flexibility Can Fit the Sample's Noise}
+  \lecturevisual[1.65in]{case-flexibility.png}{Constant, linear, quadratic and degree-nine models fitted to exactly the same twelve jobs.}
+  \small
   \begin{itemize}
-    \item $R^2=1$ is perfect; $0$ matches the evaluation-set mean; negative is worse.
-    \item The formula requires nonconstant targets.
-    \item The evaluation-set mean is a retrospective reference, not an available prediction for future examples.
+    \item A constant predicts the training mean. A line may \textbf{underfit}: too restricted to represent curvature.
+    \item Degree 9 reduces training MSE further, from $0.450$ to $0.246$.
+    \item Extra flexibility may \textbf{overfit}: follow accidental details that change in another sample.
   \end{itemize}
+  With increasing degree, minimum training loss cannot rise: set extra coefficients to zero.
+\end{frame}
+
+\begin{frame}{Choose Degree Using Validation Error}
+  \small
+  Each candidate is fitted on the same training set and scored on the same validation set.
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{lrr}
+      \textbf{Model} & \textbf{Training MSE} & \textbf{Validation MSE} \\\hline
+      Constant (degree 0; training mean) & 51.997 & 36.427 \\
+      Line (degree 1) & 2.287 & 1.374 \\
+      Quadratic (degree 2) & 0.450 & \textbf{0.454} \\
+      Degree 9 & \textbf{0.246} & 0.701
+    \end{tabular}
+  \end{center}
+  All errors are in minutes squared. The quadratic wins on validation, although degree 9 fits the training jobs better.
   \begin{keyidea}
-    Also compare with a deployable baseline fitted on \emph{training} data, such as its mean target.
+    Select the quadratic on validation, then freeze it. Its untouched test RMSE is $0.614$ min versus $6.420$ min for the training-mean baseline.
   \end{keyidea}
 \end{frame}
 
-\begin{frame}[fragile]{A Reproducible Experiment: Split Before Fitting}
-  Predict the diabetes benchmark's numerical one-year progression score using one BMI feature.
-\begin{semiverbatim}\small
-from sklearn.datasets import load_diabetes
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.dummy import DummyRegressor
-from sklearn.metrics import mean_squared_error, r2_score
-
-data = load_diabetes(scaled=False)  # raw features
-X = data.data[:, [2]]              # BMI: 2-D input
-y = data.target
-X_tr, X_te, y_tr, y_te = train_test_split(
-    X, y, test_size=0.2, random_state=42)
-\end{semiverbatim}
-  \small This illustrative fixed-model experiment uses 353 training and 89 test observations. No model selection is done on the test set.
+\begin{frame}{Sample Size and Noise Change the Evidence}
+  \lecturevisual[1.55in]{sample-noise-comparison.png}{The same generating trend under different sample sizes and noise levels, with degree chosen using validation only.}
+  \small
+  \begin{itemize}
+    \item More data can stabilize flexible fits; more noise makes chasing details riskier. The validation winner can change; here it stays degree 2.
+    \item \textbf{Bias:} missing the trend. \textbf{Variance:} sensitivity to the training sample. Noise limits attainable accuracy.
+  \end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]{Fit on Training Data; Compare on Test Data}
-  \begin{columns}[T,onlytextwidth]
-    \begin{column}{0.54\textwidth}
-\begin{semiverbatim}\scriptsize
-model = LinearRegression().fit(X_tr, y_tr)
-base = DummyRegressor(strategy="mean")
-base.fit(X_tr, y_tr)
-pred = model.predict(X_te)
-base_pred = base.predict(X_te)
+\section{Return to Classification with Polynomial Features}
 
-print(mean_squared_error(y_te, pred))
-print(mean_squared_error(y_te, base_pred))
-print(r2_score(y_te, pred))
-\end{semiverbatim}
-      \begin{block}{Expected output (rounded)}
-        Linear MSE: \textbf{4061.83}\\
-        Mean-baseline MSE: \textbf{5361.53}\\
-        Linear $R^2$: \textbf{0.233}
-      \end{block}
+\begin{frame}{Return to Classification: Two Risky Extremes}
+  \small
+  Suppose both unusually cold and unusually hot pre-job temperatures increase failure risk.
+  \[
+    \underbrace{p(t)=\sigma(w_0+w_1t)}_{\text{linear score}}
+    \qquad\longrightarrow\qquad
+    \underbrace{p(t)=\sigma(w_0+w_1t+w_2t^2)}_{\text{quadratic score}}.
+  \]
+  Here $t$ is temperature and $y\in\{0,1\}$ is the observed failure label.
+  \begin{itemize}
+    \item A sigmoid of a linear score is monotonic in one input: it cannot give high failure probabilities at both ends and low probabilities in the middle.
+    \item Adding $t^2$ allows that pattern. At threshold $0.5$, the boundary satisfies $w_0+w_1t+w_2t^2=0$, which can have two roots.
+    \item Still fit using \textbf{binary cross-entropy}, not least squares on duration.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Polynomial Features Also Change a Classifier's Shape}
+  \lecturevisual[1.7in]{case-classification.png}{Fitted linear-score and quadratic-score logistic classifiers with independent validation outcomes.}
+  \small
+  Both models learn from the same 200 synthetic training jobs. Dots are outcomes on 200 different validation jobs; curves are estimated probabilities.
+  \medskip
+
+  Polynomial features change the score's shape; the sigmoid, binary target, log-loss objective, and threshold rule remain the same.
+\end{frame}
+
+\begin{frame}{Evaluate the More Flexible Classifier Again}
+  \small
+  Compare validation log loss, then freeze the choice and threshold before using the test set.
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{lrr}
+      \textbf{Model score} & \textbf{Validation log loss} & \textbf{Validation accuracy} \\\hline
+      Linear & 0.692 & 56.5\% \\
+      Quadratic & 0.204 & 91.5\%
+    \end{tabular}
+  \end{center}
+  The quadratic is selected by lower validation log loss. On 200 untouched test jobs, its log loss is 0.243 and accuracy is 94.0\% at $\tau=0.5$.
+  \begin{itemize}
+    \item Here the test set contains 3 false positives and 9 false negatives; accuracy alone can hide an expensive error type.
+    \item Polynomial regression uses squared loss for a number; logistic regression with polynomial features uses log loss for a class probability.
+    \item Degree and threshold choices belong to validation, just as degree selection did in regression.
+  \end{itemize}
+\end{frame}
+
+\section{Limits of These Techniques}
+
+\begin{frame}{When a Smooth Fit Is the Wrong Representation}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      Some systems have operating modes, abrupt transitions, or interactions between categorical and numerical features.
+      \begin{itemize}
+        \item A low-degree curve can smooth over a meaningful jump.
+        \item Increasing degree may add oscillation or numerical instability rather than useful structure.
+        \item Continuity prevents arbitrarily small uniform error across a genuine jump.
+      \end{itemize}
     \end{column}
-    \begin{column}{0.40\textwidth}
-      \lecturevisual[2.25in]{slide32.png}{Actual held-out BMI regression and training-mean baseline.}
+    \begin{column}{0.47\textwidth}
+      \lecturevisual[1.75in]{smooth-fit-limits.png}{A global polynomial smooths over a genuinely discontinuous relationship.}
     \end{column}
   \end{columns}
-  \small Modest improvement over a baseline is evidence for this split, not a causal effect or a guarantee about other populations.
+  \medskip
+
+  The theorem assumes continuity. A good statistical fit also does not establish causal rules; better features or a different model family may be needed.
 \end{frame}
 
+\begin{frame}{Make Evaluation Match the Intended Use}
+  \small
+  \begin{itemize}
+    \item \textbf{Available inputs:} a completion timestamp would leak the duration. Use only information available when making the prediction.
+    \item \textbf{Preprocessing:} learn scaling or imputation values on training data; reuse them unchanged on validation and test inputs.
+    \item \textbf{Relevant splits:} for future jobs, consider a time-based split; to predict on new printers, keep each printer's records together.
+    \item \textbf{Coverage:} our duration models saw $x\in[1,12]$. Good errors there do not validate polynomial extrapolation to much larger jobs.
+    \item \textbf{Uncertainty:} scores from a finite test sample vary. Keep the test set out of repeated tuning.
+  \end{itemize}
+  \begin{keyidea}
+    The same evaluation discipline applies to numerical predictions and categorical decisions, with metrics suited to each target.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{From Deductive Guarantees to Empirical Evidence}
+  \small
+  \begin{enumerate}
+    \item Logical reasoning derives conclusions from an explicit knowledge base; learning can estimate relationships that are difficult to specify by hand.
+    \item Labeled experience defines inputs, targets, a hypothesis class, and a loss. The agent's learning element fits the model used for future predictions.
+    \item Least squares and gradient descent fit numerical models. Logistic classification changes the output interpretation and training loss.
+    \item Polynomial features increase representational flexibility for both tasks, while increasing the opportunity to fit noise.
+    \item Training loss measures fit; representative held-out data and task-appropriate metrics supply evidence about future usefulness.
+  \end{enumerate}
+  \begin{keyidea}
+    Approximation asks what can be represented; optimization asks what can be fitted; generalization asks what transfers to new experience.
+  \end{keyidea}
+\end{frame}
 \end{document}

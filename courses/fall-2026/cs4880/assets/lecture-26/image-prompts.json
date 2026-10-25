@@ -1,6 +1,6 @@
 {
   "generation_tool": "Built-in image_gen.imagegen for conceptual illustrations; Matplotlib for numerical charts",
-  "lecture": "CS 4880 Lecture 26: Learning Agents, Regression and Classification",
+  "lecture": "CS 4880 Lecture 26: Learning Agents: From Experience to Prediction",
   "assets": [
     {
       "filename": "slide2.png",
@@ -72,5 +72,40 @@
         "description": "Exact sigmoid: linear scores mapped to a probability range, without implying empirical calibration"
       }
     ]
+  },
+  "current_lecture_charts": {
+    "script": "generate-narrative-charts.py",
+    "checks": [
+      "narrative-case.json",
+      "classification-case.json"
+    ],
+    "description": "Print-duration regression with a consistent predicted-minus-observed residual convention; a separate failure classification case connects linear and polynomial scores.",
+    "assets": [
+      "case-candidate-lines.png",
+      "case-classification.png",
+      "case-data.png",
+      "case-flexibility.png",
+      "case-line-errors.png",
+      "case-line-residuals.png",
+      "case-line.png",
+      "case-quadratic.png",
+      "case-residual-comparison.png",
+      "case-test.png",
+      "case-validation.png"
+    ]
+  },
+  "restored_narrative_assets": {
+    "source": "Instructor-supplied Copy of 19_480_Winter26.pdf, all ten slides reviewed visually.",
+    "script": "generate-lecture-foundations.py",
+    "checks": "foundations-checks.json",
+    "assets": [
+      "learning-agent-loop.png",
+      "training-inference.png",
+      "instructor-diabetes-fit.png",
+      "gradient-geometry.png",
+      "sample-noise-comparison.png",
+      "smooth-fit-limits.png"
+    ],
+    "notes": "Learning-agent diagram adapted from AIMA figure 2.15. The supplied BMI feature and last-20 holdout are preserved. The higher-order pipeline is applied to common print-job data to isolate flexibility; no lab questions or lab data are reproduced."
   }
 }

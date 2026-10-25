@@ -1,0 +1,38 @@
+{
+  "seeds": {
+    "training": 61,
+    "validation": 62,
+    "test": 63
+  },
+  "count_per_split": 200,
+  "validation": {
+    "1": {
+      "log_loss": 0.691574039090519,
+      "accuracy": 0.565,
+      "tn": 0,
+      "fp": 87,
+      "fn": 0,
+      "tp": 113
+    },
+    "2": {
+      "log_loss": 0.2036765625608355,
+      "accuracy": 0.915,
+      "tn": 82,
+      "fp": 5,
+      "fn": 12,
+      "tp": 101
+    }
+  },
+  "selected_degree": 2,
+  "test": {
+    "log_loss": 0.24338903764881997,
+    "accuracy": 0.94,
+    "tn": 79,
+    "fp": 3,
+    "fn": 9,
+    "tp": 109
+  },
+  "threshold": 0.5,
+  "regularization_C": 100,
+  "generator": "Bernoulli(sigmoid(((temperature-50)/10)**2 - 4))"
+}
