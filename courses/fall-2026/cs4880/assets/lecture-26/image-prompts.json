@@ -1,0 +1,76 @@
+{
+  "generation_tool": "Built-in image_gen.imagegen for conceptual illustrations; Matplotlib for numerical charts",
+  "lecture": "CS 4880 Lecture 26: Learning Agents, Regression and Classification",
+  "assets": [
+    {
+      "filename": "slide2.png",
+      "prompt": "Use case: scientific-educational. Asset type: compact illustration for a university Artificial Intelligence lecture, right-hand slide column about 3 inches wide. Clean white background, crisp dark charcoal outlines, forest green, muted gold, mint, warm beige and pale blue accents, restrained soft shadows, large readable labels, generous margins. Match polished educational editorial illustrations from the preceding lecture. No watermark, no extraneous headings, no formulas unless specified. Primary request: a friendly small white four-wheeled campus delivery robot with dark face, two blue eyes, and gold sensor antenna has just finished a delivery at a campus door. In the foreground a compact open digital route log shows three rows with simple route-path icons and clock icons, representing completed deliveries used as learning examples. A green route line connects robot to door across a simple campus path, tiny buildings kept in background. Focus on learning from recorded actual travel times, not route selection. Only literal text allowed: 'Route log'. Do not show unlabeled charts, alternative paths, decision diagrams, numeric estimates or formulas. Compact landscape 4:3 composition."
+    },
+    {
+      "filename": "slide3.png",
+      "prompt": "Use case: scientific-educational. Asset type: compact illustration for a university Artificial Intelligence lecture, right-hand slide column about 3 inches wide. Clean white background, crisp dark charcoal outlines, forest green, muted gold, mint, warm beige and pale blue accents, restrained soft shadows, large readable labels, generous margins. Match polished educational editorial illustrations from the preceding lecture. No watermark, no extraneous headings, no formulas unless specified. Primary request: a precise four-node clockwise feedback diagram of a learning agent that learns travel-time predictions. Top left pale blue rounded rectangle labeled exactly 'Predictive model'; top right mint rounded rectangle labeled exactly 'Planner / actions'; bottom right pale beige rounded rectangle labeled exactly 'Environment'; bottom left pale gold rounded rectangle labeled exactly 'Labeled routes'. Exactly four main arrows: Predictive model RIGHT to Planner / actions with small label 'estimates'; Planner / actions DOWN to Environment with label 'acts'; Environment LEFT to Labeled routes with label 'outcomes'; Labeled routes UP to Predictive model with label 'updates'. Each node may wrap its label onto two lines. This diagram is a deliberately simplified supervised learning feedback loop, not a full agent architecture. No extra nodes, no direct arrow from labels to planner, no crossings. Large readable text. Nearly square canvas."
+    },
+    {
+      "filename": "slide5.png",
+      "prompt": "Use case: scientific-educational. Asset type: compact illustration for a university Artificial Intelligence lecture, right-hand slide column about 3 inches wide. Clean white background, crisp dark charcoal outlines, forest green, muted gold, mint, warm beige and pale blue accents, restrained soft shadows, large readable labels, generous margins. Match polished educational editorial illustrations from the preceding lecture. No watermark, no extraneous headings, no formulas unless specified. Primary request: training examples with inputs known before delivery and observed targets recorded after it. A clean table with exactly three columns and exactly three data rows. Column headings exactly 'Distance', 'Traffic', 'Time'. Row 1 exactly '1', 'low', '2'; row 2 exactly '2', 'low', '3'; row 3 exactly '2', 'high', '5'. Above the first two columns a shared pale blue bracket or header labeled exactly 'Known inputs'. Above the last column pale gold header labeled exactly 'Observed target'. Group first two columns in pale blue/mint, last column pale gold. A single small clock icon near Time and small road icon near Distance optional. No row numbers, no units, no extra numerical values, no title. Bold readable table typography, ample row spacing. Nearly square composition. Do not depict future time as an input."
+    },
+    {
+      "filename": "slide26.png",
+      "prompt": "Use case: scientific-educational. Asset type: compact illustration for a university Artificial Intelligence lecture, right-hand slide column about 3 inches wide. Clean white background, crisp dark charcoal outlines, forest green, muted gold, mint, warm beige and pale blue accents, restrained soft shadows, large readable labels, generous margins. Match polished educational editorial illustrations from the preceding lecture. No watermark, no extraneous headings, no formulas unless specified. Primary request: wide horizontal three-panel diagram of separate dataset roles. Exactly three equally sized rounded panels from left to right: pale blue 'Training' with a tiny stack of data cards and caption exactly 'Fit coefficients'; pale mint 'Validation' with a tiny selector icon and caption exactly 'Choose settings'; pale gold 'Test' with a tiny evaluation report icon and caption exactly 'Report once'. Each panel has its own distinct set of data cards, no overlapping sets. Thin neutral vertical separators and ample white gutters. Do not draw arrows across data sets, do not imply test data trains the model. Only literal text allowed: 'Training', 'Fit coefficients', 'Validation', 'Choose settings', 'Test', 'Report once'. Extra wide 3:1 canvas, suitable beneath three slide columns, text large and high contrast. No percentages and no numeric split sizes."
+    }
+  ],
+  "quantitative_charts": {
+    "script": "generate-charts.py",
+    "checks": "chart-checks.json",
+    "verified_with": {
+      "numpy": "2.0.2",
+      "scikit_learn": "1.6.1"
+    },
+    "assets": [
+      {
+        "filename": "slide11.png",
+        "description": "Four synthetic print jobs and their exact least-squares line"
+      },
+      {
+        "filename": "slide12.png",
+        "description": "Observed-minus-predicted print-time residuals"
+      },
+      {
+        "filename": "slide20.png",
+        "description": "Exact print-job loss contours and simultaneous gradient-descent updates"
+      },
+      {
+        "filename": "slide21.png",
+        "description": "Print-job loss trajectories for three learning rates"
+      },
+      {
+        "filename": "slide22.png",
+        "description": "Synthetic curved energy use and its best straight-line fit"
+      },
+      {
+        "filename": "slide24.png",
+        "description": "Degrees 1, 3 and 10 on the same noisy cubic sample"
+      },
+      {
+        "filename": "slide25.png",
+        "description": "Actual training and independent validation MSE by degree"
+      },
+      {
+        "filename": "slide28.png",
+        "description": "Degree-10 fit with and without scaled-feature ridge"
+      },
+      {
+        "filename": "slide32.png",
+        "description": "Exact benchmark split, fitted line and training-mean baseline"
+      },
+      {
+        "filename": "slide33.png",
+        "description": "Synthetic residual-diagnostic examples"
+      },
+      {
+        "filename": "sigmoid-score.png",
+        "description": "Exact sigmoid: linear scores mapped to a probability range, without implying empirical calibration"
+      }
+    ]
+  }
+}

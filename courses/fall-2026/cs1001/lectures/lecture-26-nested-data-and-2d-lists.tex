@@ -1,11 +1,25 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-26/}}
+
+% Generated teaching diagrams; prompts are recorded alongside the assets.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \centering
+  \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{26}
-\lecturetitle{Nested Data and 2D Lists}
-\lecturedate{October 26, 2026}
+\lecturetitle{Multidimensional Data}
+\lecturedate{Fall 2026}
 \courseunit{10. Structured Data}
 
 \begin{document}
@@ -14,41 +28,751 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Nested Data and 2D Lists
-    \item Placeholder for announcements and context.
+    \item Extend the sequence model from one dimension to data organized by multiple coordinates.
+    \item Represent two-dimensional data using nested Python lists.
+    \item Read and mutate elements using row and column indexes.
+    \item Trace nested iteration over rows and individual elements.
+    \item Generalize the same model to three and more dimensions.
+    \item Introduce NumPy arrays as a regular multidimensional representation for numerical data.
   \end{itemize}
+
+  \begin{keyidea}
+    Multidimensional data does not require a new notion of indexing. It requires applying familiar indexing and iteration at more than one structural level.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\begin{frame}{The Boundary for This Lecture}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Today}
+        \begin{itemize}
+          \item nested lists
+          \item rows, columns, and coordinates
+          \item two-stage indexing
+          \item mutation and aliasing in nested lists
+          \item nested iteration
+          \item 3D and $n$-dimensional structure
+          \item NumPy arrays, shape, slicing, and reshape
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Not today}
+        \begin{itemize}
+          \item general-purpose built-in function catalogs
+          \item searching or sorting algorithms
+          \item algorithmic complexity
+          \item advanced NumPy broadcasting rules
+          \item functions over structured data
+          \item object-oriented representations
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 1: From One Dimension to Multiple Dimensions}
+
+\begin{frame}{A One-Dimensional Sequence Uses One Position}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{One-dimensional data}
+        \centering
+        \texttt{scores = [88, 94, 79, 91]}
+      \end{block}
+
+      \begin{itemize}
+        \item One integer index identifies a position.
+        \item \texttt{scores[2]} selects one element.
+        \item The structure has one natural positional axis: left to right.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: one horizontal sequence labeled with positions 0,1,2,3.
+      \lectureimage[2.0in]{one-dimensional-sequence-axis.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Two Coordinates Identify a Cell}
+  Seats, pixels, and board squares are naturally identified by two coordinates.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.28}
+    \begin{tabular}{c|ccc}
+      & \textbf{Column 0} & \textbf{Column 1} & \textbf{Column 2} \\\hline
+      \textbf{Row 0} & 4 & 7 & 1 \\
+      \textbf{Row 1} & 8 & 5 & 2 \\
+      \textbf{Row 2} & 6 & 3 & 9
+    \end{tabular}
+  \end{center}
+
+  \begin{cpdefinition}
+    \textbf{Multidimensional data} is data whose organization requires more than one positional coordinate to identify a particular component.
+  \end{cpdefinition}
+
+  \begin{keyidea}
+    Two coordinates identify a cell: row first, then column.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Python 2D List Is a List Whose Elements Are Lists}
+  \begin{block}{Nested list}
+    \texttt{grid = [[4, 7, 1],}\\
+    \hspace*{0.78in}\texttt{[8, 5, 2],}\\
+    \hspace*{0.78in}\texttt{[6, 3, 9]]}
+  \end{block}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item The outer list contains three elements.
+    \item Each outer element is itself a list.
+    \item We interpret each inner list as one row.
+    \item This creates a useful two-dimensional \emph{conceptual} structure from ordinary lists.
   \end{itemize}
+
+  \begin{keyidea}
+    Python does not introduce a special ``2D list'' type. The representation is nested ordinary lists.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Rectangular and Ragged Nested Lists}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Rectangular}
+        \texttt{[[1, 2, 3],}\\
+        \hspace*{0.16in}\texttt{[4, 5, 6],}\\
+        \hspace*{0.16in}\texttt{[7, 8, 9]]}
+      \end{block}
+      Every row has the same number of elements.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Ragged}
+        \texttt{[[1, 2],}\\
+        \hspace*{0.16in}\texttt{[3, 4, 5],}\\
+        \hspace*{0.16in}\texttt{[6]]}
+      \end{block}
+      Different rows may have different lengths.
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Consequence}
+    A nested list can represent a grid, but Python does not require it to be rectangular.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{The Row--Column Coordinate Model}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      For a rectangular nested list, we use the convention:
+
+      \begin{center}
+        \Large\texttt{grid[row][column]}
+      \end{center}
+
+      \begin{itemize}
+        \item first index: which row?
+        \item second index: which element inside that row?
+        \item both indexes remain zero-based
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      % Intended visual: 3x3 grid with row 1 / column 2 highlighted and coordinate arrows.
+      \lectureimage[2.1in]{row-column-coordinate-grid.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 2: Indexing, Mutation, and References}
+
+\begin{frame}{Two-Dimensional Indexing Is Two Ordinary Indexing Operations}
+  Suppose:
+
+  \begin{block}{Data}
+    \texttt{grid = [[4, 7, 1], [8, 5, 2], [6, 3, 9]]}
+  \end{block}
+
+  Evaluate:
+
+  \begin{center}
+    \Large\texttt{grid[1][2]}
+  \end{center}
+
+  \begin{enumerate}
+    \item \texttt{grid[1]} evaluates to the row \texttt{[8, 5, 2]}.
+    \item The remaining \texttt{[2]} indexes that row.
+    \item The final value is \texttt{2}.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Trace a Two-Index Expression}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Expression}
+        \centering
+        \texttt{grid[2][1]}
+      \end{block}
+
+      \begin{center}
+        \texttt{grid[2]} $\rightarrow$ \texttt{[6, 3, 9]}\\[0.12in]
+        \texttt{[6, 3, 9][1]} $\rightarrow$ \texttt{3}
+      \end{center}
+
+      \begin{keyidea}
+        Bracket operations associate left to right: obtain the inner list first, then index that list.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      % Intended visual: outer list arrow to row list, then second arrow to one element.
+      \lectureimage[2.1in]{nested-list-two-stage-indexing.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{One Index Selects an Entire Row}
+  \begin{block}{Example}
+    \texttt{grid = [[4, 7, 1], [8, 5, 2], [6, 3, 9]]}\\[0.10in]
+    \texttt{row = grid[1]}
+  \end{block}
+
+  Afterwards:
+
+  \begin{center}
+    \texttt{row} $\rightarrow$ \texttt{[8, 5, 2]}
+  \end{center}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item The outer list stores references to its element values.
+    \item Here, the selected element value is itself a list.
+    \item \texttt{row} and \texttt{grid[1]} therefore refer to the same inner list.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Mutating One Cell}
+  \begin{block}{Before}
+    \texttt{grid = [[4, 7, 1], [8, 5, 2], [6, 3, 9]]}
+  \end{block}
+
+  \begin{block}{Mutation}
+    \texttt{grid[1][2] = 20}
+  \end{block}
+
+  \begin{block}{After}
+    \texttt{[[4, 7, 1], [8, 5, 20], [6, 3, 9]]}
+  \end{block}
+
+  \begin{keyidea}
+    Indexed assignment mutates the selected inner list. The surrounding outer list still refers to that same row list.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Reference Model Becomes More Important When Lists Are Nested}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      Conceptually:
+
+      \begin{center}
+        \texttt{grid} $\longrightarrow$ outer list\\[0.08in]
+        outer positions $\longrightarrow$ row lists\\[0.08in]
+        row positions $\longrightarrow$ element values
+      \end{center}
+
+      \begin{itemize}
+        \item The rows are separate list values only if they were created separately.
+        \item Multiple outer positions can refer to the same row list.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      % Intended visual: outer list containing three arrows to three distinct row lists.
+      \lectureimage[2.1in]{nested-list-reference-model.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Aliasing Can Occur Inside a Nested List}
+  \begin{block}{One row, referenced three times}
+    \texttt{row = [0, 0, 0]}\\
+    \texttt{grid = [row, row, row]}\\[0.08in]
+    \texttt{grid[0][1] = 7}
+  \end{block}
+
+  What is \texttt{grid} afterward?
+
+  \begin{center}
+    \Large\texttt{[[0, 7, 0], [0, 7, 0], [0, 7, 0]]}
+  \end{center}
+
+  \begin{alertblock}{Why?}
+    The outer list contains three references to the same inner list. The mutation changes that one shared row.
+  \end{alertblock}
+
+  To make rows independent, create separate inner lists, for example \texttt{[[0, 0, 0], [0, 0, 0], [0, 0, 0]]}.
+\end{frame}
+
+\begin{frame}{Row Slicing Uses Ordinary List Slicing}
+  \begin{block}{Data}
+    \texttt{grid = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]}
+  \end{block}
+
+  \begin{block}{Select rows 1 through the end}
+    \texttt{rows = grid[1:]}
+  \end{block}
+
+  The new outer list contains references to:
+
+  \begin{center}
+    \texttt{[[4, 5, 6], [7, 8, 9]]}
+  \end{center}
+
+  \begin{alertblock}{Reference detail}
+    Slicing creates a new outer list, but the selected inner row lists are still shared with \texttt{grid}.
+  \end{alertblock}
+
+  Native nested lists have no special column slice such as \texttt{grid[:, 1]}; a column must be selected from the rows during iteration. NumPy will provide direct multidimensional slicing later.
+\end{frame}
+
+\sectionframe{Part 3: Nested Iteration}
+
+\begin{frame}{The Outer Loop Naturally Visits Rows}
+  \begin{block}{Code}
+    \texttt{grid = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]}\\[0.08in]
+    \texttt{for row in grid:}\\
+    \hspace*{0.20in}\texttt{...}
+  \end{block}
+
+  Successive bindings of \texttt{row} are:
+
+  \begin{center}
+    \texttt{[1, 2, 3]} $\rightarrow$ \texttt{[4, 5, 6]} $\rightarrow$ \texttt{[7, 8, 9]}
+  \end{center}
+
+  \begin{keyidea}
+    Iterating over the outer list visits its elements. Because those elements are row lists, each loop iteration receives one row.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Nested Loop Visits Individual Cells}
+  \begin{block}{Code}
+    \texttt{for row in grid:}\\
+    \hspace*{0.20in}\texttt{for value in row:}\\
+    \hspace*{0.40in}\texttt{...}
+  \end{block}
+
+  \begin{center}
+    outer loop $\rightarrow$ selects one row\\[0.08in]
+    inner loop $\rightarrow$ visits each value in that row
+  \end{center}
+
+  \begin{keyidea}
+    The inner loop completes for the current row before the outer loop advances to the next row.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace Nested Iteration}
+  For \texttt{grid = [[1, 2], [3, 4]]}:
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{c|c|c}
+      \textbf{Step} & \textbf{row} & \textbf{value} \\\hline
+      1 & \texttt{[1, 2]} & \texttt{1} \\
+      2 & \texttt{[1, 2]} & \texttt{2} \\
+      3 & \texttt{[3, 4]} & \texttt{3} \\
+      4 & \texttt{[3, 4]} & \texttt{4}
+    \end{tabular}
+  \end{center}
+
+  \begin{block}{Control-flow fact}
+    The outer binding remains the same while the inner loop advances through the current row.
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Index-Based Nested Iteration Exposes Coordinates}
+  For a known $3 \times 3$ grid:
+
+  \begin{block}{Code}
+    \texttt{for row in range(3):}\\
+    \hspace*{0.20in}\texttt{for col in range(3):}\\
+    \hspace*{0.40in}\texttt{value = grid[row][col]}
+  \end{block}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item \texttt{row} identifies the outer-list position.
+    \item \texttt{col} identifies the position inside that row.
+    \item The pair \texttt{(row, col)} identifies one cell.
   \end{itemize}
+
+  \begin{keyidea}
+    Direct iteration emphasizes values; index-based iteration is useful when the coordinates themselves matter.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=4]{Example Representation: A Tic-Tac-Toe Board}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Board}
+        \texttt{board = [["X", "", "O"],}\\
+        \hspace*{0.54in}\texttt{["", "X", ""],}\\
+        \hspace*{0.54in}\texttt{["O", "", "X"]]}
+      \end{block}
+
+      \begin{itemize}
+        \item row and column coordinates identify squares;
+        \item an empty string can represent an unoccupied square;
+        \item mutation can represent a move.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      % Intended visual: tic-tac-toe board annotated with row/column coordinates.
+      \lectureimage[1.8in]{tic-tac-toe-coordinate-board.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The data representation is the topic here; game-winning logic and algorithms are outside today's scope.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Three and More Dimensions}
+
+\begin{frame}{A Third Dimension Adds Another Structural Level}
+  A three-dimensional nested list can be interpreted as a sequence of two-dimensional layers.
+
+  \begin{center}
+    \textbf{layer} $\rightarrow$ \textbf{row} $\rightarrow$ \textbf{column} $\rightarrow$ \textbf{value}
+  \end{center}
+
+  Suppose:
+
+  \begin{block}{Data}
+    \texttt{cube = [[[1, 2], [3, 4]],}\\
+    \hspace*{0.64in}\texttt{[[5, 6], [7, 8]]]}
+  \end{block}
+
+  Evaluate \texttt{cube[1][0][1]}:
+
+  \begin{enumerate}
+    \item \texttt{cube[1]} $\rightarrow$ \texttt{[[5, 6], [7, 8]]}
+    \item \texttt{[0]} $\rightarrow$ \texttt{[5, 6]}
+    \item \texttt{[1]} $\rightarrow$ \texttt{6}
+  \end{enumerate}
+
+  \begin{keyidea}
+    Additional dimensions repeat the same rule: each index moves one structural level deeper.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[shrink=4]{Nested Iteration Mirrors Structural Depth}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{Three levels}
+        \texttt{for layer in cube:}\\
+        \hspace*{0.20in}\texttt{for row in layer:}\\
+        \hspace*{0.40in}\texttt{for value in row:}\\
+        \hspace*{0.60in}\texttt{...}
+      \end{block}
+
+      Each loop operates on the sequence value produced by the level above it.
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      % Intended visual: layer -> row -> cell hierarchy with three nested boxes.
+      \lectureimage[1.8in]{three-dimensional-layer-row-column.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Each additional nested sequence level can require another coordinate and another level of iteration. This same reasoning generalizes beyond three dimensions.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Nested Lists Are Flexible---Sometimes Too Flexible}
+  Python nested lists permit:
+
+  \begin{itemize}
+    \item rows of different lengths;
+    \item inner lists that are shared through aliases;
+    \item elements of different types;
+    \item arbitrary nesting depth.
+  \end{itemize}
+
+  That flexibility is useful for general programming, but regular numerical data often benefits from a structure with explicit dimensional shape.
+
+  \begin{keyidea}
+    This is the point where NumPy provides a different abstraction: the multidimensional array.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: NumPy Multidimensional Arrays}
+
+\begin{frame}{Why Introduce NumPy Here?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      NumPy is designed around regular numerical arrays.
+
+      \begin{itemize}
+        \item dimensional shape is explicit;
+        \item elements use a common numerical data type;
+        \item multidimensional indexing is built into the array abstraction;
+        \item arithmetic can operate over many array elements at once.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      % Intended visual: irregular nested lists contrasted with a regular rectangular ndarray.
+      \lectureimage[2.1in]{nested-lists-versus-numpy-array.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Creating a NumPy Array}
+  \begin{block}{Import and construction}
+    \texttt{import numpy as np}\\[0.10in]
+    \texttt{matrix = np.array([[1, 2, 3],}\\
+    \hspace*{1.22in}\texttt{[4, 5, 6]])}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{np.array(...)} constructs a NumPy array from the provided data.
+    \item The result is a two-dimensional NumPy \texttt{ndarray}.
+    \item The rows and columns are part of the array's explicit shape.
+  \end{itemize}
+
+  \begin{alertblock}{Scope}
+    We use NumPy only to introduce multidimensional array operations needed for this unit; this is not a full NumPy API survey.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Shape Describes the Size of Each Dimension}
+  For:
+
+  \begin{block}{Array}
+    \texttt{matrix = np.array([[1, 2, 3], [4, 5, 6]])}
+  \end{block}
+
+  \begin{center}
+    \texttt{matrix.shape} $\rightarrow$ \texttt{(2, 3)}
+  \end{center}
+
+  Interpret the tuple as:
+
+  \begin{center}
+    \textbf{2 rows} $\times$ \textbf{3 columns}
+  \end{center}
+
+  \begin{keyidea}
+    Shape makes the dimensional structure explicit rather than leaving it as an informal interpretation of nested lists.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{NumPy Exposes Dimension Count and Element Type}
+  \begin{block}{Given}
+    \texttt{matrix = np.array([[1, 2, 3], [4, 5, 6]])}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l}
+      \textbf{Attribute} & \textbf{Meaning} \\\hline
+      \texttt{matrix.ndim} & number of dimensions \\
+      \texttt{matrix.shape} & size along each dimension \\
+      \texttt{matrix.dtype} & stored element data type
+    \end{tabular}
+  \end{center}
+
+  \begin{block}{For this array}
+    \texttt{ndim} is \texttt{2}; \texttt{shape} is \texttt{(2, 3)}.
+  \end{block}
+\end{frame}
+
+\begin{frame}{NumPy Uses Multidimensional Index Syntax}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Nested list}
+        \centering
+        \texttt{grid[1][2]}
+      \end{block}
+      Two ordinary indexing operations.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{NumPy array}
+        \centering
+        \texttt{matrix[1, 2]}
+      \end{block}
+      One array indexing operation with two coordinates.
+    \end{column}
+  \end{columns}
+
+  \begin{center}
+    row coordinate first, column coordinate second
+  \end{center}
+\end{frame}
+
+\begin{frame}{NumPy Can Slice Along Individual Dimensions}
+  Suppose \texttt{matrix} has shape \texttt{(3, 4)}.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l}
+      \textbf{Expression} & \textbf{Selection} \\\hline
+      \texttt{matrix[1, :]} & all columns from row 1 \\
+      \texttt{matrix[:, 2]} & column 2 from all rows \\
+      \texttt{matrix[0:2, 1:3]} & a rectangular subregion
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Each position in the comma-separated index controls one array dimension.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Visualizing Row and Column Slices}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.42\textwidth}
+      \begin{block}{Row slice}
+        \centering
+        \texttt{matrix[1, :]}
+      \end{block}
+
+      \begin{block}{Column slice}
+        \centering
+        \texttt{matrix[:, 2]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.52\textwidth}
+      % Intended visual: same matrix shown twice, once with a full row highlighted and once with a full column highlighted.
+      \lectureimage[2.1in]{numpy-slicing-rows-columns.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Array Arithmetic Can Express Elementwise Transformation}
+  \begin{block}{Array}
+    \texttt{matrix = np.array([[1, 2], [3, 4]])}
+  \end{block}
+
+  \begin{block}{Elementwise operation}
+    \texttt{doubled = matrix * 2}
+  \end{block}
+
+  \begin{center}
+    \texttt{doubled} $\rightarrow$
+    \texttt{[[2, 4], [6, 8]]}
+  \end{center}
+
+  \begin{keyidea}
+    NumPy lets an operation describe a transformation over the array as a whole instead of requiring an explicit nested Python loop for this simple case.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Reshape Changes Dimensional Organization}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.56\textwidth}
+      \begin{block}{Start with six values}
+        \texttt{data = np.array([1, 2, 3,}\\
+        \hspace*{0.30in}\texttt{4, 5, 6])}
+      \end{block}
+
+      \begin{block}{Reshape}
+        \texttt{matrix = data.reshape((2, 3))}
+      \end{block}
+
+      \begin{keyidea}
+        The new shape must preserve the number of elements: $6=2\times3$.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      % Intended visual: six cells in one row rearranged into a 2x3 rectangle.
+      \lectureimage[2.0in]{reshape-same-data-new-shape.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Matrix Multiplication Is Different from Elementwise Multiplication}
+  For compatible two-dimensional arrays:
+
+  \begin{block}{Matrix product}
+    \centering
+    \texttt{result = a @ b}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{a * b} means elementwise multiplication in NumPy.
+    \item \texttt{a @ b} means the linear-algebra matrix product.
+    \item Matrix dimensions must be compatible for the product to be defined.
+  \end{itemize}
+
+  \begin{alertblock}{Scope}
+    We use this only to distinguish two common array operations. Matrix-multiplication algorithms are outside this course unit.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Nested Lists and NumPy Arrays Serve Different Roles}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{l|l|l}
+      \textbf{Property} & \textbf{Nested lists} & \textbf{NumPy ndarray} \\\hline
+      Structure & flexible nesting & explicit dimensions \\
+      Rectangular required? & no & regular shape \\
+      Element types & may vary & common dtype \\
+      2D indexing & \texttt{a[r][c]} & \texttt{a[r, c]} \\
+      Column slicing & manual iteration & direct multidimensional slice \\
+      Numeric whole-array ops & explicit iteration & array operations
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    The choice of representation should match the structure and operations the program needs.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Integrated Prediction}
+  Consider:
+
+  \begin{block}{Code}
+    \texttt{matrix = np.array([[2, 4, 6],}\\
+    \hspace*{1.22in}\texttt{[8, 10, 12]])}\\[0.08in]
+    \texttt{column = matrix[:, 1]}\\
+    \texttt{changed = matrix * 2}
+  \end{block}
+
+  Predict:
+  \begin{enumerate}
+    \item \texttt{matrix.shape}
+    \item the value selected by \texttt{matrix[1, 2]}
+    \item the values in \texttt{column}
+    \item the values in \texttt{changed}
+    \item whether \texttt{matrix * 2} changes the original \texttt{matrix}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Multidimensional Data: The Complete Picture}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.32}
+    \begin{tabular}{l|l}
+      \textbf{Representation} & \textbf{Core reasoning model} \\\hline
+      1D list & one index selects one element \\
+      nested 2D list & first index selects row, second selects cell \\
+      nested 3D list & layer $\rightarrow$ row $\rightarrow$ cell \\
+      NumPy array & one coordinate per explicit array dimension
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    More dimensions add coordinates, not a fundamentally different execution model. Trace one structural level at a time.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{enumerate}
+    \item A two-dimensional Python list is a nested list: an outer list whose elements are row lists.
+    \item \texttt{grid[row][col]} is evaluated as two ordinary indexing operations.
+    \item Nested mutable structures require careful reference reasoning because inner lists can be aliased.
+    \item Nested loops mirror nested structure: each loop descends one sequence level.
+    \item Three and more dimensions extend the same coordinate model.
+    \item NumPy arrays make regular multidimensional shape explicit and support multidimensional indexing, slicing, arithmetic, and reshaping.
+  \end{enumerate}
+
+  \begin{block}{Next}
+    Lecture 27 asks how to design and reason about \textbf{functions over structured data}.
+  \end{block}
 \end{frame}
 
 \end{document}
