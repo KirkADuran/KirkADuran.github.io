@@ -1,54 +1,553 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+\graphicspath{{../assets/lecture-27/}}
 
+% Lecture 27 follows the Lecture 26 architecture:
+% Cal Poly title, CalPolyGreen concept leads, pale calculation boxes,
+% keyidea callouts, and charts/figures alongside brief technical prose.
+% Figures are regenerated with ../assets/lecture-27/generate-charts.py.
+% The conceptual questioning illustration uses built-in image generation.
+% Tree figures show the actual fitted models' top two levels for legibility;
+% full model diagrams are also saved in the same asset directory.
+% Primary references: https://scikit-learn.org/stable/modules/tree.html
+% and https://scikit-learn.org/stable/modules/generated/sklearn.tree.plot_tree.html
+% Worked printer data and synthetic evaluation differ from the robot lab.
+% Audience: senior-level AI students without advanced mathematics prerequisites.
+% Lead with English; equations are supporting notation, not the entry point.
+% Estimated pacing: motivation/tree language 10 min; entropy & gain 12;
+% recursive construction 8; numeric thresholds 5; Python demos 6;
+% overfitting/pruning/validation 7; synthesis 2. Total 50 minutes.
+% All content is in the lecture; no ensemble methods or appendix slides.
+
+\newcommand{\lecturevisual}[3][2.15in]{%
+  \par\vspace{2pt}%
+  {\centering\includegraphics[width=.98\linewidth,height=#1,keepaspectratio]{#2}\par}%
+  \vspace{2pt}%
+}
+\newcommand{\conceptlead}[1]{%
+  {\normalsize\bfseries\color{CalPolyGreen}#1\par}%
+}
+\newenvironment{calculation}[1][How we calculate it]{%
+  \par\begingroup
+  \setbeamercolor{calculation body}{bg=DeckSoft,fg=DeckInk}%
+  \begin{beamercolorbox}[sep=2pt,wd=\linewidth]{calculation body}%
+  \footnotesize{\bfseries\color{DeckMuted}#1\par}%
+  \setlength{\abovedisplayskip}{3pt}%
+  \setlength{\belowdisplayskip}{3pt}%
+}{\end{beamercolorbox}\endgroup}
+\setbeamersize{text margin left=.42in,text margin right=.42in}
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{27}
-\lecturetitle{Decision Trees -- recursive partitioning, information gain, pruning}
+\lecturetitle{Decision Trees: Recursive Partitioning, Information Gain, and Pruning}
 \lecturedate{October 28, 2026}
-\courseunit{Course sequence}
+\courseunit{Learning Agents and Machine Learning}
 
 \begin{document}
-
 \makedecktitle
 
-\begin{frame}{Today}
+\section{Why Decision Trees?}
+
+\begin{frame}{From Smooth Fits to Explicit Decisions}
+\small
+\conceptlead{Sometimes the world behaves more like a collection of rules than one smooth trend.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.49\textwidth}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Decision Trees -- recursive partitioning, information gain, pruning
-    \item Placeholder for announcements and context.
+   \item Lecture 26 fit lines, curves, and logistic scores to labeled outcomes.
+   \item Printer failure risk may change abruptly above a job-load threshold; temperature may change the rule for lighter jobs.
+   \item A tree learns \textbf{which question to ask next} and makes separate predictions in different regions.
   \end{itemize}
+  \begin{keyidea}A tree can model sharp thresholds and interactions without adding polynomial features by hand.\end{keyidea}
+ \end{column}
+ \begin{column}{.48\textwidth}
+   \lecturevisual[2.18in]{smooth_vs_rule.png}{Smooth prediction contrasted with an explicit threshold.}
+ \end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\begin{frame}{Akinator: The Value of the Next Question}
+\small
+\conceptlead{An informative question separates the remaining possibilities into useful groups.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.48\textwidth}
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+   \item Akinator provides an intuition: some questions eliminate more possibilities than others.
+   \item ``Is it fictional?'' can be more useful than ``Does it wear a hat?'' depending on the candidates still remaining.
+   \item A decision tree learns feature questions from labeled examples. The illustration is an analogy, not a description of Akinator's implementation.
   \end{itemize}
+ \end{column}
+ \begin{column}{.48\textwidth}
+  \lecturevisual[1.9in]{akinator_questions.png}{An original conceptual illustration of informative questioning.}
+ \end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Anatomy of a Decision Tree}
+\small
+\conceptlead{Prediction means following answers from the root until a leaf supplies a label.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.51\textwidth}
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+   \item \textbf{Root:} the first test applied to every example.
+   \item \textbf{Internal node:} another feature-based question.
+   \item \textbf{Branch:} one answer to that question.
+   \item \textbf{Leaf:} final prediction; for classification, usually the local majority class.
   \end{itemize}
+  One root-to-leaf path is an \textbf{if--then rule}. The split question and predicted label play different roles.
+ \end{column}
+ \begin{column}{.46\textwidth}
+  \lecturevisual[2.2in]{tree_regions.png}{The tree and the input regions it defines.}
+ \end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Recursive Partitioning Creates Decision Boundaries}
+\small
+\conceptlead{Every test separates the observations; later tests refine only one resulting group.}
+\begin{itemize}
+ \item \textbf{Categorical feature:} ``Warm = Yes?'' produces groups based on feature values.
+ \item \textbf{Numeric feature:} ``Job size $\leq 6$?'' puts values on opposite sides of a threshold.
+ \item Multiple tests create rectangular, \emph{axis-aligned} regions when plotted against two numerical features.
+ \item Interactions arise from \emph{the path}: the temperature question can matter only after job size was tested.
+\end{itemize}
+\begin{calculation}[One path as a compact rule]
+\[
+(\text{Job size}\leq 6)\ \land\ (\text{Temperature}\leq 70)
+\quad\Longrightarrow\quad\widehat y=\text{Complete}.
+\]
+$\land$ means ``and.'' The tree represents this combination by following two branches, not by computing an explicit product of features.
+\end{calculation}
+\end{frame}
+
+\section{Entropy and Information Gain}
+
+\begin{frame}{What Makes One Split Better Than Another?}
+\small
+\conceptlead{A helpful question creates groups whose observed labels mostly agree.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.54\textwidth}
+  \begin{itemize}
+   \item A \textbf{pure group} contains one class only: no disagreement about its training labels.
+   \item A \textbf{mixed group} contains both failed and complete observations.
+   \item Many tiny branches can appear pure on training data without predicting well. Validation and pruning help judge whether the split is useful.
+   \item Large and small children must not contribute equally: weight by how many examples each contains.
+  \end{itemize}
+ \end{column}
+ \begin{column}{.42\textwidth}
+  \begin{block}{Compare two possible questions}
+  \textbf{Good:} 5 failed / 0 complete versus 1 failed / 4 complete.\par\medskip
+  \textbf{Weak:} 4 failed / 1 complete versus 2 failed / 3 complete.
   \end{block}
+ \end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Entropy Measures Uncertainty in a Group}
+\small
+\conceptlead{Entropy is low when the answer is nearly certain and high when classes are balanced.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.51\textwidth}
+   \begin{itemize}
+    \item All failed or all complete: \textbf{zero entropy}.
+    \item Half failed and half complete: \textbf{highest binary entropy}, one bit.
+    \item A 75\% / 25\% split is uncertain, but less uncertain than 50\% / 50\%.
+   \end{itemize}
+   \begin{calculation}[Binary entropy: notation for this intuition]
+   \[
+   H(p)=-p\log_2(p)-(1-p)\log_2(1-p).
+   \]
+   $p$ is the fraction of failed examples; $1-p$ is the complete fraction. Treat $0\log_2 0$ as zero.
+   \end{calculation}
+ \end{column}
+ \begin{column}{.46\textwidth}
+  \lecturevisual[2.38in]{entropy_curve.png}{Binary entropy rises toward a balanced class distribution.}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{A Small Dataset We Can Trace by Hand}
+\small
+\conceptlead{Predict whether a printer job fails using two inputs recorded before starting.}
+\begin{center}
+\renewcommand{\arraystretch}{1.0}
+\begin{tabular}{rlll}
+\toprule
+\textbf{Job} & \textbf{Load} & \textbf{Warm?} & \textbf{Observed outcome}\\\midrule
+1 & High & Yes & Fail\\
+2 & High & Yes & Fail\\
+3 & High & Yes & Fail\\
+4 & High & No & Fail\\
+5 & High & No & Fail\\
+6 & Low & Yes & Fail\\
+7 & Low & Yes & Complete\\
+8 & Low & No & Complete\\
+9 & Low & No & Complete\\
+10 & Low & No & Complete\\\bottomrule
+\end{tabular}
+\end{center}
+The label is the outcome; Load and Warm are features. This synthetic example has six failures and four completions. Jobs 6 and 7 have identical recorded inputs.
+\end{frame}
+
+\begin{frame}{Calculate Uncertainty at the Root}
+\small
+\conceptlead{Start by counting labels. The ten printer jobs contain six failed and four complete.}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Group} & \textbf{Failed (Y)} & \textbf{Complete (N)} & \textbf{Total}\\
+\midrule
+All observations & 6 & 4 & 10\\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{itemize}
+ \item The failed fraction is $6/10$, so the group is mixed rather than pure.
+ \item We need a score for this \emph{starting uncertainty} before evaluating questions.
+\end{itemize}
+\begin{calculation}[Substitute the two class fractions]
+\[
+H(S)=-\frac6{10}\log_2\!\left(\frac6{10}\right)
+     -\frac4{10}\log_2\!\left(\frac4{10}\right)
+     \approx \boxed{0.971\text{ bits}}.
+\]
+The logarithms convert class proportions into an uncertainty score; the main procedure is count $\rightarrow$ fraction $\rightarrow$ entropy.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Information Gain: How Much Uncertainty Did the Question Remove?}
+\small
+\conceptlead{Subtract the uncertainty left after the split from the uncertainty we had before it.}
+\begin{enumerate}
+ \item Calculate the parent group's entropy.
+ \item Split the records using a candidate question.
+ \item Calculate entropy inside each child and weight by its share of the records.
+ \item Prefer the question producing the \textbf{largest reduction}.
+\end{enumerate}
+\begin{calculation}[One formula for all candidate splits]
+\[
+\underbrace{IG(S,X)}_{\text{gain}}
+ =\underbrace{H(S)}_{\text{before}}
+ -\underbrace{\sum_{v}\frac{|S_v|}{|S|}H(S_v)}_{\text{weighted uncertainty after}}.
+\]
+$S_v$ is the group receiving answer $v$; $|S_v|/|S|$ is its fraction of observations. The sum simply adds the child contributions.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Worked Split: Ask About Load or Warm?}
+\small
+\conceptlead{Load is the better root question: its children agree with their labels more strongly.}
+\lecturevisual[1.4in]{split_comparison.png}{Exact class counts for the independent ten-job lecture example.}
+\begin{calculation}[Compare both reductions from the same root entropy of 0.971 bits]
+\[
+\begin{aligned}
+H_{\rm after}(\text{Load})&=\tfrac5{10}H(1)+\tfrac5{10}H(\tfrac15)=0.361, & IG&=0.610,\\
+H_{\rm after}(\text{Warm})&=\tfrac5{10}H(\tfrac45)+\tfrac5{10}H(\tfrac25)=0.846, & IG&=0.125.
+\end{aligned}
+\]
+Here $H(p)$ is binary entropy. The bigger gain leaves less uncertainty, so \textbf{Load becomes the root}.
+\end{calculation}
+\end{frame}
+
+\section{Recursion and Stopping}
+
+\begin{frame}{Build the Tree by Repeating the Same Decision}
+\small
+\conceptlead{Use the best local question, divide the records, then solve the smaller problems.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.55\textwidth}
+ \begin{enumerate}
+  \item \textbf{Stop} if labels are pure or a growth rule says to stop; make a leaf.
+  \item \textbf{Search} candidate feature tests and compute each gain.
+  \item \textbf{Choose} the largest useful gain and partition the data.
+  \item \textbf{Recurse} separately on each child group.
+ \end{enumerate}
+ \begin{keyidea}``Greedy'' means best split \emph{now}. It does not guarantee the best complete tree; insisting on immediate gain can miss interactions that need another question.\end{keyidea}
+ \end{column}
+ \begin{column}{.42\textwidth}
+ \begin{calculation}[Readable recursive pseudocode]
+ \texttt{BuildTree(records):}\par
+ \quad if stop: return majority leaf\par
+ \quad find best candidate split\par
+ \quad if no gain: return majority leaf\par
+ \quad left = BuildTree(left records)\par
+ \quad right = BuildTree(right records)\par
+ \quad return node(test, left, right)
+ \end{calculation}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Continue the Example: A Small Complete Tree}
+\small
+\conceptlead{Only the mixed low-load branch needs another question.}
+\lecturevisual[1.5in]{completed_tree.png}{Ask about warmth only in the low-load subgroup.}
+\begin{itemize}
+ \item \textbf{High load:} all five jobs failed; stop immediately.
+ \item \textbf{Low load:} ask Warm. With No, all three complete; with Yes, one fails and one completes.
+ \item Break the tied leaf using its parent's majority (complete). One training error remains because the recorded inputs cannot separate these jobs.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Why Can the Tree Still Make a Mistake?}
+\small
+\conceptlead{A decision rule cannot distinguish observations that look identical to the model.}
+\begin{block}{The inseparable pair in our data}
+Jobs 6 and 7 both have \textbf{Load = Low} and \textbf{Warm = Yes}. One failed; the other completed.
+\end{block}
+\begin{itemize}
+ \item Every deterministic tree using only these features sends both jobs down the same path.
+ \item More splitting cannot recover a distinction that the inputs never recorded.
+ \item Omitted sensors, random effects, noisy labels, or unrecorded conditions may explain the different outcomes.
+\end{itemize}
+\begin{calculation}[The limitation in compact form]
+\[
+\mathbf x_6=\mathbf x_7\quad\Longrightarrow\quad f(\mathbf x_6)=f(\mathbf x_7),
+\quad\text{even though }y_6\neq y_7.
+\]
+\end{calculation}
+\end{frame}
+
+\section{Numerical Features}
+
+\begin{frame}{Numerical Features: Where Should We Place the Cutoff?}
+\small
+\conceptlead{For a numerical feature, search possible ``less than or equal to'' cutoffs.}
+\lecturevisual[1.3in]{thresholds.png}{Candidate thresholds for a separate six-job numerical example.}
+\begin{enumerate}
+ \item In a separate six-job example, sizes are $2,3,4,9,11,12$ ten-page batches.
+ \item Candidate midpoints are $2.5,3.5,6.5,10,11.5$.
+ \item For each midpoint, split the records and measure the impurity left behind.
+ \item Choose the feature and threshold giving the greatest impurity reduction.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{A Numeric Split Is the Same Impurity Calculation}
+\small
+\conceptlead{A threshold simply determines who goes left and right; the split score works as before.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.54\textwidth}
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+   \item Candidate: ``Job size $\leq 6.5$?''
+   \item Place 2, 3, 4 on the left; 9, 11, 12 on the right.
+   \item If every left observation is complete and every right observation is failed, both children are pure.
+   \item Trying all midpoints is a search over possible decision rules, not advanced calculus.
   \end{itemize}
+ \end{column}
+ \begin{column}{.42\textwidth}
+ \begin{calculation}[Weighted child impurity]
+ \[
+  I_{\rm split}(t)=\frac{n_L}{n}I(L)
+   +\frac{n_R}{n}I(R).
+ \]
+ Smaller is better. Here each child is pure, so the score is zero.
+ \end{calculation}
+ \end{column}
+\end{columns}
+\begin{keyidea}The same mechanism works for classification (entropy or Gini) and regression (e.g., squared-error reduction).\end{keyidea}
+\end{frame}
+
+\begin{frame}{Stop Before a Tree Memorizes the Training Set}
+\small
+\conceptlead{Depth and leaf-size limits prevent the algorithm from inventing a rule for every tiny exception.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.49\textwidth}
+  \begin{block}{\texttt{max\_depth}}
+  Maximum number of splits along a path. Smaller values produce shallower, simpler trees.
+  \end{block}
+ \end{column}
+ \begin{column}{.49\textwidth}
+  \begin{block}{\texttt{min\_samples\_leaf}}
+  Minimum number of training examples permitted in each leaf. Prevents tiny, fragile groups.
+  \end{block}
+ \end{column}
+\end{columns}
+\begin{itemize}
+ \item These are \textbf{pre-pruning} controls: they constrain growth before the tree is finished.
+ \item Too restrictive $\rightarrow$ meaningful patterns are missed (underfitting).
+ \item Too flexible $\rightarrow$ sample-specific noise can become rules (overfitting).
+\end{itemize}
+\end{frame}
+
+\section{Python: The Instructor's Two Examples}
+
+\begin{frame}[fragile]{Python Example 1: California Housing Regression Tree}
+\small
+\conceptlead{The same recursive structure can predict a number rather than a class.}
+{\scriptsize
+\begin{verbatim}
+import matplotlib.pyplot as plt
+from sklearn.datasets import fetch_california_housing
+from sklearn.tree import DecisionTreeRegressor, plot_tree
+
+# Load data
+data = fetch_california_housing()
+X = data.data
+y = data.target
+feature_names = data.feature_names
+
+# Fit for display; held-out evaluation comes later.
+tree = DecisionTreeRegressor(max_depth=4, random_state=42)
+tree.fit(X, y)
+
+# Plot the tree
+plt.figure(figsize=(20, 10))
+plot_tree(tree, feature_names=feature_names,
+          filled=True, rounded=True, fontsize=10)
+plt.title("Decision Tree Regression on California Housing Dataset")
+plt.show()
+\end{verbatim}
+}
+\end{frame}
+
+\begin{frame}{Reading the California Housing Tree}
+\small
+\conceptlead{A regression leaf predicts the mean target of its training records.}
+\lecturevisual[1.4in]{california_tree.png}{Regenerated top two levels of the instructor's regression model; full tree saved with the assets.}
+\begin{itemize}
+ \item Read \texttt{MedInc} at the root: True goes left, False right. Top two levels shown; fitted model depth is four.
+ \item \texttt{samples} counts records reaching the node; \texttt{value} is its mean target.
+ \item \texttt{squared\_error} summarizes spread of targets within the node; reducing this spread replaces class entropy as the regression goal.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Python Example 2: Wine Classification Tree}
+\small
+\conceptlead{Now a leaf predicts a class using the observations that reach it.}
+{\scriptsize
+\begin{verbatim}
+import matplotlib.pyplot as plt
+from sklearn.datasets import load_wine
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+# Load dataset
+wine = load_wine()
+X = wine.data
+y = wine.target
+feature_names = wine.feature_names
+class_names = wine.target_names
+# Fit for display; held-out evaluation comes later.
+clf = DecisionTreeClassifier(max_depth=4, random_state=42)
+clf.fit(X, y)
+# Plot the tree
+plt.figure(figsize=(20, 10))
+plot_tree(clf, feature_names=feature_names,
+          class_names=class_names, filled=True,
+          rounded=True, fontsize=10)
+plt.title("Decision Tree on Wine Dataset")
+plt.show()
+\end{verbatim}
+}
+\end{frame}
+
+\begin{frame}{Reading the Wine Classification Tree}
+\small
+\conceptlead{Read each node's question, sample count, class distribution, and predicted class.}
+\lecturevisual[1.5in]{wine_tree.png}{Regenerated top two levels of the instructor's wine classifier; full tree saved with the assets.}
+\begin{itemize}
+ \item \texttt{value} shows class counts; \texttt{class} is the majority. Two levels shown; fitted model depth is four.
+ \item \texttt{gini} measures impurity; Gini is scikit-learn's default criterion.
+ \item \texttt{criterion="entropy"} uses information gain instead. This model keeps the default Gini criterion.
+\end{itemize}
+\end{frame}
+
+\section{Overfitting, Pruning, and Validation}
+
+\begin{frame}{A Deep Tree Can Fit the Wrong Details}
+\small
+\conceptlead{Perfectly matching old observations does not mean predicting new jobs well.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.54\textwidth}
+  \begin{itemize}
+   \item Deep trees can carve out tiny regions to explain isolated training examples or misreadings.
+   \item \textbf{Training error} often falls as complexity grows; \textbf{validation error} may stop improving or increase.
+   \item Smaller trees have more bias (stronger simplifying assumptions); large trees can have more variance (sensitivity to the sample).
+  \end{itemize}
+ \end{column}
+ \begin{column}{.43\textwidth}
+  \lecturevisual[2.36in]{complexity_curve.png}{Measured training and validation errors on a separate synthetic classification dataset.}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Two Ways to Prune: Before Growth or Afterward}
+\small
+\conceptlead{Pruning trades a little training fit for simpler rules that may generalize better.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.48\textwidth}
+  \begin{block}{Pre-pruning}
+  Stop growth using \texttt{max\_depth}, \texttt{min\_samples\_leaf}, or a minimum split improvement.
+  \end{block}
+  Easy to enforce, but may block useful later questions.
+ \end{column}
+ \begin{column}{.48\textwidth}
+  \begin{block}{Post-pruning}
+  Grow a larger tree, then remove branches when their improvement is too small to justify their complexity.
+  \end{block}
+  Cost-complexity pruning is controlled by \texttt{ccp\_alpha}.
+ \end{column}
+\end{columns}
+\begin{calculation}[Cost-complexity pruning in one line]
+\[
+  R_\alpha(T)=R(T)+\alpha\,|\text{leaves}(T)|.
+\]
+$R(T)$ is the training impurity cost; $|\text{leaves}(T)|$ counts final leaves; $\alpha$ is a penalty for extra leaves. Larger $\alpha$ generally favors smaller trees.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Choose the Tree Using Held-Out Evidence}
+\small
+\conceptlead{Compare models on held-out examples, not training accuracy alone.}
+{\centering
+\renewcommand{\arraystretch}{1.32}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Candidate} & \textbf{Leaves / depth} & \textbf{Training accuracy} & \textbf{Validation accuracy}\\
+\midrule
+Unrestricted & 50 / 10 & 100.0\% & 87.5\%\\
+Pre-pruned & 9 / 4 & 88.6\% & 89.2\%\\
+Post-pruned & 7 / 5 & 92.5\% & 92.5\%\\
+\bottomrule
+\end{tabular}
+\par}
+\begin{itemize}
+ \item Separate synthetic experiment: 360 training, 120 validation, 120 test cases. Training fits rules; validation compares depth and pruning settings.
+ \item Here the frozen post-pruned model scores 88.3\% on untouched test cases.
+ \item If failures are rare, also examine missed failures and false alarms, not just accuracy.
+\end{itemize}
+\begin{keyidea}Removing a special-case leaf can make some training labels wrong but improve predictions on new jobs.\end{keyidea}
+\end{frame}
+
+\section{Interpretability and Takeaways}
+
+\begin{frame}{Explain a Decision, Then Examine Its Failure}
+\small
+\conceptlead{The tree gives an inspectable chain of reasons; it cannot reveal what the sensors never measured.}
+\begin{block}{Two readable rules from our printer tree}
+\textbf{Rule 1:} IF load is high, THEN predict failed.\par\smallskip
+\textbf{Rule 2:} IF load is low AND warm is no, THEN predict complete.
+\end{block}
+\begin{itemize}
+ \item Trace a misclassification through its nodes: which test routed it to this leaf?
+ \item Check the leaf's sample count: a rule based on one or two cases may be fragile.
+ \item Missing features might include paper quality, component wear, or sensor confidence.
+ \item Understandable rules help debugging, auditing, and explaining an agent's action to a human operator.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Synthesis: From Questions to Generalization}
+\small
+\begin{enumerate}
+ \item \textbf{Representation:} decision paths form conditional if--then rules and nonlinear, axis-aligned partitions.
+ \item \textbf{Learning:} entropy describes class uncertainty; information gain chooses a useful local question; recursion builds the rest of the tree.
+ \item \textbf{Limitations:} greedy choices are not globally optimal, and contradictory labels with identical features cannot be perfectly separated.
+ \item \textbf{Generalization:} numeric thresholds, depth limits, leaf-size controls, pruning, and held-out validation determine whether those rules transfer.
+\end{enumerate}
+\begin{keyidea}A good decision tree asks informative questions \emph{and} knows when to stop asking.\end{keyidea}
 \end{frame}
 
 \end{document}

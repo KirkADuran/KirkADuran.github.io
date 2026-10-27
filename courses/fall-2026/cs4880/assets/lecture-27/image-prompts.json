@@ -1,0 +1,37 @@
+{
+  "lecture": 27,
+  "course": "cs4880",
+  "reproducible_generator": "generate-charts.py",
+  "generated_diagrams": [
+    "california_tree.png",
+    "california_tree_full.png",
+    "completed_tree.png",
+    "complexity_curve.png",
+    "entropy_curve.png",
+    "smooth_vs_rule.png",
+    "split_comparison.png",
+    "thresholds.png",
+    "tree_regions.png",
+    "wine_tree.png",
+    "wine_tree_full.png"
+  ],
+  "illustrations": [
+    {
+      "path": "akinator_questions.png",
+      "mode": "built-in image_gen tool",
+      "prompt": "Use case: scientific-educational. Asset type: a conceptual illustration for a university AI lecture about asking informative questions, inspired by the twenty-questions idea used by Akinator. Primary request: a friendly original question-asking character, a small brass-and-forest-green mechanical owl, holds up a pale card with the exact question 'Fictional?'. A group of six tiny original character cards separates into two smaller groups along two clear paths labeled exactly 'Yes' and 'No'. Show a human silhouette, an astronaut, and a scientist on the No side; a tiny dragon, a robot knight, and a friendly ghost on the Yes side. This is an analogy for narrowing possibilities, not a real product screenshot or an algorithm diagram. White background, clean restrained educational editorial illustration, charcoal outlines, forest green #154734, muted gold #BD8B13, pale mint and warm beige, generous white space. Compact landscape 3:2 composition, readable at 3 inches wide. Text only 'Fictional?', 'Yes', 'No'. No logos, no Akinator branding, no equations, no extraneous headings, no watermark."
+    }
+  ],
+  "numerical_checks": "chart-checks.json",
+  "model_figures": "California Housing and Wine models use all records to illustrate structure, not to estimate held-out performance. Slide images show the top two levels; *_full.png files preserve all four fitted levels.",
+  "evaluation": "Independent synthetic make_moons experiment uses separate training, validation, and final test partitions. Data, seeds, pruning parameters, and measured scores appear in generate-charts.py and chart-checks.json.",
+  "dependencies": {
+    "numpy": "2.0.2",
+    "scikit-learn": "1.6.1",
+    "matplotlib": "installed plotting environment"
+  },
+  "dataset_sources": [
+    "https://scikit-learn.org/stable/modules/generated/sklearn.datasets.fetch_california_housing.html",
+    "https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_wine.html"
+  ]
+}

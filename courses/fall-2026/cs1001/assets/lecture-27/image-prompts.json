@@ -1,0 +1,13 @@
+{
+  "lecture": 27,
+  "course": "cs1001",
+  "reproducible_generator": "generate-diagrams.py",
+  "generated_diagrams": [
+    "flatten-grid-to-sequence.png",
+    "password-requirement-pipeline.png",
+    "structured-function-contracts.png",
+    "while-loop-control-flow.png",
+    "zip-corresponding-sequences.png"
+  ],
+  "purpose": "Exact diagrams match the code examples, sequence values, function contracts, and control flow in the lecture; generated directly with Matplotlib."
+}

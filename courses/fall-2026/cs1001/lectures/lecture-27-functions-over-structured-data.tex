@@ -1,11 +1,24 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-27/}}
+
+% Diagrams are reproducible with ../assets/lecture-27/generate-diagrams.py.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{27}
 \lecturetitle{Functions over Structured Data}
-\lecturedate{October 28, 2026}
+\lecturedate{Fall 2026}
 \courseunit{10. Structured Data}
 
 \begin{document}
@@ -14,41 +27,733 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Functions over Structured Data
-    \item Placeholder for announcements and context.
+    \item Design functions whose inputs and outputs are lists, nested lists, strings, and dictionaries.
+    \item Decompose structured-data problems into smaller transformations and summaries.
+    \item Use selected Python tools---\texttt{sum}, \texttt{max}, \texttt{enumerate}, \texttt{zip}, \texttt{map}, \texttt{filter}, \texttt{any}, and \texttt{all}---when they express the intended computation directly.
+    \item Apply \texttt{while} to repetition whose number of iterations is not known in advance.
+    \item Preserve the distinction between producing a new structure and mutating an existing one.
   \end{itemize}
+
+  \begin{keyidea}
+    Today is a design lecture: each problem begins as a prompt, and we choose a representation and control structure that match the data and the required result.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\begin{frame}{The Boundary for This Lecture}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Today}
+        \begin{itemize}
+          \item functions over structured values
+          \item decomposition and helper functions
+          \item selected sequence built-ins
+          \item \texttt{map} and \texttt{filter}
+          \item \texttt{enumerate} and \texttt{zip}
+          \item \texttt{while}
+          \item Boolean aggregation with \texttt{any} / \texttt{all}
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Not today}
+        \begin{itemize}
+          \item searching algorithms
+          \item sorting algorithms
+          \item algorithmic complexity
+          \item object-oriented design
+          \item classes or methods we define ourselves
+          \item advanced library APIs
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 1: Prompt, Design, Implement, Refine}
+
+\begin{frame}{How Today's Lecture Works}
+  For each problem we will follow the same sequence.
+
+  \begin{center}
+    \textbf{Prompt} $\longrightarrow$ \textbf{Data Contract} $\longrightarrow$ \textbf{Plan} $\longrightarrow$ \textbf{Code} $\longrightarrow$ \textbf{Refine}
+  \end{center}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item First decide what the input and output structures mean.
+    \item Then identify the repeated computation or changing state.
+    \item Write a correct version using mechanisms we already understand.
+    \item Finally ask whether a Python construct communicates that same intent more directly.
   \end{itemize}
+
+  \begin{keyidea}
+    A built-in is useful when it removes incidental mechanism without hiding the computation we need to understand.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Structured Data Appears in the Function Contract}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{Examples}
+        \footnotesize
+        \texttt{def average(values: list[float]) -> float:}\\[0.08in]
+        \texttt{def flatten(grid: list[list[int]]) -> list[int]:}\\[0.08in]
+        \texttt{def row\_maxima(grid: list[list[int]]) -> dict[int, int]:}
+      \end{block}
+
+      \begin{itemize}
+        \item The annotation communicates more than element type.
+        \item It communicates the \textbf{shape of the expected data}; annotations do not enforce types or row lengths at runtime.
+        \item The return type states what representation the function promises to produce.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      % Intended visual: three function contracts connected to 1D list, 2D grid, and dictionary output.
+      \lectureimage[2.05in]{structured-function-contracts.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Prompt 1: Compute an Average}
+  \begin{activity}
+    Write a function that accepts a nonempty list of numerical values and returns their arithmetic mean.
+  \end{activity}
+
+  \begin{block}{Contract}
+    \texttt{def average(values: list[float]) -> float:}
+  \end{block}
+
+  Before writing code:
+  \begin{enumerate}
+    \item What quantity must be accumulated?
+    \item What second quantity is needed to produce the mean?
+    \item Does the input list need to be modified?
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{A Correct Loop-Based Solution}
+  \begin{block}{Mechanism made explicit}
+    \texttt{def average(values: list[float]) -> float:}\\
+    \hspace*{0.20in}\texttt{total = 0.0}\\
+    \hspace*{0.20in}\texttt{for value in values:}\\
+    \hspace*{0.40in}\texttt{total = total + value}\\
+    \hspace*{0.20in}\texttt{return total / len(values)}
+  \end{block}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item \texttt{total} is the result-so-far accumulator.
+    \item \texttt{len(values)} supplies the number of observations.
+    \item The input is read but never mutated.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{When the Built-In Matches the Intent}
+  Python already provides \texttt{sum} for numerical accumulation.
+
+  \begin{block}{Refined implementation}
+    \texttt{def average(values: list[float]) -> float:}\\
+    \hspace*{0.20in}\texttt{return sum(values) / len(values)}
+  \end{block}
+
+  \begin{center}
+    \textbf{explicit accumulation} $\longrightarrow$ \textbf{named aggregate operation}
+  \end{center}
+
+  \begin{keyidea}
+    The function contract and mathematical meaning have not changed. Only the level at which the accumulation is expressed has changed.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Prompt 2: Average of Averages}
+  \begin{activity}
+    A nested list stores several groups of scores. Return the average of the average score from each group.
+  \end{activity}
+
+  \begin{block}{Example input}
+    \texttt{groups = [[80, 90], [70, 100], [85, 95]]}
+  \end{block}
+
+  Desired intermediate structure:
+  \begin{center}
+    \texttt{[85.0, 85.0, 90.0]}
+  \end{center}
+
+  Then average those three values. Assume the outer list and every group are nonempty.
+\end{frame}
+
+\begin{frame}{Decompose the Problem with a Helper}
+  \begin{block}{Reuse the abstraction we just designed}
+    \texttt{def average(values: list[float]) -> float:}\\
+    \hspace*{0.20in}\texttt{return sum(values) / len(values)}\\[0.10in]
+    \texttt{def average\_of\_averages(groups: list[list[float]]) -> float:}\\
+    \hspace*{0.20in}\texttt{group\_averages = []}\\
+    \hspace*{0.20in}\texttt{for group in groups:}\\
+    \hspace*{0.40in}\texttt{group\_averages.append(average(group))}\\
+    \hspace*{0.20in}\texttt{return average(group\_averages)}
+  \end{block}
+
+  \begin{keyidea}
+    The outer function reasons about groups. The helper function owns the lower-level meaning of ``average one group.''
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Average of Averages Is a Specific Contract}
+  Suppose groups have different lengths:
+
+  \begin{block}{Data}
+    \texttt{[[100], [0, 0, 0]]}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Average of group averages}
+        \centering
+        \texttt{(100 + 0) / 2 = 50}
+      \end{block}
+      Each group receives equal weight.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Average of all observations}
+        \centering
+        \texttt{(100 + 0 + 0 + 0) / 4 = 25}
+      \end{block}
+      Each observation receives equal weight.
+    \end{column}
+  \end{columns}
+
+  \begin{alertblock}{Design consequence}
+    A function name and purpose statement must say which quantity is intended.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 2: Functions over Nested Structures}
+
+\begin{frame}{Prompt 3: Flatten One Level}
+  \begin{activity}
+    Write a function that accepts a two-dimensional list and returns a new one-dimensional list containing the elements row by row.
+  \end{activity}
+
+  \begin{block}{Example}
+    \texttt{[[1, 2], [3, 4, 5], [6]]}\\
+    $\longrightarrow$\\
+    \texttt{[1, 2, 3, 4, 5, 6]}
+  \end{block}
+
+  Questions:
+  \begin{enumerate}
+    \item How many structural levels must be traversed?
+    \item What state should accumulate the result?
+    \item Should any row in the input be modified?
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Flattening Requires Traversing Two Structural Levels}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{center}
+        \textbf{outer list} $\rightarrow$ \textbf{row} $\rightarrow$ \textbf{element}
+      \end{center}
+
+      \begin{itemize}
+        \item The outer loop selects one row at a time.
+        \item The inner loop selects one element from that row at a time.
+        \item A fresh output list accumulates the elements in encounter order.
+      \end{itemize}
+
+      \begin{keyidea}
+        Nested data usually leads to nested processing because each loop traverses one structural level.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: rows of a grid flowing left-to-right into one flat sequence.
+      \lectureimage[2.50in]{flatten-grid-to-sequence.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Implementation: Flatten One Level}
+  \begin{block}{Function}
+    \texttt{def flatten(grid: list[list[int]]) -> list[int]:}\\
+    \hspace*{0.20in}\texttt{result = []}\\
+    \hspace*{0.20in}\texttt{for row in grid:}\\
+    \hspace*{0.40in}\texttt{for value in row:}\\
+    \hspace*{0.60in}\texttt{result.append(value)}\\
+    \hspace*{0.20in}\texttt{return result}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{grid} and its rows are read only.
+    \item \texttt{result} is intentionally mutated because it is a new list owned by this function.
+    \item The returned structure is independent of the outer input list.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Prompt 4: Record the Maximum of Each Row}
+  \begin{activity}
+    Given a two-dimensional list of integers, return a dictionary mapping each row index to the maximum value in that row.
+  \end{activity}
+
+  \begin{block}{Example}
+    \texttt{[[4, 9, 2], [7, 1, 8], [5, 3, 6]]}\\
+    $\longrightarrow$\\
+    \texttt{\{0: 9, 1: 8, 2: 6\}}
+  \end{block}
+
+  Assume every row is nonempty, as required by \texttt{max}. This problem needs both:
+  \begin{itemize}
+    \item each row's \textbf{position}, and
+    \item the row \textbf{value} itself.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{\texttt{enumerate}: Position and Value Together}
+  Compare:
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Index-driven}
+        \texttt{for i in range(len(rows)):}\\
+        \hspace*{0.20in}\texttt{row = rows[i]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Enumerated}
+        \texttt{for i, row in enumerate(rows):}\\
+        \hspace*{0.20in}\texttt{...}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{cpdefinition}
+    \texttt{enumerate(sequence)} supplies pairs containing an element's index and the element value.
+  \end{cpdefinition}
+
+  Use it when the computation genuinely needs both pieces of information.
+\end{frame}
+
+\begin{frame}{Implementation: Row Maxima}
+  \begin{block}{Function}
+    \texttt{def row\_maxima(grid: list[list[int]]) -> dict[int, int]:}\\
+    \hspace*{0.20in}\texttt{result = \{\}}\\
+    \hspace*{0.20in}\texttt{for index, row in enumerate(grid):}\\
+    \hspace*{0.40in}\texttt{result[index] = max(row)}\\
+    \hspace*{0.20in}\texttt{return result}
+  \end{block}
+
+  \begin{center}
+    \textbf{row position} $+$ \textbf{row aggregate} $\longrightarrow$ \textbf{dictionary association}
+  \end{center}
+
+  \begin{keyidea}
+    The output representation is part of the solution: the dictionary preserves an explicit association between each row index and its summary value.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Named Transformation Patterns --- \texttt{map} and \texttt{filter}}
+
+\begin{frame}{Prompt 5: Apply One Function to Every Value}
+  \begin{activity}
+    Given a list of integers, produce a new list containing the square of each value.
+  \end{activity}
+
+  We already know two representations:
+
+  \begin{block}{Explicit loop}
+    \texttt{result = []}\\
+    \texttt{for value in values:}\\
+    \hspace*{0.20in}\texttt{result.append(square(value))}
+  \end{block}
+
+  \begin{block}{Comprehension}
+    \texttt{result = [square(value) for value in values]}
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{\texttt{map}: Name the Transformation Pattern Directly}
+  \begin{block}{Helper function}
+    \texttt{def square(value: int) -> int:}\\
+    \hspace*{0.20in}\texttt{return value * value}
+  \end{block}
+
+  \begin{block}{Mapping}
+    \texttt{result = list(map(square, values))}
+  \end{block}
+
+  \begin{cpdefinition}
+    \texttt{map(function, sequence)} applies the function to each supplied value. In Python 3, \texttt{map} produces an iterator: values are generated as it is consumed. \texttt{list(...)} collects them into a list.
+  \end{cpdefinition}
+
+  \begin{center}
+    \textbf{same computational pattern} --- different representation
+  \end{center}
+\end{frame}
+
+\begin{frame}{\texttt{filter}: Name the Selection Pattern Directly}
+  \begin{block}{Predicate}
+    \texttt{def positive(value: int) -> bool:}\\
+    \hspace*{0.20in}\texttt{return value > 0}
+  \end{block}
+
+  \begin{block}{Filtering}
+    \texttt{result = list(filter(positive, values))}
+  \end{block}
+
+  \begin{cpdefinition}
+    \texttt{filter(predicate, sequence)} retains the values for which the predicate returns \texttt{True}.
+  \end{cpdefinition}
+
+  The predicate decides \textbf{whether} an existing value remains; it does not transform that value. Like \texttt{map}, \texttt{filter} returns an iterator.
+\end{frame}
+
+\begin{frame}{Loop, Comprehension, \texttt{map}, or \texttt{filter}?}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Representation} & \textbf{Good fit} \\\hline
+      explicit \texttt{for} & multiple statements or changing state \\
+      comprehension & compact transform / select into a new list \\
+      \texttt{map} & apply an existing named function to every value \\
+      \texttt{filter} & retain values using an existing named predicate
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    These forms are not ranked from ``basic'' to ``advanced.'' Choose the representation that makes the data relationship easiest to read.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Prompt 6: Caesar Cipher}
+  \begin{activity}
+    Write a function that shifts each lowercase English letter forward by a fixed number of positions, wrapping from \texttt{z} back to \texttt{a}.
+  \end{activity}
+
+  \begin{block}{Example with shift 3}
+    \texttt{"attack"} $\longrightarrow$ \texttt{"dwwdfn"}
+  \end{block}
+
+  Assume the input contains only lowercase letters \texttt{a} through \texttt{z}. This combines ideas from several units:
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item strings as immutable sequences,
+    \item \texttt{ord} / \texttt{chr},
+    \item modular arithmetic,
+    \item iteration and function decomposition.
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Design a One-Character Transformation First}
+  For lowercase letters, \texttt{ord('a')} provides a useful origin.
+
+  \begin{block}{Helper}
+    \texttt{def shift\_char(char: str, shift: int) -> str:}\\
+    \hspace*{0.20in}\texttt{offset = ord(char) - ord("a")}\\
+    \hspace*{0.20in}\texttt{shifted = (offset + shift) \% 26}\\
+    \hspace*{0.20in}\texttt{return chr(ord("a") + shifted)}
+  \end{block}
+
+  \begin{center}
+    character $\rightarrow$ numeric offset $\rightarrow$ shifted offset $\rightarrow$ character
+  \end{center}
+\end{frame}
+
+\begin{frame}{Build the String from Transformed Characters}
+  \begin{block}{Function}
+    \texttt{def caesar(text: str, shift: int) -> str:}\\
+    \hspace*{0.20in}\texttt{result = ""}\\
+    \hspace*{0.20in}\texttt{for char in text:}\\
+    \hspace*{0.40in}\texttt{result = result + shift\_char(char, shift)}\\
+    \hspace*{0.20in}\texttt{return result}
+  \end{block}
+
+  \begin{keyidea}
+    Because strings are immutable, each update rebinds \texttt{result} to a newly produced string. The input \texttt{text} is never mutated.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Functions over Corresponding Structures}
+
+\begin{frame}{Prompt 7: Match Student Names with Grades}
+  \begin{activity}
+    Two lists store corresponding data: one contains names and the other contains scores. Return the names of students whose score is at least 70.
+  \end{activity}
+
+  \begin{block}{Data}
+    \texttt{names  = ["Ada", "Grace", "Alan", "Edsger"]}\\
+    \texttt{scores = [92, 68, 81, 65]}
+  \end{block}
+
+  Desired result:
+  \begin{center}
+    \texttt{["Ada", "Alan"]}
+  \end{center}
+\end{frame}
+
+\begin{frame}{\texttt{zip}: Corresponding Values Together}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{Iteration}
+        \texttt{for name, score in zip(names, scores):}\\
+        \hspace*{0.20in}\texttt{...}
+      \end{block}
+
+      \begin{cpdefinition}
+        \texttt{zip} groups values from corresponding positions of multiple sequences.
+      \end{cpdefinition}
+
+      \begin{itemize}
+        \item first name with first score,
+        \item second name with second score,
+        \item and so on.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: two parallel sequences connected pairwise into tuples.
+      \lectureimage[2.4in]{zip-corresponding-sequences.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Implementation: Passing Students}
+  \begin{block}{Function}
+    \texttt{def passing\_students(}\\
+    \hspace*{0.20in}\texttt{names: list[str], scores: list[int]}\\
+    \texttt{) -> list[str]:}\\
+    \hspace*{0.20in}\texttt{result = []}\\
+    \hspace*{0.20in}\texttt{for name, score in zip(names, scores):}\\
+    \hspace*{0.40in}\texttt{if score >= 70:}\\
+    \hspace*{0.60in}\texttt{result.append(name)}\\
+    \hspace*{0.20in}\texttt{return result}
+  \end{block}
+
+  \begin{alertblock}{Function contract}
+    This design assumes equal lengths and corresponding data in the same order. By default, \texttt{zip} stops at the shorter input; check lengths when every entry must have a partner.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 5: When Repetition Depends on a Condition}
+
+\begin{frame}{Prompt 8: Keep Asking Until the Answer Is Correct}
+  \begin{activity}
+    Ask the user \texttt{"What is 4 + 5?"}. If the answer is wrong, ask again. Stop only after the user enters \texttt{9}.
+  \end{activity}
+
+  Assume each response can be converted to an integer. The number of repetitions is unknown:
+
+  \begin{itemize}
+    \item the user may answer correctly immediately;
+    \item the user may require several attempts;
+    \item there is no input sequence whose length determines the repetition count.
+  \end{itemize}
+
+  \begin{keyidea}
+    This is condition-controlled repetition rather than sequence-controlled iteration.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The \texttt{while} Statement}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{General form}
+        \texttt{while condition:}\\
+        \hspace*{0.20in}\texttt{body}
+      \end{block}
+
+      Execution model:
+      \begin{enumerate}
+        \item evaluate the condition;
+        \item if \texttt{False}, leave the loop;
+        \item if \texttt{True}, execute the body;
+        \item return to the condition and evaluate it again.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: decision diamond feeding loop body and returning to the condition.
+      \lectureimage[2.45in]{while-loop-control-flow.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Implementation: Repeated Math Prompt}
+  \begin{block}{Function}
+    \texttt{def ask\_addition() -> None:}\\
+    \hspace*{0.20in}\texttt{answer = int(input("What is 4 + 5? "))}\\
+    \hspace*{0.20in}\texttt{while answer != 9:}\\
+    \hspace*{0.40in}\texttt{print("Try again.")}\\
+    \hspace*{0.40in}\texttt{answer = int(input("What is 4 + 5? "))}\\
+    \hspace*{0.20in}\texttt{print("Correct.")}
+  \end{block}
+
+  \begin{keyidea}
+    Something in the loop body must make progress toward changing the condition. Here, a new user response replaces the previous value of \texttt{answer}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Choose \texttt{for} or \texttt{while} from the Source of Repetition}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{l|l|l}
+      \textbf{Question} & \textbf{Typical construct} & \textbf{Example} \\\hline
+      process each value in a sequence & \texttt{for} & each row in a grid \\
+      repeat a known count & \texttt{for} + \texttt{range} & five trials \\
+      repeat while a condition holds & \texttt{while} & ask until correct
+    \end{tabular}
+  \end{center}
+
+  \begin{alertblock}{Common failure mode}
+    A \texttt{while} loop can run forever if its condition never becomes \texttt{False}.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 6: Climax --- Password Validation with \texttt{any} and \texttt{all}}
+
+\begin{frame}{Final Prompt: Validate a Password}
+  \begin{activity}
+    Write a function that returns \texttt{True} exactly when a password:
+    \begin{itemize}
+      \item has at least 8 characters,
+      \item contains at least one uppercase letter,
+      \item contains at least one lowercase letter,
+      \item contains at least one digit, and
+      \item contains no whitespace characters.
+    \end{itemize}
+  \end{activity}
+
+  \begin{block}{Contract}
+    \texttt{def valid\_password(password: str) -> bool:}
+  \end{block}
+\end{frame}
+
+\begin{frame}{\texttt{any}: Does At Least One Result Satisfy the Condition?}
+  Suppose we compute one Boolean per character:
+
+  \begin{block}{Uppercase checks}
+    \texttt{[char.isupper() for char in password]}
+  \end{block}
+
+  \begin{cpdefinition}
+    \texttt{any(values)} returns \texttt{True} when at least one supplied value is truthy.
+  \end{cpdefinition}
+
+  Therefore:
+
+  \begin{block}{Requirement}
+    \texttt{has\_upper = any([char.isupper() for char in password])}
+  \end{block}
+
+  The same pattern works for lowercase letters and digits. \texttt{any([])} is \texttt{False}; here the comprehension builds its Boolean list before \texttt{any} combines the results.
+\end{frame}
+
+\begin{frame}{\texttt{all}: Does Every Result Satisfy the Condition?}
+  For whitespace, the requirement applies to \textbf{every} character.
+
+  \begin{block}{Per-character claim}
+    \texttt{not char.isspace()}
+  \end{block}
+
+  \begin{cpdefinition}
+    \texttt{all(values)} returns \texttt{True} when every supplied value is truthy.
+  \end{cpdefinition}
+
+  Therefore:
+
+  \begin{block}{Requirement}
+    \texttt{no\_space = all([not char.isspace() for char in password])}
+  \end{block}
+
+  \begin{center}
+    \texttt{any}: existential condition \hspace{0.35in} \texttt{all}: universal condition\\[0.06in]
+    \texttt{all([])} is \texttt{True}: no element violates the condition.
+  \end{center}
+\end{frame}
+
+\begin{frame}{Build Each Requirement Independently}
+  \begin{block}{Intermediate Boolean values}
+    \texttt{long\_enough = len(password) >= 8}\\
+    \texttt{has\_upper = any([char.isupper() for char in password])}\\
+    \texttt{has\_lower = any([char.islower() for char in password])}\\
+    \texttt{has\_digit = any([char.isdigit() for char in password])}\\
+    \texttt{no\_space = all([not char.isspace() for char in password])}
+  \end{block}
+
+  \begin{keyidea}
+    Instead of one complicated expression, name each independent requirement so its meaning can be inspected and tested separately.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Complete Password Checker}
+  \small
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.60\textwidth}
+{\footnotesize
+\begin{verbatim}
+def valid_password(password: str) -> bool:
+    long_enough = len(password) >= 8
+    has_upper = any([char.isupper()
+                    for char in password])
+    has_lower = any([char.islower()
+                    for char in password])
+    has_digit = any([char.isdigit()
+                    for char in password])
+    no_space = all([not char.isspace()
+                    for char in password])
+    return (long_enough and has_upper and
+            has_lower and has_digit and no_space)
+\end{verbatim}
+}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \lectureimage[2.35in]{password-requirement-pipeline.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Trace the Requirements, Not Just the Final Boolean}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.23}
+    \begin{tabular}{l|c|c|c|c|c|c}
+      \textbf{Password} & \textbf{Len} & \textbf{Upper} & \textbf{Lower} & \textbf{Digit} & \textbf{No space} & \textbf{Valid} \\\hline
+      \texttt{CompSci9} & T & T & T & T & T & T \\
+      \texttt{compsci9} & T & F & T & T & T & F \\
+      \texttt{Comp Sci9} & T & T & T & T & F & F \\
+      \texttt{CS9abc} & F & T & T & T & T & F
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    A complex validation function becomes easier to reason about when each rule is represented by one named Boolean claim.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{The Structured-Data Toolkit We Used Today}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Tool} & \textbf{Question it answers} \\\hline
+      \texttt{sum} / \texttt{max} & how can this structure be summarized? \\
+      \texttt{enumerate} & what are the position and value together? \\
+      \texttt{zip} & which values from different structures correspond? \\
+      \texttt{map} & what should every value become? \\
+      \texttt{filter} & which existing values should remain? \\
+      \texttt{any} & does at least one Boolean condition hold? \\
+      \texttt{all} & do all Boolean conditions hold? \\
+      \texttt{while} & should repetition continue based on current state?
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{enumerate}
+    \item The shape and meaning of structured data belong in a function's contract.
+    \item Decompose a large structured-data problem into smaller transformations and summaries.
+    \item Use nested iteration when the data itself has nested structure.
+    \item Use \texttt{enumerate} when a computation needs position and value; use \texttt{zip} when it needs corresponding values from multiple sequences.
+    \item \texttt{map} and \texttt{filter} are named forms of transformation and selection patterns already studied with loops and comprehensions.
+    \item Use \texttt{while} when repetition is governed by a condition rather than by a sequence.
+    \item \texttt{any} and \texttt{all} let many Boolean results collapse into one higher-level decision.
+  \end{enumerate}
+
+  \begin{block}{Next}
+    The next unit introduces \textbf{objects and compound data}: a new way to group related state under a single programmer-defined abstraction.
+  \end{block}
 \end{frame}
 
 \end{document}

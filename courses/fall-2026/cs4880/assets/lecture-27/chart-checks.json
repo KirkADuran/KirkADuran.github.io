@@ -1,0 +1,234 @@
+{
+  "versions": {
+    "sklearn": "1.6.1",
+    "numpy": "2.0.2"
+  },
+  "lecture_example": {
+    "rows": [
+      {
+        "id": 1,
+        "load": "High",
+        "warm": "Yes",
+        "failed": 1
+      },
+      {
+        "id": 2,
+        "load": "High",
+        "warm": "Yes",
+        "failed": 1
+      },
+      {
+        "id": 3,
+        "load": "High",
+        "warm": "Yes",
+        "failed": 1
+      },
+      {
+        "id": 4,
+        "load": "High",
+        "warm": "No",
+        "failed": 1
+      },
+      {
+        "id": 5,
+        "load": "High",
+        "warm": "No",
+        "failed": 1
+      },
+      {
+        "id": 6,
+        "load": "Low",
+        "warm": "Yes",
+        "failed": 1
+      },
+      {
+        "id": 7,
+        "load": "Low",
+        "warm": "Yes",
+        "failed": 0
+      },
+      {
+        "id": 8,
+        "load": "Low",
+        "warm": "No",
+        "failed": 0
+      },
+      {
+        "id": 9,
+        "load": "Low",
+        "warm": "No",
+        "failed": 0
+      },
+      {
+        "id": 10,
+        "load": "Low",
+        "warm": "No",
+        "failed": 0
+      }
+    ],
+    "root_entropy": 0.9709505944546686,
+    "splits": {
+      "load": {
+        "counts": {
+          "High": [
+            5,
+            0
+          ],
+          "Low": [
+            1,
+            4
+          ]
+        },
+        "after": 0.36096404744368116,
+        "gain": 0.6099865470109874
+      },
+      "warm": {
+        "counts": {
+          "No": [
+            2,
+            3
+          ],
+          "Yes": [
+            4,
+            1
+          ]
+        },
+        "after": 0.8464393446710154,
+        "gain": 0.12451124978365313
+      }
+    },
+    "training_accuracy_with_stated_tie_break": 0.9
+  },
+  "numeric_example": {
+    "values": [
+      2,
+      3,
+      4,
+      9,
+      11,
+      12
+    ],
+    "candidate_midpoints": [
+      2.5,
+      3.5,
+      6.5,
+      10,
+      11.5
+    ]
+  },
+  "housing": {
+    "shape": [
+      20640,
+      8
+    ],
+    "root_feature": "MedInc",
+    "root_threshold": 5.035149812698364,
+    "depth": 4,
+    "leaves": 16
+  },
+  "wine": {
+    "shape": [
+      178,
+      13
+    ],
+    "depth": 4,
+    "leaves": 11
+  },
+  "validation_experiment": {
+    "dataset": "make_moons(n_samples=600, noise=.30, random_state=41)",
+    "counts": {
+      "training": 360,
+      "validation": 120,
+      "test": 120
+    },
+    "curve": [
+      {
+        "depth": 1,
+        "training_error": 0.17500000000000004,
+        "validation_error": 0.15000000000000002
+      },
+      {
+        "depth": 2,
+        "training_error": 0.11388888888888893,
+        "validation_error": 0.1333333333333333
+      },
+      {
+        "depth": 3,
+        "training_error": 0.11388888888888893,
+        "validation_error": 0.1333333333333333
+      },
+      {
+        "depth": 4,
+        "training_error": 0.10277777777777775,
+        "validation_error": 0.09999999999999998
+      },
+      {
+        "depth": 5,
+        "training_error": 0.05833333333333335,
+        "validation_error": 0.08333333333333337
+      },
+      {
+        "depth": 6,
+        "training_error": 0.05277777777777781,
+        "validation_error": 0.09999999999999998
+      },
+      {
+        "depth": 7,
+        "training_error": 0.03888888888888886,
+        "validation_error": 0.14166666666666672
+      },
+      {
+        "depth": 8,
+        "training_error": 0.01666666666666672,
+        "validation_error": 0.1333333333333333
+      },
+      {
+        "depth": 9,
+        "training_error": 0.008333333333333304,
+        "validation_error": 0.1166666666666667
+      },
+      {
+        "depth": 10,
+        "training_error": 0.0,
+        "validation_error": 0.125
+      },
+      {
+        "depth": 11,
+        "training_error": 0.0,
+        "validation_error": 0.125
+      },
+      {
+        "depth": 12,
+        "training_error": 0.0,
+        "validation_error": 0.125
+      }
+    ],
+    "comparison": {
+      "Unrestricted": {
+        "leaves": 50,
+        "depth": 10,
+        "training_accuracy": 1.0,
+        "validation_accuracy": 0.875
+      },
+      "Pre-pruned": {
+        "leaves": 9,
+        "depth": 4,
+        "training_accuracy": 0.8861111111111111,
+        "validation_accuracy": 0.8916666666666667
+      },
+      "Post-pruned": {
+        "leaves": 7,
+        "depth": 5,
+        "training_accuracy": 0.925,
+        "validation_accuracy": 0.925
+      }
+    },
+    "pre_pruning": {
+      "max_depth": 4,
+      "min_samples_leaf": 10
+    },
+    "post_pruning_alpha": 0.005148823547890563,
+    "selected_model": "Post-pruned",
+    "frozen_model_test_accuracy": 0.8833333333333333
+  }
+}
