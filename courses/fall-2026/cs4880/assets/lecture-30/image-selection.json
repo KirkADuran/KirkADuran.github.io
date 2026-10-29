@@ -1,0 +1,10 @@
+{
+  "source_archive": "Lecture_30_Images_Only.zip",
+  "preservation": "All 30 supplied PNGs are preserved byte-for-byte; supplied-images.json records their SHA-256 hashes.",
+  "replaced_in_slides": {
+    "source_lenet_arch.png": "Garbled/inaccurate layer labels; replaced by a native LaTeX schematic of the conceptual stages.",
+    "source_alexnet_arch.png": "Garbled/inaccurate layer labels; replaced by a native LaTeX schematic following the original paper."
+  },
+  "historical_outputs": "Supplied CIFAR confusion matrices, AAPL plots, and GAN snapshots are historical source results, not new measured runs. Extra source screenshots remain archived without duplicating their contents on additional slides.",
+  "verification_scope": "example-checks.json records model interface/gradient checks and full displayed synthetic-sensor runs. CNN uses synthetic minibatches, GAN one MNIST minibatch; neither reproduces historical benchmarks."
+}

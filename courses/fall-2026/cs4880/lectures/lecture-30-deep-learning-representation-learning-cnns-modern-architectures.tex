@@ -1,54 +1,825 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
-
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{listings}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+\graphicspath{{../assets/lecture-30/}}
+% Cal Poly CS 4880, Lecture 30, November 6 2026.
+% Adapted from instructor-supplied Lecture 21 (Advanced Neural Networks).
+% English-first with secondary formal notation. Source results are labeled as reported,
+% not independently rerun; source CNN, RNN, LSTM, GRU, GAN examples retained.
+% Approx. 50 min: comparison/CNN 21; detection 6; sequences 15; GAN 8.
+% Walk through code at a high level; run the companion examples outside class.
+\newcommand{\lecturevisual}[3][2.15in]{%
+ \par\vspace{2pt}{\centering\includegraphics[width=.98\linewidth,height=#1,keepaspectratio]{#2}\par}\vspace{2pt}%
+}
+\newcommand{\architecturestage}[1]{%
+ {\centering\setlength{\fboxsep}{5pt}%
+ \fcolorbox{CalPolyGreen}{DeckSoft}{\parbox{.86\linewidth}{\centering\small #1}}\par}%
+}
+\newcommand{\conceptlead}[1]{{\small\bfseries\color{CalPolyGreen}#1\par}}
+\newenvironment{calculation}[1][Mathematical description]{%
+ \par\begingroup\setbeamercolor{calculation body}{bg=DeckSoft,fg=DeckInk}%
+ \begin{beamercolorbox}[sep=3pt,wd=\linewidth]{calculation body}%
+ \footnotesize{\bfseries\color{DeckMuted}#1\par}%
+ \setlength{\jot}{0pt}\setlength{\abovedisplayskip}{3pt}\setlength{\belowdisplayskip}{3pt}%
+}{\end{beamercolorbox}\endgroup}
+\setbeamersize{text margin left=.42in,text margin right=.42in}
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{30}
-\lecturetitle{Deep Learning -- representation learning, CNNs, modern architectures}
+\lecturetitle{Advanced Neural Networks: Vision, Sequences, and Generation}
 \lecturedate{November 6, 2026}
-\courseunit{Course sequence}
-
+\courseunit{Learning Agents and Machine Learning}
 \begin{document}
-
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Deep Learning -- representation learning, CNNs, modern architectures
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{Why Network Architecture Matters}
+\begin{frame}{One Network Shape Does Not Fit Every Input}
+\small
+\conceptlead{A dense network accepts a list of features, but structure in the input matters.}
+\begin{itemize}
+ \item In Lecture 29, every unit in a dense layer could connect to every feature of the previous layer.
+ \item For an \textbf{image}, nearby pixels form meaningful patterns; flattening preserves pixel indices but gives a dense layer no built-in preference for local neighbors.
+ \item For a \textbf{sequence}, the same observations in a different order may mean something entirely different.
+ \item We can build useful assumptions into the \textbf{architecture}: locality for images and reusable state for sequences.
+\end{itemize}
+\begin{keyidea}Today's idea: architecture determines what relationships are easy for a model to learn from the same data.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}{MNIST Works; Natural Images Are Harder}
+\small
+\conceptlead{A good result on one dataset does not establish that the model works on a different kind of image.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.50\textwidth}
+ \lecturevisual[1.60in]{source_mnist_samples.png}{MNIST: centered grayscale handwritten digits.}
+ \end{column}
+ \begin{column}{.46\textwidth}
+ \begin{itemize}
+  \item MNIST: 28$\times$28 grayscale digits; a dense network can perform well.
+  \item CIFAR-10: 32$\times$32 color objects with varied background, pose, and texture.
+  \item A network's \textbf{inductive bias} is the structural preference built into its design.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\begin{calculation}[What flattening does]
+A 32$\times$32 RGB image becomes a vector of $32\cdot32\cdot3=3{,}072$ input numbers. Pixel positions still exist in the vector, but a generic dense layer does not explicitly assume nearby pixels are related.
+\end{calculation}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{CIFAR-10: A Test of Visual Generalization}
+\small
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.47\textwidth}
+ \begin{itemize}
+ \item 60,000 labeled RGB images, each 32$\times$32 pixels.
+ \item 50,000 training images and 10,000 test images.
+ \item Ten classes: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck.
+ \item Small objects and variable backgrounds make classifying these pictures more challenging than centered digits.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.50\textwidth}
+ \lecturevisual[2.60in]{source_cifar_samples.png}{Examples from the instructor's CIFAR-10 slide.}
+ \end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\begin{frame}{The Original Dense-Network CIFAR-10 Result}
+\small
+\conceptlead{The earlier network was fitted, but its predictions on natural images were weak.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.42\textwidth}
+ \begin{itemize}
+  \item The supplied experiment reports \textbf{32.32\% test accuracy} after 20 epochs.
+  \item On ten balanced classes, random guessing would average about 10\%; the model learned something.
+  \item Its confusion matrix reveals which categories it mixes up.
+  \item The source does not provide all baseline settings, so treat later comparisons as \emph{illustrative}, not a controlled ablation.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.55\textwidth}
+ \lecturevisual[2.25in]{source_dense_cifar_confusion.png}{Confusion matrix from the source lecture's dense baseline.}
+ \end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\section{Convolutional Neural Networks}
+\begin{frame}{Before CNNs: Image Filters Were Designed by Hand}
+\small
+\conceptlead{A small kernel can detect a local visual pattern by scanning across an image.}
+\lecturevisual[1.85in]{kernel_processing.png}{One input image patch, transformed with blur, edge detection, and sharpening.}
+\begin{itemize}
+ \item Traditional image processing applies fixed \textbf{kernels}, such as blur or edge-detection filters.
+ \item Each output location summarizes a small neighboring patch of pixels.
+ \item These filters are useful, but designing the right ones requires assumptions and expertise.
+ \item A \textbf{convolutional neural network (CNN)} learns the filter values from training data.
+\end{itemize}
 \end{frame}
 
+\begin{frame}{Convolution: Apply a Learned Filter Everywhere}
+\small
+\conceptlead{One filter learns a visual pattern and searches for it across many image locations.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.55\textwidth}
+ \lecturevisual[2.10in]{local_receptive_field.png}{The same small filter scans the input image.}
+ \end{column}
+ \begin{column}{.41\textwidth}
+ \begin{itemize}
+ \item A \textbf{receptive field} is the local input patch used for an output.
+ \item Multiply filter and pixel values, then sum.
+ \item Slide it to create a \textbf{feature map} of responses.
+ \item Training changes the filter's weights.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Convolution: Name Each Part of the Calculation}
+\small
+\conceptlead{The equation describes one filter response before an activation such as ReLU.}
+\begin{calculation}[One filter at one location]
+\[z_{u,v}=b+\sum_{i,j,c}K_{i,j,c}\,X_{u+i,v+j,c}.\]
+$X$ is the input; $K$ contains one filter's weights; $b$ is its bias. $(u,v)$ is an output location; $(i,j)$ are kernel offsets; $c$ indexes input channels. $z$ is the pre-activation response (stride 1, no padding). Libraries call this cross-correlation ``convolution.''
+\end{calculation}
+
+\begin{itemize}
+ \item $K$ is shared across spatial locations; only the selected input patch changes.
+ \item Summing over $c$ combines all input channels into this one filter's output map.
+ \item Another learned filter has its own weights and bias and produces another output channel.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{A Tiny Convolution Calculation}
+\small
+\conceptlead{The calculation is familiar multiplication and addition, repeated at many positions.}
+\lecturevisual[1.48in]{convolution_arithmetic.png}{A 3 by 3 image patch multiplied by a 3 by 3 filter.}
+\begin{itemize}
+ \item Multiply the numbers in matching positions and add the nine products.
+ \item Here the sum is zero: the chosen directional filter has no net response to this particular patch.
+ \item Shift by one pixel and compute the next response; one filter produces a grid of responses whose size depends on padding and stride.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Why Convolution Is More Efficient Than Dense Layers}
+\small
+\conceptlead{The same small set of weights is reused at every image location.}
+\begin{itemize}
+ \item \textbf{Locality:} early filters inspect nearby pixels, not every pixel in the image simultaneously.
+ \item \textbf{Weight sharing:} a detector for an edge on the left also checks for that edge on the right.
+ \item \textbf{Multiple filters:} distinct learned filters can respond to different textures, edges, or other patterns.
+ \item \textbf{Stride} decides how far to move the filter each step; \textbf{padding} determines how image borders are handled.
+\end{itemize}
+\begin{calculation}[Count the weights in a first convolutional layer]
+A 3$\times$3 filter with 3 RGB channels has $3\cdot3\cdot3=27$ weights. With one bias per filter and 32 filters:
+\[(3\cdot3\cdot3+1)\cdot32=896\text{ trainable parameters.}\]
+A dense 3,072-input-to-32-unit layer would require $(3072+1)\cdot32=98{,}336$ parameters. These layers do different work; the count shows the effect of weight sharing.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Track Shapes: Padding, Stride, and Pooling}
+\small
+\conceptlead{Weights determine what is detected; padding and stride determine where responses are computed.}
+\begin{calculation}[Output size along one spatial dimension]
+\[N_{\rm out}=\left\lfloor\frac{N+2p-k}{s}\right\rfloor+1.\]
+$N$: input size; $k$: kernel size; $p$: padding on each side; $s$: stride; $\lfloor\cdot\rfloor$: round down. This assumes dilation 1 and symmetric padding.
+\end{calculation}
+\begin{itemize}
+ \item A 32-wide input, 3-wide filter, no padding, stride 1 gives $32-3+1=30$ responses.
+ \item Padding by 1 gives 32 responses. In our code, \texttt{padding='same'} with stride 1 preserves spatial size.
+ \item A 2-wide pooling window with stride 2 and no padding maps 32 locations to 16.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Pooling: Keep Strong Signals, Shrink the Map}
+\small
+\conceptlead{Pooling summarizes nearby responses so later layers process fewer locations.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.54\textwidth}
+ \lecturevisual[2.35in]{pooling.png}{Max pooling a 4 by 4 grid into a 2 by 2 grid.}
+ \end{column}
+ \begin{column}{.42\textwidth}
+ \begin{itemize}
+  \item \textbf{Max pooling} keeps the strongest response in each local region.
+  \item A 2$\times$2 pool with stride 2 reduces width and height by about half.
+  \item Small movements in a feature can still produce a similar pooled response.
+  \item Some modern networks replace pooling with strided convolutions.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\begin{keyidea}Convolution extracts patterns; pooling compresses where those patterns were found.\end{keyidea}
+\end{frame}
+
+\begin{frame}{LeNet-5: Learned Features for Handwritten Digits}
+\small
+\conceptlead{Neural networks learned local image filters long before today's deep-learning boom.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.49\textwidth}
+ \begin{itemize}
+  \item Yann LeCun and collaborators pioneered practical convolutional digit recognition; LeNet-5 was described in 1998.
+  \item Repeated convolution and subsampling stages built increasingly useful representations of digits.
+  \item The final classifier used these learned features to identify a number.
+  \item The key architectural advantage was learning \textbf{local, shared features}, not hand-authoring every detector.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.47\textwidth}
+ \architecturestage{Grayscale digit image}
+ {\centering $\downarrow$\par}
+ \architecturestage{Convolution + subsampling}
+ {\centering $\downarrow$\par}
+ \architecturestage{Convolution + subsampling}
+ {\centering $\downarrow$\par}
+ \architecturestage{Learned features + digit decision}
+ \medskip\centering\scriptsize Simplified LeNet-5 flow; historical subsampling differs from our max-pooling example.
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{AlexNet: A Turning Point for CNNs}
+\small
+\conceptlead{Larger datasets, GPUs, and trainable deep networks made CNNs more successful on natural images.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.49\textwidth}
+ \begin{itemize}
+  \item AlexNet's 2012 ImageNet results demonstrated a major advance in large-scale visual recognition.
+  \item Convolutional layers learned edges, textures, and object parts.
+  \item ReLU activations, GPU training, data augmentation, and dropout helped make training practical.
+  \item This was progress in the \textbf{full training system}, not a single clever filter.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.47\textwidth}
+ \architecturestage{Color image}
+ {\centering $\downarrow$\par}
+ \architecturestage{5 convolutional layers\\with pooling after selected layers}
+ {\centering $\downarrow$\par}
+ \architecturestage{2 dense hidden layers}
+ {\centering $\downarrow$\par}
+ \architecturestage{1,000-class softmax output}
+ \medskip\centering\scriptsize Simplified AlexNet flow; original training used two GPUs.
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Dropout: Train Without Relying on Every Unit}
+\small
+\conceptlead{Randomly suppressing some activations during training can discourage fragile dependence on particular paths.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.55\textwidth}
+ \lecturevisual[1.95in]{dropout.png}{Illustration of randomly omitted hidden activations.}
+ \end{column}
+ \begin{column}{.41\textwidth}
+ \begin{itemize}
+  \item During training, each selected activation is temporarily set to zero with some probability.
+  \item The network must learn predictions that survive different sets of available units.
+  \item During inference, dropout is switched off; frameworks account for scaling.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\begin{calculation}[Dropout rate versus keeping a unit]
+For dropout rate $0\le r<1$, each selected activation is kept with probability $1-r$ during training. In \emph{inverted dropout}, surviving values are scaled by $1/(1-r)$ so each activation	extquotesingle s expected value is unchanged.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile]{Original CIFAR-10 Example: Load and Normalize}
+\small
+\conceptlead{Preserve image geometry when preparing data for a CNN.}
+{\footnotesize\begin{verbatim}
+import tensorflow as tf
+from tensorflow.keras.datasets import cifar10
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import (Input, Conv2D,
+    MaxPooling2D, Dropout, Flatten, Dense)
+
+(x_train, y_train), (x_test, y_test) = cifar10.load_data()
+x_train = x_train.astype("float32") / 255.0
+x_test  = x_test.astype("float32") / 255.0
+y_train = to_categorical(y_train, 10)
+y_test  = to_categorical(y_test, 10)
+\end{verbatim}}
+\begin{keyidea}Every example remains a 32$\times$32$\times$3 array. The test set is never passed to \texttt{fit}. The source lecture uses one-hot labels, so we retain categorical cross-entropy.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Original CIFAR-10 CNN: Convolutional Stages}
+\small
+\conceptlead{Three convolution/pooling blocks progressively turn image pixels into compact feature maps.}
+{\footnotesize\begin{verbatim}
+model = Sequential([
+    Input(shape=(32, 32, 3)),
+    Conv2D(32, (3, 3), activation='relu', padding='same'),
+    MaxPooling2D(pool_size=(2, 2)),
+    Dropout(0.25),
+    Conv2D(64, (3, 3), activation='relu', padding='same'),
+    MaxPooling2D(pool_size=(2, 2)),
+    Dropout(0.25),
+    Conv2D(128, (3, 3), activation='relu', padding='same'),
+    MaxPooling2D(pool_size=(2, 2)),
+    Dropout(0.25),
+])
+\end{verbatim}}
+\begin{calculation}[Spatial scale across the network]
+The source's three 2$\times$2 pooling stages reduce spatial size from 32$\times$32 to 16$\times$16, 8$\times$8, then 4$\times$4. The channel count increases from 32 to 64 to 128.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile]{Original CIFAR-10 CNN: Classifier and Training}
+\small
+\conceptlead{After extracting patterns, predict one of ten classes.}
+{\footnotesize\begin{verbatim}
+model.add(Flatten())
+model.add(Dense(256, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(10, activation='softmax'))
+model.compile(optimizer='adam',
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
+history = model.fit(x_train, y_train, epochs=20,
+                    validation_split=0.2, batch_size=128)
+test_loss, test_acc = model.evaluate(x_test, y_test)
+\end{verbatim}}
+\begin{keyidea}The last 20\% of training examples are held out for validation (40,000 fit / 10,000 validation); the official test set stays separate. \texttt{softmax} returns ten class probabilities summing to one. Historical accuracy on the next slide is not a promised rerun result.\end{keyidea}
+\end{frame}
+
+\begin{frame}{CIFAR-10: What Changed with a CNN?}
+\small
+\conceptlead{The source's CNN experiment reports stronger image classification than its earlier dense baseline.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.42\textwidth}
+ \begin{block}{Source lecture results}
+ \textbf{Dense baseline:} 32.32\% test accuracy.\par\medskip
+ \textbf{CNN example:} 76.05\% test accuracy.
+ \end{block}
+ \begin{itemize}
+ \item The CNN can reuse local visual features across an image.
+ \item Incomplete source settings make this an illustrative comparison, not a controlled ablation.
+ \item The confusion matrix helps identify remaining errors by category.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.55\textwidth}
+ \lecturevisual[2.00in]{source_cnn_cifar_confusion.png}{Confusion matrix from the source CNN run.}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\section{From Classification to Detection}
+\begin{frame}{Classification Answers ``What?''; Detection Adds ``Where?''}
+\small
+\conceptlead{A single class label cannot describe every object in a busy scene.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.53\textwidth}
+ \lecturevisual[2.40in]{classification_vs_detection.png}{Object labels and approximate bounding boxes.}
+ \end{column}
+ \begin{column}{.43\textwidth}
+ \begin{itemize}
+  \item \textbf{Classification:} choose a label for the image.
+  \item \textbf{Detection:} identify objects and predict bounding boxes around them.
+  \item Multiple objects may occur at different scales and overlap.
+  \item Robotics needs both object identity and approximate location.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{From Region Proposals to YOLO}
+\small
+\conceptlead{One-stage detectors predict objects directly rather than classifying a long list of candidate crops.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.47\textwidth}
+ \begin{block}{Two-stage detection}
+ Propose candidate regions, extract features, and classify/refine candidate boxes. Multiple steps can increase compute cost, though modern systems can be accurate and efficient.
+ \end{block}
+ \end{column}
+ \begin{column}{.49\textwidth}
+ \begin{block}{YOLO: You Only Look Once}
+ A neural network predicts object locations and categories in one forward pass through the image. The original YOLO used a spatial grid; later versions have evolved beyond this exact design.
+ \end{block}
+ \end{column}
+\end{columns}
+\begin{calculation}[A predicted detection]
+A box can be encoded as $(x,y,w,h)$: center coordinates $x,y$, width $w$, height $h$, with pixel or normalized units specified by the implementation. Detectors also output class scores and may output a separate objectness score; the exact encoding depends on the model.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Original YOLO Examples: Multiple Objects at Once}
+\small
+\conceptlead{A detector can label several objects in the same image, each with a separate region.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.54\textwidth}
+ \lecturevisual[2.55in]{source_yolo_outdoor.png}{An outdoor example from the instructor's lecture.}
+ \end{column}
+ \begin{column}{.43\textwidth}
+ \lecturevisual[2.55in]{source_yolo_city.png}{A crowded street from the instructor's lecture.}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Reading YOLO Outputs Critically}
+\small
+\conceptlead{Fast object detection is useful, but predictions are not automatically correct.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.40\textwidth}
+ \lecturevisual[2.50in]{source_yolo_underwater.png}{An underwater detection result from the source slides.}
+ \end{column}
+ \begin{column}{.56\textwidth}
+ \begin{itemize}
+ \item A confidence score describes model output, not a promise that a label is correct.
+ \item Small, occluded, or overlapping objects can be difficult to detect and localize.
+ \item A wrong object label or misplaced box can directly affect a robot's planned behavior.
+ \item Different detectors trade off latency, memory, localization, and category accuracy.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\begin{calculation}[How to compare a predicted box with a labeled box]
+$\operatorname{IoU}(B_p,B_t)=\dfrac{\operatorname{area}(B_p\cap B_t)}{\operatorname{area}(B_p\cup B_t)}$, where $B_p$ is the predicted box and $B_t$ the labeled box. Intersection is shared area; union counts all covered area once. IoU measures location overlap, not class correctness.
+\end{calculation}
+\end{frame}
+
+\section{Networks That Remember Ordered Inputs}
+\begin{frame}{Images Have Position; Sequences Have Order}
+\small
+\conceptlead{Treating a sequence as an unordered bag loses information about what happened first.}
+\begin{itemize}
+ \item \textbf{Language:} ``dog bites man'' and ``man bites dog'' contain the same words in a different order.
+ \item \textbf{Video:} movement depends on the ordering of frames.
+ \item \textbf{Audio:} sound unfolds over time; the timing of phonemes matters.
+ \item \textbf{Time series:} future sensor or price values may depend on earlier observations.
+\end{itemize}
+\begin{keyidea}A recurrent neural network carries a changing \textbf{hidden state} from one time step to the next. It is a learned summary of earlier inputs, not a perfect memory.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Recurrent Networks: One Operation, Reused Over Time}
+\small
+\conceptlead{A recurrent unit processes the next input together with a summary of the past.}
+\lecturevisual[1.50in]{rnn_unrolled.png}{A recurrent layer shown at four successive time steps.}
+\begin{itemize}
+ \item The \textbf{same learned weights} are applied at every time step.
+ \item The updated hidden state is passed forward to the next time step.
+ \item \textbf{Unrolling} a recurrent network draws the operations across time, without creating separate independent models.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{What Does the RNN Update Actually Mean?}
+\small
+\conceptlead{New memory is computed from new evidence and old memory.}
+\begin{enumerate}
+ \item Read the current input $x_t$ (for example, today's sensor measurement).
+ \item Combine it with the hidden state from the previous time step $h_{t-1}$.
+ \item Apply a nonlinear activation to form the new state $h_t$.
+ \item Use the state to predict the current or future output.
+\end{enumerate}
+\begin{calculation}[A simple recurrent update]
+\[h_t=\tanh(W_x x_t+W_h h_{t-1}+b),\qquad \widehat y_t=g(W_yh_t+c).\]
+$t$ indexes time; $x_t$ is input and $h_t$ the hidden state ($h_0=0$ here). $W_x,W_h,W_y$ are learned input, recurrent, and output weight matrices; $b,c$ are biases. $\widehat y_t$ is the prediction; $g$ is the output activation (identity for regression). $\tanh$ acts entry by entry.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile]{Build a Reproducible Sequence Before Fitting}
+\small
+\conceptlead{Our runnable example uses a synthetic sensor series, not an unexplained stock-data variable.}
+{\footnotesize\begin{verbatim}
+import numpy as np
+rng = np.random.default_rng(4880)
+t = np.arange(600)
+series = np.sin(t / 15) + 0.1 * rng.normal(size=600)
+train_end, val_end, window = 360, 480, 20
+mean, scale = series[:train_end].mean(), series[:train_end].std()
+values = ((series - mean) / scale).astype('float32')
+target_time = np.arange(window, len(values))
+X = np.stack([values[j-window:j] for j in target_time])[..., None]
+y = values[target_time]
+\end{verbatim}}
+\begin{keyidea}Each input contains the previous 20 observations, and its target is the next value. Scaling uses training history only. The AAPL plots that follow are supplied historical illustrations, not outputs from this sensor example.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Split Windows by the Time of Their Target}
+\small
+\conceptlead{A forecast may use observed history, but it must not use future values.}
+{\footnotesize\begin{verbatim}
+train = target_time < train_end
+val = (target_time >= train_end) & (target_time < val_end)
+test = target_time >= val_end
+X_train, y_train = X[train], y[train]
+X_val, y_val = X[val], y[val]
+X_test, y_test = X[test], y[test]
+models = {}
+\end{verbatim}}
+\begin{itemize}
+ \item Shapes: training $(340,20,1)$; validation $(120,20,1)$; test $(120,20,1)$. Axes are samples, time steps, features.
+ \item Validation/test inputs may include earlier observed values. Every input ends \emph{before} its own target: one-step forecasting, not a 120-step forecast from one origin.
+ \item Each window starts with a fresh hidden state; the RNN carries state \emph{within} that window.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Original Python Example: SimpleRNN for a Time Series}
+\small
+\conceptlead{Use a window of past values to predict a numerical next value.}
+{\footnotesize\begin{verbatim}
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Input, SimpleRNN, Dense
+
+# X_train shape: (samples, time_steps, features)
+model = Sequential([
+    Input(shape=(X_train.shape[1], X_train.shape[2])),
+    SimpleRNN(64, activation='tanh'),
+    Dense(1)
+])
+model.compile(optimizer='adam', loss='mse')
+models['SimpleRNN'] = model
+\end{verbatim}}
+\begin{keyidea}This example consumes the sensor windows just defined. We use 64 hidden units in all three recurrent models; the source SimpleRNN used 50. With \texttt{return\_sequences=False} (default), only the final hidden output feeds \texttt{Dense(1)}.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Why Ordinary RNNs Struggle with Long Histories}
+\small
+\conceptlead{The learning signal has to travel backward across many repeated time steps.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.52\textwidth}
+ \begin{itemize}
+  \item \textbf{Vanishing gradients:} repeated calculations can shrink learning signals until early time steps have little influence.
+  \item \textbf{Exploding gradients:} repeated calculations can amplify them into unstable updates.
+  \item The model may fail to learn dependencies between distant events.
+  \item Gradient clipping can help exploding gradients; gating helps preserve useful longer-term information.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.45\textwidth}
+ \lecturevisual[2.30in]{source_rnn_stock.png}{Source demonstration: actual versus SimpleRNN fitted/predicted price series.}
+ \end{column}
+\end{columns}
+\begin{calculation}[Why depth through time matters]
+Backpropagation through time repeatedly applies local derivatives. A long product of factors smaller than one can vanish; factors larger than one can explode. This is the gradient problem, not simply a missing software option.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{LSTM: Learn What to Retain and What to Forget}
+\small
+\conceptlead{Gates give the network a more controlled path for carrying information over time.}
+\begin{itemize}
+ \item A \textbf{Long Short-Term Memory (LSTM)} cell maintains a cell state in addition to a hidden output.
+ \item The \textbf{forget gate} decides how much previous state to retain.
+ \item The \textbf{input gate} decides what new information to write.
+ \item The \textbf{output gate} decides what portion of stored information to expose.
+ \item This improves learning of many long-range dependencies, though it does not guarantee perfect memory.
+\end{itemize}
+\begin{calculation}[Cell-state update: retention plus new content]
+\[c_t=f_t\odot c_{t-1}+i_t\odot \widetilde c_t.\]
+$t$ indexes time; $c_t$ is cell memory and $\widetilde c_t$ proposed new content. $f_t,i_t$ are learned forget/input gate vectors with entries in $[0,1]$; $\odot$ multiplies corresponding entries. This is the memory update; the hidden output also uses an output gate.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile]{Original LSTM Example: Replace the Recurrent Layer}
+\small
+\conceptlead{Keep the same input windows and prediction target; change the memory mechanism.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.54\textwidth}
+{\footnotesize\begin{verbatim}
+from tensorflow.keras.layers import LSTM
+from tensorflow.keras import Sequential
+
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    LSTM(64),
+    Dense(1)
+])
+model.compile(optimizer='adam', loss='mse')
+models['LSTM'] = model
+\end{verbatim}}
+ \end{column}
+ \begin{column}{.43\textwidth}
+ \lecturevisual[1.70in]{source_lstm_stock.png}{Historical source plot.}
+ \small Historical source: LSTM on AAPL prices; not this sensor run.
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{GRU: A Smaller Gated Recurrent Unit}
+\small
+\conceptlead{GRUs use a simpler arrangement of gates to manage a changing hidden state.}
+\begin{itemize}
+ \item A \textbf{Gated Recurrent Unit (GRU)} combines information retention and updating without a separate LSTM-style cell state.
+ \item An \textbf{update gate} controls how much of the old state to preserve versus overwrite.
+ \item A \textbf{reset gate} controls how much past information influences a new candidate state.
+ \item GRUs often have fewer parameters than similarly sized LSTMs, but performance depends on the task and settings.
+\end{itemize}
+\begin{calculation}[A simplified GRU-style interpolation]
+\[h_t=z_t\odot h_{t-1}+(1-z_t)\odot\widetilde h_t.\]
+$h_t$ is hidden state at time $t$; $\widetilde h_t$ is the candidate. The update gate $z_t$ has entries in $[0,1]$: here 1 retains old state and 0 replaces it. $1$ means an all-ones vector; $\odot$ is entrywise multiplication. The reset gate helps form the candidate (not shown).
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile]{Original GRU Example: Another Memory Mechanism}
+\small
+\conceptlead{We can hold the surrounding prediction setup fixed and change the recurrent unit.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.54\textwidth}
+{\footnotesize\begin{verbatim}
+from tensorflow.keras.layers import GRU
+from tensorflow.keras import Sequential
+
+model = Sequential([
+    Input(shape=X_train.shape[1:]),
+    GRU(64),
+    Dense(1)
+])
+model.compile(optimizer='adam', loss='mse')
+models['GRU'] = model
+\end{verbatim}}
+ \end{column}
+ \begin{column}{.43\textwidth}
+ \lecturevisual[1.70in]{source_gru_stock.png}{Historical source plot.}
+ \small Historical source: GRU on AAPL prices; not this sensor run.
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Train Equally; Choose on Validation; Test Once}
+\small
+{\footnotesize\begin{verbatim}
+val_mse = {}
+for name, model in models.items():
+    model.fit(X_train, y_train, epochs=10, batch_size=32,
+              validation_data=(X_val, y_val), shuffle=False, verbose=0)
+    val_mse[name] = model.evaluate(X_val, y_val, verbose=0)
+best = models[min(val_mse, key=val_mse.get)]
+pred = best.predict(X_test, verbose=0).ravel()
+rmse = scale * np.sqrt(np.mean((pred - y_test)**2))
+naive = scale * np.sqrt(np.mean((X_test[:, -1, 0] - y_test)**2))
+print('test RMSE:', rmse, 'last-value RMSE:', naive)
+\end{verbatim}}
+\begin{calculation}[What the metric means]
+$\operatorname{RMSE}=\sqrt{\frac{1}{n}\sum_{j=1}^{n}(\widehat y_j-y_j)^2}$: root mean squared error across $n$ test targets. $y_j$ is observed and $\widehat y_j$ predicted. Multiplying by the training standard deviation \texttt{scale} restores sensor units.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Choosing a Sequence Model Requires a Fair Test}
+\small
+\conceptlead{Different-looking prediction plots do not tell us which model generalizes best.}
+\begin{itemize}
+ \item Give the SimpleRNN, LSTM, and GRU the same historical input windows and target definition.
+ \item Split by \textbf{time}; random window splits can train on future targets and near-duplicate histories.
+ \item Fit preprocessing only on past training observations; apply unchanged to later observations.
+ \item Compare MAE/RMSE and a \textbf{naive last-value forecast} before claiming an architecture is useful.
+ \item Equal hidden width does not mean equal parameter count. Report model capacity and training budget alongside accuracy.
+\end{itemize}
+\begin{keyidea}The new architecture helps only if it performs better under an honest, controlled evaluation of future data.\end{keyidea}
+\end{frame}
+
+\section{Generative Models and Adversarial Learning}
+\begin{frame}{Discriminative versus Generative Learning}
+\small
+\conceptlead{Not every model learns to assign a label; some learn to produce new examples.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.48\textwidth}
+ \begin{block}{Discriminative question}
+ Given an image, \textbf{which label} best describes it?\\[5pt]
+ Example: classify a digit as 7.
+ \end{block}
+ \end{column}
+ \begin{column}{.48\textwidth}
+ \begin{block}{Generative question}
+ Given a learned training distribution, \textbf{what new image} could plausibly come from it?\\[5pt]
+ Example: generate a digit-like image from noise.
+ \end{block}
+ \end{column}
+\end{columns}
+\begin{itemize}
+ \item A \textbf{Generative Adversarial Network (GAN)} uses two networks trained in competition.
+ \item The generator makes artificial examples; the discriminator learns to distinguish generated examples from real ones.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{A GAN Trains Two Networks Against Each Other}
+\small
+\conceptlead{One model learns to imitate the training data; the other provides a changing quality signal.}
+\lecturevisual[1.25in]{gan_flow.png}{Noise enters the generator; the discriminator also observes real examples.}
+\begin{itemize}
+ \item \textbf{Generator $G$:} maps a random latent input $z$ to a candidate image $G(z)$.
+ \item \textbf{Discriminator $D$:} returns a logit (unbounded score) for how real an input looks.
+ \item Training alternates updates: improve discrimination, then improve generation using the discriminator's feedback.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Original GAN Generator: Turn Noise into Images}
+\scriptsize
+\conceptlead{A generator expands a small random vector into a 28$\times$28 grayscale image.}
+\begin{verbatim}
+from tensorflow.keras import layers
+
+def build_generator():
+    return tf.keras.Sequential([
+        layers.Input(shape=(100,)),
+        layers.Dense(7*7*256, use_bias=False),
+        layers.BatchNormalization(), layers.LeakyReLU(),
+        layers.Reshape((7, 7, 256)),
+        layers.Conv2DTranspose(128, (5,5), strides=(1,1),
+                               padding='same', use_bias=False),
+        layers.BatchNormalization(), layers.LeakyReLU(),
+        layers.Conv2DTranspose(64, (5,5), strides=(2,2),
+                               padding='same', use_bias=False),
+        layers.BatchNormalization(), layers.LeakyReLU(),
+        layers.Conv2DTranspose(1, (5,5), strides=(2,2),
+                               padding='same', use_bias=False,
+                               activation='tanh')
+    ])
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Original GAN Discriminator: Evaluate Real or Fake}
+\small
+\conceptlead{The discriminator compresses an image into a real-versus-generated score.}
+{\footnotesize\begin{verbatim}
+def build_discriminator():
+    return tf.keras.Sequential([
+        layers.Input(shape=(28, 28, 1)),
+        layers.Conv2D(64, (5,5), strides=(2,2), padding='same'),
+        layers.LeakyReLU(),
+        layers.Dropout(0.3),
+        layers.Conv2D(128, (5,5), strides=(2,2), padding='same'),
+        layers.LeakyReLU(),
+        layers.Dropout(0.3),
+        layers.Flatten(),
+        layers.Dense(1)
+    ])
+\end{verbatim}}
+\begin{keyidea}The final \texttt{Dense(1)} returns a \textbf{logit} (unbounded score), not a probability. The training loss must be configured consistently, such as \texttt{BinaryCrossentropy(from\_logits=True)}.\end{keyidea}
+\end{frame}
+
+\begin{frame}{How GAN Training Connects the Two Networks}
+\small
+\conceptlead{Defining two architectures does not yet train a GAN.}
+\begin{enumerate}
+ \item Scale real MNIST images to $[-1,1]$: $(x-127.5)/127.5$ for raw pixel value $x\in[0,255]$. This matches the generator's \texttt{tanh} output.
+ \item Draw noise vectors of length 100. Produce fake images with $G$; score both real and fake images with $D$.
+ \item Update \textbf{only $D$'s weights} to label real images 1 and fake images 0.
+ \item Update \textbf{only $G$'s weights} to make $D$ label fake images 1. Backpropagate \emph{through} $D$ to reach $G$.
+\end{enumerate}
+\begin{calculation}[A common non-saturating generator loss]
+$L_D=\operatorname{BCE}(1,D(x))+\operatorname{BCE}(0,D(G(z)))$,\quad
+$L_G=\operatorname{BCE}(1,D(G(z)))$.\\
+$x$ is a real image; $z$ is noise; $G,D$ are generator/discriminator. BCE is binary cross-entropy, averaged over a minibatch; labels come first. Here $D$ returns logits, so use \texttt{from\_logits=True}. Separate optimizers update the two parameter sets.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{GAN Training: Images Change Over Epochs}
+\small
+\conceptlead{Supplied snapshots from one historical run show emerging digit structure; improvement is not guaranteed or monotonic.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.32\textwidth}
+ {\centering\textbf{Epoch 1}\par}
+ \lecturevisual[2.35in]{gan_epoch1.png}{Source outputs after early epochs.}
+ \end{column}
+ \begin{column}{.32\textwidth}
+ {\centering\textbf{Epoch 7}\par}
+ \lecturevisual[2.35in]{gan_epoch7.png}{Source outputs after intermediate epochs.}
+ \end{column}
+ \begin{column}{.32\textwidth}
+ {\centering\textbf{Epoch 19}\par}
+ \lecturevisual[2.35in]{gan_epoch19.png}{Source outputs after later epochs.}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Generated Samples, Progress, and Failure Modes}
+\small
+\conceptlead{Believable examples are the goal, but stable adversarial training is difficult.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.52\textwidth}
+ \lecturevisual[2.55in]{source_gan_real_generated.png}{Handwritten and generated examples from the supplied lecture.}
+ \end{column}
+ \begin{column}{.44\textwidth}
+ \begin{itemize}
+ \item The generator can learn digit-like structure without being handed a unique target image for each noise vector.
+ \item \textbf{Mode collapse:} the generator repeatedly produces a narrow set of examples.
+ \item \textbf{Instability:} alternating adversarial optimization can oscillate or fail to converge.
+ \item Visual quality is only one dimension of evaluation; diversity also matters.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\section{Synthesis}
+\begin{frame}{Match the Architecture to the Structure of the Problem}
+\small
+\lecturevisual[1.10in]{architecture_summary.png}{CNNs, recurrent networks, and GANs address different modeling needs.}
+\begin{itemize}
+ \item \textbf{CNNs:} learn reusable local filters for images and spatial structure.
+ \item \textbf{RNN/LSTM/GRU:} share weights across time and carry learned state for sequences.
+ \item \textbf{GANs:} train a generator with feedback from a competing discriminator.
+ \item More architectural complexity does not replace good data, evaluation, or deployment constraints.
+\end{itemize}
+\begin{keyidea}Next: unsupervised learning---discovering groups and useful representations without given class labels.\end{keyidea}
+\end{frame}
+
+\appendix
+\begin{frame}{References and Reproducible Checks}
+\small
+\begin{itemize}
+ \item Supplied Lecture 30 image archive: original result plots are historical, not regenerated benchmarks.
+ \item \href{https://www.cs.toronto.edu/\string~kriz/cifar.html}{CIFAR-10 dataset description}; \href{https://keras.io/api/layers/convolution_layers/convolution2d/}{Keras Conv2D}; \href{https://keras.io/api/layers/recurrent_layers/gru/}{Keras GRU}.
+ \item \href{https://yann.lecun.com/exdb/publis/pdf/lecun-98.pdf}{LeCun et al. (1998), LeNet-5}; \href{https://papers.neurips.cc/paper/2012/hash/c399862d3b9d6b76c8436e924a68c45b-Abstract.html}{Krizhevsky et al. (2012), AlexNet}.
+ \item \href{https://www.tensorflow.org/tutorials/generative/dcgan}{TensorFlow DCGAN tutorial}: compatible generator/discriminator, normalization, and adversarial losses.
+ \item Companion \texttt{assets/lecture-30/verify-examples.py}: checks convolution/pooling arithmetic, CNN shapes and a training update, the full displayed sensor-model runs, and generator/discriminator gradients.
+\end{itemize}
+\begin{keyidea}The CNN's full 20-epoch CIFAR-10 run and historical GAN training curves are not reproduced by the lightweight verification script.\end{keyidea}
+\end{frame}
 \end{document}

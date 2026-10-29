@@ -1,0 +1,60 @@
+{
+  "tensorflow_version": "2.21.0",
+  "scope": "Run the slide code and check mathematical/model interfaces.\n\nRequires numpy and TensorFlow. Reads the exact verbatim blocks from the deck.\nCNN: synthetic RGB minibatches test normalization, labels, architecture, and a\ntraining update; does NOT reproduce a 20-epoch CIFAR-10 benchmark. Sequence:\nexecutes every displayed sensor-training epoch. GAN: actual cached/downloaded\nMNIST images, forward passes, and one update of each network; not 19 epochs.\nSet KERAS_HOME to a writable dataset cache. Supplied plots remain historical.\n",
+  "passed_code_blocks": [
+    "Original CIFAR-10 Example: Load and Normalize",
+    "Original CIFAR-10 CNN: Convolutional Stages",
+    "Original CIFAR-10 CNN: Classifier and Training",
+    "Build a Reproducible Sequence Before Fitting",
+    "Split Windows by the Time of Their Target",
+    "Original Python Example: SimpleRNN for a Time Series",
+    "Original LSTM Example: Replace the Recurrent Layer",
+    "Original GRU Example: Another Memory Mechanism",
+    "Train Equally; Choose on Validation; Test Once",
+    "Original GAN Generator: Turn Noise into Images",
+    "Original GAN Discriminator: Evaluate Real or Fake"
+  ],
+  "arithmetic": {
+    "filter_response": 0,
+    "max_pool": [
+      [
+        9,
+        4
+      ],
+      [
+        8,
+        7
+      ]
+    ]
+  },
+  "cnn": {
+    "parameters": 620362,
+    "synthetic_batch_loss_accuracy": [
+      2.3027396202087402,
+      0.125
+    ],
+    "scope": "One synthetic RGB minibatch update; no historical accuracy reproduced."
+  },
+  "sequence": {
+    "validation_mse": {
+      "SimpleRNN": 0.03557417541742325,
+      "LSTM": 0.02763734571635723,
+      "GRU": 0.051164090633392334
+    },
+    "selected": "LSTM",
+    "test_rmse_sensor_units": 0.10916853050001724,
+    "last_value_rmse": 0.13561412297593609,
+    "parameters": {
+      "SimpleRNN": 4289,
+      "LSTM": 16961,
+      "GRU": 12929
+    }
+  },
+  "gan": {
+    "generator_loss": 0.6774073839187622,
+    "discriminator_loss": 1.3956972360610962,
+    "generator_parameters": 2330944,
+    "discriminator_parameters": 212865,
+    "scope": "One update of each network on eight real MNIST examples; no epoch snapshots reproduced."
+  }
+}
