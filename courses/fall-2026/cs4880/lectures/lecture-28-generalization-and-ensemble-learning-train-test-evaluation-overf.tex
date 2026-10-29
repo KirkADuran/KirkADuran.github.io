@@ -1,54 +1,572 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+\graphicspath{{../assets/lecture-28/}}
 
+% Lecture 28: Generalization and Ensemble Learning. Nov 2, 2026.
+% Built to match the instructor's Lecture 26/27 Cal Poly Beamer conventions.
+% Audience: senior-level AI without advanced mathematics prerequisites.
+% Pedagogy: lead with meaning in ordinary English; calculations are supporting evidence.
+% 50-minute plan: motivation 5, leakage/evaluation design 7, metrics 6,
+% learning curves/model selection 7, ensemble/bagging 8, random forests 8,
+% demonstrations 6, limitations 3. The broader ensemble survey is one slide.
+% Python examples retain the instructor's original Wine and California Housing
+% programs and add separate validation-aware random-forest comparisons.
+% Original visualization source: supplied Lecture 19 Decision Trees, pp.10 and 12.
+% Additional technical checks:
+% https://scikit-learn.org/stable/modules/ensemble.html
+% https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+% https://scikit-learn.org/stable/modules/cross_validation.html
+% https://scikit-learn.org/stable/modules/learning_curve.html
+% The learning-curve and runtime diagrams are explicitly illustrative, not results.
+
+\newcommand{\lecturevisual}[3][2.15in]{%
+  \par\vspace{2pt}%
+  {\centering\includegraphics[width=.98\linewidth,height=#1,keepaspectratio]{#2}\par}%
+  {\centering\scriptsize\color{DeckMuted}#3\par}%
+  \vspace{2pt}%
+}
+\newcommand{\conceptlead}[1]{%
+  {\small\bfseries\color{CalPolyGreen}#1\par}%
+}
+\newenvironment{calculation}[1][How we calculate it]{%
+  \par\begingroup
+  \setbeamercolor{calculation body}{bg=DeckSoft,fg=DeckInk}%
+  \begin{beamercolorbox}[sep=4pt,wd=\linewidth]{calculation body}%
+  \footnotesize{\bfseries\color{DeckMuted}#1\par}%
+  \setlength{\abovedisplayskip}{3pt}%
+  \setlength{\belowdisplayskip}{3pt}%
+  \setlength{\jot}{0pt}%
+}{\end{beamercolorbox}\endgroup}
+\setbeamersize{text margin left=.42in,text margin right=.42in}
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{28}
-\lecturetitle{Generalization and Ensemble Learning -- train/test evaluation, overfitting, random forests, ensembles}
+\lecturetitle{Generalization and Ensemble Learning}
 \lecturedate{November 2, 2026}
-\courseunit{Course sequence}
+\courseunit{Learning Agents and Machine Learning}
 
 \begin{document}
-
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Generalization and Ensemble Learning -- train/test evaluation, overfitting, random forests, ensembles
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{Why a Perfect Tree May Fail}
+
+\begin{frame}[t]{Why Can a Perfect Decision Tree Be a Bad Model?}
+\small
+\conceptlead{Memorizing old outcomes and predicting future outcomes are different achievements.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.52\textwidth}
+ \begin{itemize}
+  \item Last lecture, an unrestricted tree could split until nearly every training example was classified correctly.
+  \item A rule like ``this exact camera pattern means blocked'' may describe \emph{one recording}, not a useful property of corridors.
+  \item The robot must succeed on \textbf{new delivery runs}, new buildings, and new conditions.
+ \end{itemize}
+ \begin{keyidea}The goal is \textbf{generalization}: reliable predictions on observations not used to fit or choose the model.\end{keyidea}
+ \end{column}
+ \begin{column}{.44\textwidth}
+ \begin{block}{Two different reports}
+ \textbf{Training accuracy:} 100\%\\[4pt]
+ \textbf{New-run accuracy:} 67\%\\[7pt]
+ A high first number does not guarantee a high second one.\par\smallskip
+ \scriptsize Hypothetical example, not a measured result.
+ \end{block}
+ \end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}[t]{Three Ways Predictions Fail}
+\small
+\conceptlead{Ask whether the model is too simple, too specific, or facing a changed world.}
+\lecturevisual[1.58in]{three_failures.png}{}
+\begin{itemize}
+ \item \textbf{Underfitting:} a depth-one tree misses important interactions.
+ \item \textbf{Overfitting:} a deep tree turns unusual training examples into fragile rules.
+ \item \textbf{Distribution shift:} the deployment environment differs from training (e.g., rain, lighting, or a new campus building).
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\section{Design an Honest Evaluation}
+
+\begin{frame}[t]{Train, Validate, Test: Each Set Has One Job}
+\small
+\conceptlead{Keep model fitting, model selection, and final reporting separate.}
+\begin{center}
+\renewcommand{\arraystretch}{1.17}
+\begin{tabular}{>{\raggedright\arraybackslash}p{.19\linewidth}>{\raggedright\arraybackslash}p{.33\linewidth}>{\raggedright\arraybackslash}p{.36\linewidth}}
+\toprule
+\textbf{Partition} & \textbf{What we do with it} & \textbf{Question it answers}\\
+\midrule
+\textbf{Training} & Fit weights, splits, and leaf predictions. & What relationships can the model learn?\\
+\textbf{Validation} & Choose depth, forest size, and threshold. & Which candidate looks best on unseen cases?\\
+\textbf{Test} & Evaluate the frozen selected model \emph{once}. & How well did the chosen procedure transfer?\\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{keyidea}Set hyperparameters on validation, learn splits on training, and report the final test only after choosing the model.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\begin{frame}[t]{Data Leakage: Different Frames, Same Experience}
+\small
+\conceptlead{A random row split is not independent if rows record nearly the same event.}
+\lecturevisual[1.16in]{leakage_groups.png}{Near-duplicate recording frames can leak across a frame-level split.}
+\begin{itemize}
+ \item Adjacent frames share nearly the same corridor, lighting, and obstacles.
+ \item Sharing a run between training and test gives an \emph{overly optimistic} score.
+ \item Keep delivery runs/sessions intact. To predict future runs, hold out later time periods; random grouped splits alone do not preserve time order.
+ \item Fit preprocessing (e.g., imputation) on training data only, inside each fold.
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}[t]{Cross-Validation: Do Not Trust One Lucky Split}
+\small
+\conceptlead{Rotate held-out groups, refit, and summarize the validation scores.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.53\textwidth}
+\lecturevisual[1.13in]{group_folds.png}{T = train; V = validate; test stays untouched.}
+\end{column}
+\begin{column}{.44\textwidth}
+\begin{itemize}
+ \item $K$ folds: train $K$ times, validating on a different fold each time.
+ \item Grouped folds keep each delivery run intact.
+ \item The spread measures split sensitivity, not a confidence interval.
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{calculation}[Average the held-out scores]
+$\displaystyle\overline s=\frac1K\sum_{k=1}^K s_k$ is the mean held-out score.\par
+$K$: fold count; $k$: fold index; $s_k$: held-out score; $\overline s$: mean score. Refit preprocessing within each training fold; leave the test untouched.
+\end{calculation}
+\end{frame}
+
+\section{What Counts as a Good Prediction?}
+
+\begin{frame}[t]{A Confusion Matrix Names the Mistakes}
+\small
+\conceptlead{On 40 hypothetical segments, count the different mistake types.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.50\textwidth}
+ \begin{center}
+ \renewcommand{\arraystretch}{1.2}
+ \begin{tabular}{lcc}
+  & \textbf{Actual} & \textbf{Actual}\\[-4pt]
+  & \textbf{Blocked} & \textbf{Clear}\\\hline
+ \textbf{Pred. Blocked} & TP = 9 & FP = 3\\
+ \textbf{Pred. Clear} & FN = 6 & TN = 22\\
+ \end{tabular}
+ \end{center}
+ \textbf{False positive:} unnecessary rerouting.\par\smallskip
+ \textbf{False negative:} the robot enters an unexpectedly blocked route.\par\smallskip
+ High accuracy can hide missed blockages: inspect false negatives and recall.
+
+ \end{column}
+ \begin{column}{.47\textwidth}
+ \begin{calculation}[Four ways to describe performance]
+ \[\begin{aligned}
+ \text{Accuracy}&=\frac{TP+TN}{N}=\frac{31}{40}=77.5\%\\
+ \text{Precision}&=\frac{TP}{TP+FP}=\frac9{12}=75\%\\
+ \text{Recall}&=\frac{TP}{TP+FN}=\frac9{15}=60\%\\
+ F_1&=\frac{2TP}{2TP+FP+FN}=\frac{18}{27}\approx66.7\%
+ \end{aligned}\]
+ \scriptsize Positive = Blocked. TP/TN: true positives/negatives; FP/FN: false positives/negatives. $N=40$ cases. $F_1$: harmonic mean of precision and recall.
+ \end{calculation}
+ \end{column}
+\end{columns}
+
+\end{frame}
+
+\begin{frame}[t]{A Decision Threshold Turns Scores Into Labels}
+\small
+\conceptlead{The same learned score can produce different labels under different risk tolerances.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.50\textwidth}
+ \begin{itemize}
+  \item Suppose a model assigns blockage score $p=0.70$ to a corridor.
+  \item Threshold $0.50$: predict \textbf{blocked}; threshold $0.80$: predict \textbf{clear}.
+  \item Lowering the threshold cannot reduce recall on a fixed dataset, but adds predicted positives. Precision may rise or fall.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.47\textwidth}
+ \lecturevisual[1.73in]{threshold_tradeoff.png}{Illustrative precision--recall tradeoff when a threshold changes.}
+ \end{column}
+\end{columns}
+
+\end{frame}
+
+\begin{frame}[t]{Regression Error: How Far Off Are the Predictions?}
+\small
+\conceptlead{Numerical predictions need an error magnitude, not a right/wrong count.}
+\begin{calculation}[Regression error, if the target is delay in minutes]
+\[\operatorname{MAE}=\frac1m\sum_i|\widehat y_i-y_i|,\qquad
+\operatorname{RMSE}=\sqrt{\frac1m\sum_i(\widehat y_i-y_i)^2}.\]
+$m$: evaluated cases; $i$: case index; $y_i$: true delay; $\widehat y_i$: predicted delay. MAE is mean absolute error; RMSE is root mean squared error. Both use minutes; RMSE emphasizes large misses.
+\end{calculation}
+\begin{block}{A two-case example}
+True delays: $[2,6]$ minutes; predictions: $[3,3]$ minutes. Absolute errors are $[1,3]$: MAE $=2$ minutes and RMSE $=\sqrt{5}\approx2.24$ minutes.
+\end{block}
+\begin{keyidea}A larger miss influences RMSE more strongly because errors are squared before averaging.\end{keyidea}
+\end{frame}
+
+\section{Diagnose and Select Models}
+
+\begin{frame}[t]{Learning Curves: Does More Training Data Help?}
+\small
+\conceptlead{A learning curve shows training and validation performance as sample size grows.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.55\textwidth}
+ \lecturevisual[2.08in]{learning_curve.png}{}
+ \end{column}
+ \begin{column}{.41\textwidth}
+ \begin{itemize}
+ \item \textbf{Both errors high:} likely underfitting or weak features.
+ \item \textbf{Training error low, validation error high:} likely overfitting.
+ \item More representative data may narrow the gap; improvement is not guaranteed.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[t]{Choose the Candidate That Works on Validation}
+\small
+\conceptlead{The strongest training score need not belong to the most useful model.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.51\textwidth}
+ \lecturevisual[1.98in]{model_validation.png}{}
+ \end{column}
+ \begin{column}{.46\textwidth}
+ \begin{itemize}
+  \item The unrestricted tree gets \textbf{100\% training accuracy}, but only 72\% on validation.
+  \item The random forest gets the best validation score here: \textbf{88\%}.
+  \item Choose hyperparameters using validation; evaluate the final selected model on test data once.
+ \end{itemize}
+ \begin{keyidea}This example illustrates selection, not a guarantee that forests always win.\end{keyidea}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[t]{Why More Data Helps --- and What It Cannot Fix}
+\small
+\conceptlead{Additional independent experience makes sample-specific accidents less persuasive.}
+\begin{itemize}
+ \item More \emph{representative} delivery runs show the model what varies and which patterns persist.
+ \item Extra copies of nearly identical frames do not add the same amount of new information.
+ \item More of the \emph{same} data cannot fix missing sensor features, mislabeled outcomes, or a new building unlike the training environments.
+ \item If one validation split gives an unusually good or bad result, grouped cross-validation can expose that instability.
+\end{itemize}
+\begin{block}{Transition to ensembles}
+Rather than trust one tree trained on one sample, could we combine many trees that make \textbf{different mistakes}?
+\end{block}
+\end{frame}
+
+\section{Bagging: Many Different Trees}
+
+\begin{frame}[t]{Ensemble Learning: Combine Imperfect Predictors}
+\small
+\conceptlead{One uncertain judgment can become more stable when several useful judgments are combined.}
+\begin{itemize}
+ \item An \textbf{ensemble} uses multiple learned models to produce one prediction.
+ \item For \textbf{classification}, models can vote on the label or average their class probabilities.
+ \item For \textbf{regression}, models can average their numerical predictions.
+ \item Shared mistakes persist; diverse errors are more likely to cancel.
+\end{itemize}
+\begin{calculation}[A regression ensemble in compact form]
+\[\widehat y_{\rm ensemble}(\mathbf x)=\frac1B\sum_{b=1}^B\widehat y_b(\mathbf x).\]
+$\mathbf x$: feature vector for one case; $B$: model count; $b$: model index; $\widehat y_b(\mathbf x)$: prediction of model $b$. Average these to get the ensemble prediction.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[t]{Bagging: Bootstrap Aggregation}
+\small
+\conceptlead{Train each tree on a newly sampled version of the same training set.}
+\lecturevisual[1.02in]{bagging_pipeline.png}{Bootstrap samples train separate trees, whose outputs are combined.}
+\begin{enumerate}
+ \item Draw $N$ training rows \textbf{with replacement}; repetition is allowed.
+ \item Fit a separate tree to that sample. Repeat for many bootstrap samples.
+ \item Combine results by majority vote or averaging.
+\end{enumerate}
+\begin{calculation}[Why the samples really differ]
+$N$: original training-set size and draws per sample. The expected distinct fraction is $1-(1-1/N)^N$, about $63\%$ for large $N$. Related frames should not be mistaken for independent evidence.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[t]{Five Trees Vote: A Worked Prediction}
+\small
+\conceptlead{The ensemble chooses the class with the most votes --- not necessarily a unanimous answer.}
+\lecturevisual[0.98in]{vote_five.png}{Three Blocked votes and two Clear votes.}
+\begin{calculation}[Classification vote]
+\[\widehat y(\mathbf x)=\operatorname{mode}\!\left(\widehat y_1(\mathbf x),\ldots,\widehat y_B(\mathbf x)\right).\]
+$\mathbf x$: one case; $\widehat y_b$: label from tree $b$; $B$: tree count. \emph{Mode} is the most frequent label: Blocked wins $3$ to $2$ here. Specify a tie rule if needed.
+\end{calculation}
+\smallskip\scriptsize A 3-to-2 vote is not a calibrated 60\% probability. In scikit-learn, random forests average tree probabilities rather than hard-vote; shared mistakes can persist.
+\end{frame}
+
+\section{Random Forests}
+
+\begin{frame}[t]{Why Bagging Similar Trees Helps Less}
+\small
+\conceptlead{Correlated errors survive a vote: the trees need reasons to disagree.}
+\lecturevisual[0.88in]{correlated_errors.png}{}
+\smallskip\begin{itemize}
+ \item Bootstrap samples vary, but dominant features may repeat. If trees fail on the \emph{same cases}, averaging helps less.
+\end{itemize}
+\begin{calculation}[Why correlation matters (optional intuition)]
+\[\operatorname{Var}(\text{average})=\sigma^2\left(\rho+\frac{1-\rho}{B}\right).\]
+\scriptsize $B$: model count; $\sigma^2$: variance of each estimate across training samples; $\rho$: common pairwise correlation. $\rho=1$: no variance reduction; $\rho=0$: variance divided by $B$. This is a variance model, not an accuracy formula.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[t]{Random Forests Add a Second Source of Randomness}
+\small
+\conceptlead{Random forests randomize the rows used per tree and the candidate features considered at each split.}
+\lecturevisual[1.36in]{forest_two_randomness.png}{Randomized observations and random feature subsets encourage diverse trees.}
+\begin{itemize}
+ \item \textbf{Bootstrap rows:} different training samples for different trees.
+ \item \textbf{Random feature candidates:} each split searches only a subset of the inputs.
+ \item Each tree chooses its best available split; feature randomness makes trees less alike.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[t]{How a Random Forest Trains and Predicts}
+\small
+\conceptlead{Many ordinary decision trees are trained; the final output combines their answers.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.52\textwidth}
+ \begin{enumerate}
+  \item Create a bootstrap sample for each tree.
+  \item Recursively split with a random subset of candidate features at each node.
+  \item Let all trees predict the new observation.
+  \item \textbf{Classify:} average class probabilities. \textbf{Regress:} average numerical values.
+ \end{enumerate}
+ \end{column}
+ \begin{column}{.44\textwidth}
+ \begin{block}{Important hyperparameters}
+ \texttt{n\_estimators}: tree count.\\[4pt]
+ \texttt{max\_depth}: depth limit.\\[4pt]
+ \texttt{min\_samples\_leaf}: smallest leaf.\\[4pt]
+ \texttt{max\_features}: features considered per split.
+ \end{block}
+ \end{column}
+\end{columns}
+\begin{calculation}[One common feature-sampling convention]
+With $d$ input features, \texttt{max\_features="sqrt"} considers about $\sqrt d$ candidate features per split ($\sqrt{\cdot}$: square root). Regression defaults may use all features; the setting is tunable.
+\end{calculation}
+\begin{keyidea}More trees may stabilize predictions; gains diminish while compute cost grows.\end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{Beyond Random Forests: Other Ensemble Methods}
+\small
+\conceptlead{Ensemble learning is a family of approaches, not one algorithm.}
+\lecturevisual[1.02in]{ensemble_families.png}{Parallel bagging, sequential boosting, and learned stacking illustrated.}
+\vspace{-2pt}
+\renewcommand{\arraystretch}{1.10}
+\begin{center}
+\scriptsize
+\begin{tabular}{p{.18\linewidth}p{.68\linewidth}}
+\textbf{Method} & \textbf{How it combines models}\\\hline
+\textbf{Bagging} & Separately fitted bootstrap models combined by averaging/voting; aims to reduce variance.\\
+\textbf{Random forest} & Bagged trees plus random feature candidates to reduce tree correlation.\\
+\textbf{Boosting} & Sequentially adds models to improve errors/loss (AdaBoost, gradient boosting, XGBoost).\\
+\textbf{Stacking} & A meta-model learns from out-of-fold base-model predictions to avoid training leakage.\\
+\textbf{Voting} & Independently trained classifiers combine hard labels or probabilities.\\
+\end{tabular}
+\end{center}
+\end{frame}
+
+\section{Python: From Your Original Trees to a Forest}
+
+\begin{frame}[fragile,t]{Python Example 1: Explore the Wine Tree}
+\small
+\conceptlead{A tree fitted on all data illustrates rules; it does not measure generalization.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.40\textwidth}
+\lecturevisual[1.70in]{wine_tree.png}{Top levels of the depth-4 Wine tree from Lecture 27; fitted on all data.}
+\end{column}
+\begin{column}{.57\textwidth}
+\scriptsize
+\begin{verbatim}
+import matplotlib.pyplot as plt
+from sklearn.datasets import load_wine
+from sklearn.tree import (
+    DecisionTreeClassifier, plot_tree)
+wine = load_wine()
+X, y = wine.data, wine.target
+clf = DecisionTreeClassifier(max_depth=4, random_state=42)
+clf.fit(X, y)
+plt.figure(figsize=(14, 7))
+plot_tree(clf, max_depth=2, filled=True,
+          feature_names=wine.feature_names,
+          class_names=wine.target_names, fontsize=8)
+plt.show()
+\end{verbatim}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile,t]{Wine: Compare on Validation, Then Report on Test}
+\small
+\conceptlead{Use the same partitions for both candidates; keep the final test out of selection.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.49\textwidth}
+\scriptsize
+\begin{verbatim}
+# Continue after loading Wine above.
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+X_tr, X_hold, y_tr, y_hold = train_test_split(
+    X, y, test_size=.4, stratify=y,
+    random_state=42)
+X_v, X_test, y_v, y_test = train_test_split(
+    X_hold, y_hold, test_size=.5,
+    stratify=y_hold, random_state=42)
+\end{verbatim}
+\end{column}
+\begin{column}{.49\textwidth}
+\scriptsize
+\begin{verbatim}
+models = [
+    DecisionTreeClassifier(
+        max_depth=4, random_state=42),
+    RandomForestClassifier(n_estimators=100,
+        max_depth=6, random_state=42)]
+for model in models:
+    model.fit(X_tr, y_tr)
+scores = [m.score(X_v, y_v) for m in models]
+best = models[scores.index(max(scores))]
+print("Validation accuracy:", scores)
+print("Test:", best.score(X_test, y_test))
+\end{verbatim}
+\end{column}
+\end{columns}
+\begin{calculation}[Read the variable names]
+\texttt{tr}: training; \texttt{v}: validation; \texttt{hold}: temporary held-out pool. \texttt{score} is accuracy here; select its maximum. This small independent-sample teaching example uses stratification, not grouped deployment evaluation.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile,t]{Python Example 2: Explore a Housing Regression Tree}
+\small
+\conceptlead{A regression tree predicts a leaf's mean target for the squared-error criterion.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.40\textwidth}
+\lecturevisual[1.70in]{california_tree.png}{Top levels of the depth-4 California Housing tree from Lecture 27.}
+\end{column}
+\begin{column}{.57\textwidth}
+\scriptsize
+\begin{verbatim}
+from sklearn.datasets import (
+    fetch_california_housing)
+from sklearn.tree import DecisionTreeRegressor
+data = fetch_california_housing()
+X, y = data.data, data.target
+# Structural illustration, not held-out evaluation.
+tree = DecisionTreeRegressor(max_depth=4, random_state=42)
+tree.fit(X, y)
+plt.figure(figsize=(14, 7))
+plot_tree(tree, max_depth=2, filled=True,
+          feature_names=data.feature_names, fontsize=8)
+plt.show()
+\end{verbatim}
+\end{column}
+\end{columns}
+\scriptsize The target is district median house value, in units of \$100,000; rows describe census block groups, not individual houses.
+\end{frame}
+
+\begin{frame}[fragile,t]{Housing: Select by Validation Error, Then Test Once}
+\small
+\conceptlead{For regression, average the tree predictions and prefer lower validation error.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.49\textwidth}
+\scriptsize
+\begin{verbatim}
+# Continue with Housing X, y.
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import root_mean_squared_error
+X_tr, X_hold, y_tr, y_hold = train_test_split(
+    X, y, test_size=.4, random_state=42)
+X_v, X_test, y_v, y_test = train_test_split(
+    X_hold, y_hold, test_size=.5, random_state=42)
+models = [
+    DecisionTreeRegressor(
+        max_depth=4, random_state=42),
+    RandomForestRegressor(n_estimators=100,
+        max_depth=12, random_state=42, n_jobs=-1)]
+\end{verbatim}
+\end{column}
+\begin{column}{.49\textwidth}
+\scriptsize
+\begin{verbatim}
+for model in models:
+    model.fit(X_tr, y_tr)
+errors = [mean_absolute_error(y_v, m.predict(X_v))
+          for m in models]
+best = models[errors.index(min(errors))]
+pred = best.predict(X_test)
+print("Validation MAE:", errors)
+print("Test MAE:",
+      mean_absolute_error(y_test, pred))
+print("Test RMSE:",
+      root_mean_squared_error(y_test, pred))
+\end{verbatim}
+\end{column}
+\end{columns}
+\begin{calculation}[What this simple split does and does not test]
+Both metrics use \$100,000 units. Random splits demonstrate the workflow; geographic holdouts are needed to assess transfer to new regions. Code assumes scikit-learn 1.4+ for \texttt{root\_mean\_squared\_error}.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[t]{Fair Comparisons: Same Inputs, Same Protocol}
+\small
+\conceptlead{Changing the model while holding evaluation fixed turns a demonstration into evidence.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.54\textwidth}
+ \lecturevisual[1.78in]{controlled_protocol.png}{Grouped partitions determine when a model may see each observation.}
+ \end{column}
+ \begin{column}{.43\textwidth}
+ \begin{itemize}
+ \item Fit a \textbf{linear baseline}, shallow tree, unrestricted tree, and forest on the same features and train split.
+ \item Tune on validation folds; record depth, accuracy, and runtime.
+ \item Freeze the selected model, then evaluate on test once.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\begin{calculation}[What to vary in the lab]
+\texttt{n\_estimators} changes forest size; \texttt{max\_depth} changes each tree's complexity. Report validation metrics and training-time cost together.
+\end{calculation}
+\end{frame}
+
+\section{Limits and Synthesis}
+
+\begin{frame}[t]{More Trees Are Not a Free Improvement}
+\small
+\conceptlead{Forests can be more stable than one deep tree, but they cost computation and cannot repair a broken evaluation.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.53\textwidth}
+ \lecturevisual[1.76in]{forest_runtime.png}{Illustrative learning-performance saturation and training-time tradeoff.}
+ \end{column}
+ \begin{column}{.44\textwidth}
+ \begin{itemize}
+ \item Gains can level off while training time continues to grow.
+ \item Highly correlated or systematically biased trees may all make the same mistake.
+ \item A forest is generally less interpretable than one small decision tree.
+ \item No ensemble automatically fixes leakage, missing sensors, or distribution shift.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[t]{Synthesis: Better Models Require Better Evidence}
+\small
+\begin{enumerate}
+ \item \textbf{Generalization:} evaluate future performance, not just how well the model fits old examples.
+ \item \textbf{Reliable evaluation:} prevent leakage; group correlated observations; use validation to choose settings and test once.
+ \item \textbf{Error diagnosis:} confusion matrices, regression error, and learning curves reveal different kinds of failure.
+ \item \textbf{Ensemble learning:} bagging combines bootstrap-fitted predictors; random forests add feature randomness to lower correlation.
+ \item \textbf{Limits:} averaging can reduce variance, not recover information that was never measured.
+\end{enumerate}
+\begin{keyidea}When would five identical trees fail together, and why would five diverse trees do better?\end{keyidea}
 \end{frame}
 
 \end{document}

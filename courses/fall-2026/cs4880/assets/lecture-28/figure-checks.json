@@ -1,0 +1,49 @@
+{
+  "illustrative_not_empirical": [
+    "three_failures.png",
+    "threshold_tradeoff.png",
+    "learning_curve.png",
+    "model_validation.png",
+    "forest_runtime.png"
+  ],
+  "confusion_counts": {
+    "TP": 9,
+    "FP": 3,
+    "FN": 6,
+    "TN": 22
+  },
+  "metrics": {
+    "accuracy": 0.775,
+    "precision": 0.75,
+    "recall": 0.6,
+    "f1": 0.6666666666666666
+  },
+  "thresholds": [
+    0.2,
+    0.4,
+    0.6,
+    0.8,
+    0.9
+  ],
+  "precision": [
+    0.6,
+    0.625,
+    0.6666666666666666,
+    0.75,
+    1.0
+  ],
+  "recall": [
+    1.0,
+    0.8333333333333334,
+    0.6666666666666666,
+    0.5,
+    0.3333333333333333
+  ],
+  "validation_scores": [
+    0.78,
+    0.72,
+    0.88
+  ],
+  "tree_figures_reused_from": "../lecture-27",
+  "expected_distinct_bootstrap_fraction_N1000": 0.6323045752290363
+}

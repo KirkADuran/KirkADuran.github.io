@@ -1,0 +1,31 @@
+{
+  "sklearn_version": "1.9.1",
+  "examples": [
+    {
+      "title": "Python Example 1: Explore the Wine Tree",
+      "output": ""
+    },
+    {
+      "title": "Wine: Compare on Validation, Then Report on Test",
+      "output": "Validation accuracy: [0.9722222222222222, 0.9722222222222222]\nTest: 0.9722222222222222",
+      "partition_sizes": [
+        106,
+        36,
+        36
+      ]
+    },
+    {
+      "title": "Python Example 2: Explore a Housing Regression Tree",
+      "output": ""
+    },
+    {
+      "title": "Housing: Select by Validation Error, Then Test Once",
+      "output": "Validation MAE: [0.5698032293244082, 0.3570315829179973]\nTest MAE: 0.3607665114230029\nTest RMSE: 0.5418717188084909",
+      "partition_sizes": [
+        12384,
+        4128,
+        4128
+      ]
+    }
+  ]
+}
