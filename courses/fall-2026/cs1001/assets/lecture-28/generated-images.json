@@ -1,0 +1,32 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "use_case": "scientific-educational",
+  "images": [
+    {
+      "file": "car-list-positional-fields.png",
+      "prompt": "Use case: scientific-educational. Asset type: raster illustration for a CS1001 lecture slide, placed in a narrow right-hand column. Create one polished, very readable educational diagram on a white background, portrait or near-square composition, dark Cal Poly green #154734 outlines/text, light sage fills, restrained gold #BD8B13 accents. Large crisp sans-serif labels, generous spacing, flat illustration with a little warmth. Put all important content inside safe margins. No slide title, no watermark, no decorative filler. Exact labels and arrow directions matter. Show a small illustrated gray car above a three-row table. Column labels: 'Index', 'Value', 'Meaning'. Rows exactly: '0' | 'Honda' | 'make'; '1' | 'Civic' | 'model'; '2' | '2020' | 'year'. Emphasize indexes in gold and meanings in green. A simple visual teaching positional list fields; no arrows implying copying.",
+      "sha256": "71cc5aa80aa8f3e1988a8af82e972079aaecf6164f477dd84e5024d6786e4c66"
+    },
+    {
+      "file": "object-state-and-behavior-overview.png",
+      "prompt": "Use case: scientific-educational. Asset type: raster illustration for a CS1001 lecture slide, placed in a narrow right-hand column. Create one polished, very readable educational diagram on a white background, portrait or near-square composition, dark Cal Poly green #154734 outlines/text, light sage fills, restrained gold #BD8B13 accents. Large crisp sans-serif labels, generous spacing, flat illustration with a little warmth. Put all important content inside safe margins. No slide title, no watermark, no decorative filler. Exact labels and arrow directions matter. Show a single green outlined card labeled 'Car instance' with a small tasteful car illustration. Within this ONE object card clearly separate state rows 'make: Honda', 'model: Civic', 'year: 2020'. Beneath it a muted smaller separate banner 'Behavior: next lecture'. Emphasize that related attributes belong to one entity. No method names needed.",
+      "sha256": "f9a3b24cb052171cb6d63b85ac46bd27ca21dd7dbf7cd6c86817ca83fcfad591"
+    },
+    {
+      "file": "one-class-many-instances.png",
+      "prompt": "Use case: scientific-educational. Asset type: raster illustration for a CS1001 lecture slide, placed in a narrow right-hand column. Create one polished, very readable educational diagram on a white background, portrait or near-square composition, dark Cal Poly green #154734 outlines/text, light sage fills, restrained gold #BD8B13 accents. Large crisp sans-serif labels, generous spacing, flat illustration with a little warmth. Put all important content inside safe margins. No slide title, no watermark, no decorative filler. Exact labels and arrow directions matter. At top a blueprint-style card labeled 'Car class' and below three DISTINCT vertically stacked object cards labeled 'car1', 'car2', 'car3'. Thin branching connectors from the class to each card indicate construction, not shared instance identity. Each card must show exactly its own fields: car1: 'Honda', 'Civic', '2020'; car2: 'Toyota', 'Corolla', '2022'; car3: 'Ford', 'Mustang', '1967'. Use tiny different car silhouettes and large readable labels. Each card separate, not nested.",
+      "sha256": "bfe952dd5c0290807a7a327691a0ba66396340aa8e506bb9829ca49da052b51e",
+      "refinement_prompt": "Use case: text-localization. Edit target: the supplied Car class / three instances diagram. Correct ONLY the type labels in the TOP 'Car class' table: row 'make' must have type 'str', row 'model' must have type 'str', and row 'year' must have type 'int'. The current year type 'string' is wrong. Preserve every other element, all three car instance cards, values, illustrations, arrows, colors, spacing, and white background exactly. No other changes."
+    },
+    {
+      "file": "self-during-initialization.png",
+      "prompt": "Use case: scientific-educational. Asset type: raster illustration for a CS1001 lecture slide, placed in a narrow right-hand column. Create one polished, very readable educational diagram on a white background, portrait or near-square composition, dark Cal Poly green #154734 outlines/text, light sage fills, restrained gold #BD8B13 accents. Large crisp sans-serif labels, generous spacing, flat illustration with a little warmth. Put all important content inside safe margins. No slide title, no watermark, no decorative filler. Exact labels and arrow directions matter. A Python call-frame diagram: top card labeled '__init__ call' contains 'self', 'make: Honda', 'model: Civic', 'year: 2020'. A clear arrow STARTING at 'self' points DOWN to ONE separate bottom card labeled 'new Car instance'. The instance card contains 'make: Honda', 'model: Civic', 'year: 2020'. Illustrate one call parameter referring to one object, not copying. No reverse arrow.",
+      "sha256": "41aff1a3d9b5f8fda413d593d84b4225695d7e2b6f8426086566a04f9f018f04"
+    },
+    {
+      "file": "name-reference-object.png",
+      "prompt": "Use case: scientific-educational. Asset type: raster illustration for a CS1001 lecture slide, placed in a narrow right-hand column. Create one polished, very readable educational diagram on a white background, portrait or near-square composition, dark Cal Poly green #154734 outlines/text, light sage fills, restrained gold #BD8B13 accents. Large crisp sans-serif labels, generous spacing, flat illustration with a little warmth. Put all important content inside safe margins. No slide title, no watermark, no decorative filler. Exact labels and arrow directions matter. One small name tag 'car1' at top with a thick arrow pointing DOWN to ONE green object card labeled 'Car instance'. Inside that card exactly three rows 'make: Honda', 'model: Civic', 'year: 2020', and a small car illustration. The name tag must be outside the object, arrow represents reference, no intervening copies.",
+      "sha256": "653064d09a7bb6cc2433ac0d8726068e85ee1a7617f712e407f87f0759345d05"
+    }
+  ]
+}

@@ -1,11 +1,24 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-29/}}
+
+% Generated classroom visuals live in ../assets/lecture-29/.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{29}
-\lecturetitle{Objects II -- Methods, Aliasing, and Collections}
-\lecturedate{November 4, 2026}
+\lecturetitle{Objects II --- Methods, Aliasing, and Collections}
+\lecturedate{Fall 2026}
 \courseunit{11. Objects and Compound Data}
 
 \begin{document}
@@ -14,41 +27,689 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Objects II -- Methods, Aliasing, and Collections
-    \item Placeholder for announcements and context.
+    \item Define \textbf{methods} as behavior associated with a class.
+    \item Explain how \texttt{self} identifies the particular instance involved in a method call.
+    \item Distinguish methods that return information from methods that mutate object state.
+    \item Extend the reference and aliasing model to user-defined objects.
+    \item Distinguish object identity from equality at a basic level.
+    \item Store objects inside lists and dictionaries and iterate over those collections.
+    \item Build objects that themselves contain collections or other objects.
   \end{itemize}
+
+  \begin{keyidea}
+    Methods operate on object state, while references determine \emph{which} object a method call or mutation affects.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\begin{frame}{Where We Left Off}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Lecture 28}
+        \begin{itemize}
+          \item class and instance
+          \item \texttt{\_\_init\_\_}
+          \item attributes
+          \item object state
+          \item references to instances
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Lecture 29}
+        \begin{itemize}
+          \item behavior through methods
+          \item deeper meaning of \texttt{self}
+          \item mutation and aliasing
+          \item identity and equality
+          \item collections of objects
+          \item nested compound structures
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 1: From Object State to Object Behavior}
+
+\begin{frame}{Objects Can Represent Both State and Behavior}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      \begin{block}{State}
+        A \texttt{Dog} instance might store:
+        \begin{itemize}
+          \item \texttt{name}
+          \item \texttt{breed}
+          \item \texttt{age}
+        \end{itemize}
+      \end{block}
+      \begin{block}{Behavior}
+        A \texttt{Dog} might also be able to:
+        \begin{itemize}
+          \item report a description
+          \item compute a value from its state
+          \item change its state
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: one Dog instance with attribute fields on one side and method actions on the other.
+      \lectureimage[2.22in]{object-state-and-behavior.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Definition: Method}
+  \small
+  \begin{cpdefinition}
+    A \textbf{method} is a function defined as part of a class. A method can use the state of a particular instance and can optionally modify that state.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{class Dog:}\\
+    \hspace*{0.20in}\texttt{def \_\_init\_\_(self, name: str, breed: str, age: int):}\\
+    \hspace*{0.40in}\texttt{self.name = name}\\
+    \hspace*{0.40in}\texttt{self.breed = breed}\\
+    \hspace*{0.40in}\texttt{self.age = age}\\
+    \hspace*{0.20in}\texttt{def bark(self) -> str:}\\
+    \hspace*{0.40in}\texttt{return self.name + " says bark!"}
+  \end{block}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item Its first parameter is conventionally named \texttt{self}.
+    \item It is called using dot notation on an instance.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{Calling a Method Uses Dot Notation}
+  \begin{block}{Class and call}
+    \texttt{dog1 = Dog("Sofia", "Maremma", 1)}\\[0.08in]
+    \texttt{message = dog1.bark()}
+  \end{block}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item \texttt{dog1} refers to one particular \texttt{Dog} instance.
+    \item \texttt{.bark} selects behavior defined by the \texttt{Dog} class.
+    \item The method executes using \texttt{dog1} as the current instance.
+    \item The returned string is bound to \texttt{message}.
+  \end{itemize}
+
+  \begin{keyidea}
+    Dot notation connects a method definition to the instance on which that behavior should operate.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{What Does \texttt{self} Mean?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{cpdefinition}
+        Inside an instance method, \texttt{self} is the parameter that refers to the instance involved in the current method call.
+      \end{cpdefinition}
+
+      \begin{itemize}
+        \item \texttt{self.name} means the \texttt{name} attribute of that instance.
+        \item \texttt{self.age} means the \texttt{age} attribute of that instance.
+        \item Different calls can bind \texttt{self} to different instances.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.39\textwidth}
+      % Intended visual: dog1.bark() arrow into a method frame where self points back to dog1.
+      \lectureimage[2.22in]{self-method-binding.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Trace: \texttt{self} Is Bound for the Call}
+  \begin{block}{Program}
+    \texttt{dog1 = Dog("Sofia", "Maremma", 1)}\\
+    \texttt{dog2 = Dog("Buddy", "Labrador", 3)}\\[0.08in]
+    \texttt{a = dog1.bark()}\\
+    \texttt{b = dog2.bark()}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l|l}
+      \textbf{Call} & \textbf{\texttt{self} refers to} & \textbf{attribute read} \\\hline
+      \texttt{dog1.bark()} & \texttt{dog1} instance & \texttt{dog1.name} \\
+      \texttt{dog2.bark()} & \texttt{dog2} instance & \texttt{dog2.name}
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Methods Can Accept Additional Arguments}
+  \begin{block}{Add this method inside the same Dog class}
+    \texttt{def rename(self, new\_name: str) -> None:}\\
+    \hspace*{0.20in}\texttt{self.name = new\_name}
+  \end{block}
+
+  Calling:
+  \begin{block}{Call}
+    \texttt{dog1.rename("Luna")}
+  \end{block}
+
+  conceptually binds:
+  \begin{itemize}
+    \item \texttt{self} $\rightarrow$ the instance referred to by \texttt{dog1}
+    \item \texttt{new\_name} $\rightarrow$ \texttt{"Luna"}
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\sectionframe{Part 2: Query Methods and Mutating Methods}
+
+\begin{frame}{Some Methods Compute Information Without Changing State}
+  \begin{block}{Add this query method inside Dog}
+    \texttt{def human\_years(self) -> int:}\\
+    \hspace*{0.20in}\texttt{return self.age * 7}
+  \end{block}
+
+  \begin{itemize}
+    \item The method reads \texttt{self.age}.
+    \item It computes and returns a new value.
+    \item The object's attributes are unchanged.
+  \end{itemize}
+
+  \begin{keyidea}
+    Reading object state does not imply mutating object state.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Other Methods Intentionally Change State}
+  \begin{block}{Add this mutating method inside Dog}
+    \texttt{def birthday(self) -> None:}\\
+    \hspace*{0.20in}\texttt{self.age = self.age + 1}
+  \end{block}
+
+  \begin{itemize}
+    \item The right-hand side reads the current age.
+    \item Assignment writes a new value into the instance's \texttt{age} attribute.
+    \item The change remains after the method returns.
+    \item The useful result is the changed object state, so no explicit value needs to be returned.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Query Versus Mutation Is an Interface Decision}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.28}
+    \begin{tabular}{l|l|l}
+      \textbf{Method style} & \textbf{Primary effect} & \textbf{Typical return} \\\hline
+      query & reads state & computed value \\
+      mutation & changes state & often \texttt{None}
+    \end{tabular}
+  \end{center}
+
+  \begin{block}{Examples}
+    \texttt{dog1.human\_years()} $\rightarrow$ returns information\\
+    \texttt{dog1.birthday()} $\rightarrow$ changes \texttt{dog1.age}
+  \end{block}
+
+  \begin{keyidea}
+    A method's contract should make it clear whether callers should expect a returned value, a state change, or both.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace the State Change}
+  \begin{block}{Before}
+    \texttt{dog1} $\rightarrow$ \texttt{Dog(name="Sofia", age=1)}
+  \end{block}
+
+  \begin{block}{Call}
+    \texttt{dog1.birthday()}
+  \end{block}
+
+  \begin{block}{After}
+    \texttt{dog1} $\rightarrow$ \texttt{Dog(name="Sofia", age=2)}
+  \end{block}
+
+  \begin{itemize}
+    \item The variable \texttt{dog1} was not rebound.
+    \item The same instance still exists.
+    \item One attribute inside that instance changed.
+  \end{itemize}
+\end{frame}
+
+\sectionframe{Part 3: References and Object Aliasing}
+
+\begin{frame}{Assignment Still Does Not Automatically Copy}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{.50\textwidth}
+      \begin{block}{Program}
+        \texttt{dog1 = Dog("Sofia", "Maremma", 1)}\\
+        \texttt{dog2 = dog1}
+      \end{block}
+      Assignment copies the reference; it does not construct another Dog.
+    \end{column}
+    \begin{column}{.44\textwidth}
+      \lectureimage[1.75in]{object-aliasing-two-names.png}
+    \end{column}
+  \end{columns}
+  \begin{keyidea}
+    Two names are aliases when they refer to the same object.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Mutation Through Either Alias Reaches the Same Instance}
+  \begin{block}{Program}
+    \texttt{dog1 = Dog("Sofia", "Maremma", 1)}\\
+    \texttt{dog2 = dog1}\\
+    \texttt{dog2.birthday()}
+  \end{block}
+
+  \begin{block}{After the call}
+    \texttt{dog1.age} $\rightarrow$ \texttt{2}\\
+    \texttt{dog2.age} $\rightarrow$ \texttt{2}
+  \end{block}
+
+  \begin{itemize}
+    \item The method call occurred through the name \texttt{dog2}.
+    \item The changed state belongs to the shared instance, not to a variable name.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Constructing Again Produces an Independent Instance}
+  \begin{block}{Program}
+    \texttt{dog1 = Dog("Sofia", "Maremma", 1)}\\
+    \texttt{dog2 = Dog("Sofia", "Maremma", 1)}
+  \end{block}
+
+  \begin{itemize}
+    \item The attribute values happen to match.
+    \item Two constructor calls produce two distinct instances.
+    \item Mutating one does not mutate the other.
+  \end{itemize}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \centering
+      \texttt{dog1} $\rightarrow$ Dog instance A
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \centering
+      \texttt{dog2} $\rightarrow$ Dog instance B
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Identity Asks Whether Two References Reach the Same Object}
+  \begin{block}{Example}
+    \texttt{dog1 = Dog("Sofia", "Maremma", 1)}\\
+    \texttt{dog2 = dog1}\\
+    \texttt{dog3 = Dog("Sofia", "Maremma", 1)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Expression} & \textbf{Result} \\\hline
+      \texttt{dog1 is dog2} & \texttt{True} \\
+      \texttt{dog1 is dog3} & \texttt{False}
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    \texttt{is} asks about identity: are these two references to the exact same instance?
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Identity and Equality Answer Different Questions}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Identity}
+        \texttt{a is b}
+
+        Are \texttt{a} and \texttt{b} references to the same object?
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Equality}
+        \texttt{a == b}
+
+        Should these two values be considered equivalent?
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{itemize}
+    \item Identity is built into the reference model.
+    \item A class can define its own notion of value equality.
+    \item Our \texttt{Dog} class has no custom equality rule: distinct instances compare unequal with \texttt{==}, even if their attributes match.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Passing an Object to a Function Can Also Create an Alias}
+  \begin{block}{Function}
+    \texttt{def celebrate(dog: Dog) -> None:}\\
+    \hspace*{0.20in}\texttt{dog.birthday()}
+  \end{block}
+
+  \begin{block}{Call}
+    \texttt{dog1 = Dog("Sofia", "Maremma", 1)}\\
+    \texttt{celebrate(dog1)}
+  \end{block}
+
+  During the call, the parameter \texttt{dog} and the caller's name \texttt{dog1} refer to the same instance.
+
+  \begin{keyidea}
+    Parameter binding does not automatically copy mutable objects.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Collections of Objects}
+
+\begin{frame}{Define the Student Used in These Collections}
+  \begin{block}{A class for the next examples}
+    \texttt{class Student:}\\
+    \hspace*{0.20in}\texttt{def \_\_init\_\_(self, name: str, age: int, gpa: float):}\\
+    \hspace*{0.40in}\texttt{self.name = name}\\
+    \hspace*{0.40in}\texttt{self.age = age}\\
+    \hspace*{0.40in}\texttt{self.gpa = gpa}
+  \end{block}
+  \begin{itemize}
+    \item This version stores name, age, and GPA; Lecture 28's design stored a major instead of age.
+    \item Read constructor arguments using the definition in the current example.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{A List Can Contain References to Objects}
+  \begin{block}{Example}
+    \texttt{students = [}\\
+    \hspace*{0.20in}\texttt{Student("Alice", 20, 3.8),}\\
+    \hspace*{0.20in}\texttt{Student("Bob", 21, 3.5),}\\
+    \hspace*{0.20in}\texttt{Student("Charlie", 19, 3.9)}\\
+    \texttt{]}
+  \end{block}
+
+  \begin{itemize}
+    \item The list is one collection value.
+    \item Each element refers to a \texttt{Student} instance.
+    \item Each instance carries its own compound state.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Mental Model: Collection of References}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{List positions}
+        \texttt{students[0]}\\
+        \texttt{students[1]}\\
+        \texttt{students[2]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      % Intended visual: list slots containing arrows to three separate Student instances with attributes.
+      \lectureimage[1.75in]{list-of-object-references.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The list organizes references; the objects contain the student-specific state.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Iterating Over a List of Objects}
+  \begin{block}{Example}
+    \texttt{for student in students:}\\
+    \hspace*{0.20in}\texttt{print(student.name)}
+  \end{block}
+
+  Each iteration:
+  \begin{enumerate}
+    \item binds \texttt{student} to the next list element;
+    \item that element is a reference to a \texttt{Student} instance;
+    \item dot notation reads an attribute of that instance.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Sequence Patterns Still Apply to Objects}
+  Suppose we want the names of students with GPA at least \texttt{3.5}.
+
+  \begin{block}{Explicit loop}
+    \texttt{names = []}\\
+    \texttt{for student in students:}\\
+    \hspace*{0.20in}\texttt{if student.gpa >= 3.5:}\\
+    \hspace*{0.40in}\texttt{names.append(student.name)}
+  \end{block}
+
+  \begin{keyidea}
+    Earlier loop patterns do not disappear. The values being processed are now compound objects rather than primitive values.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Dictionary Can Also Store Objects}
+  \begin{block}{Example}
+    \texttt{students\_by\_id = \{}\\
+    \hspace*{0.20in}\texttt{101: Student("Alice", 20, 3.8),}\\
+    \hspace*{0.20in}\texttt{205: Student("Bob", 21, 3.5)}\\
+    \texttt{\}}
+  \end{block}
+
+  Then:
+  \begin{block}{Access}
+    \texttt{students\_by\_id[205].name}
+  \end{block}
+
+  \begin{itemize}
+    \item The dictionary associates an ID key with an object reference.
+    \item Dot notation continues from the selected object.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Aliasing Can Occur Through a Collection}
+  \begin{block}{Program}
+    \texttt{alice = Student("Alice", 20, 3.8)}\\
+    \texttt{students = [alice]}\\
+    \texttt{students[0].gpa = 4.0}
+  \end{block}
+
+  After the mutation:
+  \begin{block}{Observation}
+    \texttt{alice.gpa} $\rightarrow$ \texttt{4.0}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{alice} and \texttt{students[0]} both reach the same instance.
+    \item The list does not contain an independent copy of the student.
+  \end{itemize}
+\end{frame}
+
+\sectionframe{Part 5: Objects Containing Structured Data}
+
+\begin{frame}{An Object Attribute Can Itself Be a Collection}
+  \begin{block}{Example}
+    \texttt{class Classroom:}\\
+    \hspace*{0.20in}\texttt{def \_\_init\_\_(self, name: str):}\\
+    \hspace*{0.40in}\texttt{self.name = name}\\
+    \hspace*{0.40in}\texttt{self.students = []}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{name} refers to a string.
+    \item \texttt{students} refers to a mutable list.
+    \item The object's state can therefore include structured values.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Methods Can Mutate Collection Attributes}
+  \begin{block}{Add this method inside Classroom}
+    \texttt{def add\_student(self, student: Student) -> None:}\\
+    \hspace*{0.20in}\texttt{self.students.append(student)}
+  \end{block}
+
+  \begin{block}{Use}
+    \texttt{room = Classroom("180-0114")}\\
+    \texttt{alice = Student("Alice", 20, 3.8)}\\
+    \texttt{room.add\_student(alice)}
+  \end{block}
+
+  \begin{keyidea}
+    A mutating method may change an attribute by mutating the collection that attribute refers to. Appending an object stores a reference to that same object; it does not create an automatic copy.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{An Object Can Also Contain Another Object}
+  \begin{block}{Example}
+    \texttt{class Address:}\\
+    \hspace*{0.20in}\texttt{def \_\_init\_\_(self, street: str, city: str):}\\
+    \hspace*{0.40in}\texttt{self.street = street}\\
+    \hspace*{0.40in}\texttt{self.city = city}
+  \end{block}
+
+  \begin{block}{Person contains an Address reference}
+    \texttt{class Person:}\\
+    \hspace*{0.20in}\texttt{def \_\_init\_\_(self, name: str, address: Address):}\\
+    \hspace*{0.40in}\texttt{self.name = name}\\
+    \hspace*{0.40in}\texttt{self.address = address}
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Nested Attribute Access Is Evaluated Left to Right}
+  \begin{block}{Example}
+    \texttt{addr = Address("123 Main St", "San Luis Obispo")}\\
+    \texttt{person = Person("Alice", addr)}\\[0.08in]
+    \texttt{person.address.city}
+  \end{block}
+
+  Evaluate in stages:
+  \begin{enumerate}
+    \item \texttt{person.address} produces the referenced \texttt{Address} object.
+    \item \texttt{.city} then reads that object's \texttt{city} attribute.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Nested Objects Extend the Same Reference Model}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{itemize}
+        \item A variable can refer to an object.
+        \item An attribute can refer to another object.
+        \item A list element can refer to an object.
+        \item A dictionary value can refer to an object.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+      % Intended visual: Person -> Address, Classroom -> list -> Student references.
+      \lectureimage[1.65in]{nested-object-reference-graph.png}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The syntax changes, but the fundamental model remains names and containers holding references to values.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 6: Integrated Tracing}
+
+\begin{frame}{Integrated Example}
+  For this final trace, use a fresh, smaller Student definition (name and GPA only).
+  \begin{block}{Classes}
+    \texttt{class Student:}\\
+    \hspace*{0.20in}\texttt{def \_\_init\_\_(self, name: str, gpa: float):}\\
+    \hspace*{0.40in}\texttt{self.name = name}\\
+    \hspace*{0.40in}\texttt{self.gpa = gpa}\\
+    \hspace*{0.20in}\texttt{def set\_gpa(self, gpa: float) -> None:}\\
+    \hspace*{0.40in}\texttt{self.gpa = gpa}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Predict Before Tracing}
+  \begin{block}{Program}
+    \texttt{a = Student("Alice", 3.5)}\\
+    \texttt{b = a}\\
+    \texttt{students = [a]}\\
+    \texttt{students[0].set\_gpa(3.9)}
+  \end{block}
+
+  Predict:
+  \begin{enumerate}
+    \item How many \texttt{Student} instances exist?
+    \item What does \texttt{a.gpa} evaluate to?
+    \item What does \texttt{b.gpa} evaluate to?
+    \item Is \texttt{a is students[0]} true or false?
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Reveal: One Shared Instance}
+  Only one constructor call occurred, so there is one \texttt{Student} instance.
+
+  \begin{block}{Three references reach this one Student}
+    \centering
+    \texttt{a}, \texttt{b}, \texttt{students[0]}
+    $\longrightarrow$ \texttt{name="Alice", gpa=3.9}
+  \end{block}
+
+  Therefore:
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item \texttt{a.gpa} $\rightarrow$ \texttt{3.9}
+    \item \texttt{b.gpa} $\rightarrow$ \texttt{3.9}
+    \item \texttt{a is students[0]} $\rightarrow$ \texttt{True}
   \end{itemize}
+\end{frame}
+
+\begin{frame}{A Useful Tracing Procedure for Objects}
+  When object code becomes difficult, trace these questions in order:
+
+  \begin{enumerate}
+    \item Which instances have actually been constructed?
+    \item Which names or container positions refer to each instance?
+    \item Which instance is bound to \texttt{self} for the current method call?
+    \item Which attributes are read?
+    \item Which attributes or contained mutable values are changed?
+    \item What value, if any, is returned?
+  \end{enumerate}
+
+  \begin{keyidea}
+    Separate \textbf{control flow}, \textbf{references}, and \textbf{object state}; do not mentally collapse them into one step.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Three Common Wrong Models}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.31\textwidth}
+      \begin{alertblock}{Names own objects}
+        \texttt{b = a} does \textbf{not} construct a second object. It creates another reference to the same object.
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{alertblock}{Collections copy objects}
+        Putting \texttt{alice} into a list does \textbf{not} automatically create an independent student.
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.31\textwidth}
+      \begin{alertblock}{\texttt{self} is global}
+        \texttt{self} is a method parameter whose binding is established separately for each call.
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{What We Are Not Adding Yet}
+  \begin{itemize}
+    \item inheritance and class hierarchies
+    \item private attributes or property decorators
+    \item class variables and static methods
+    \item custom operator behavior
+    \item abstract classes or interfaces
+    \item advanced object-oriented design patterns
+  \end{itemize}
+
+  \begin{keyidea}
+    The goal is a precise mental model of instances, methods, references, and compound structures before adding larger object-oriented abstractions.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{enumerate}
+    \item A method is behavior defined as part of a class.
+    \item \texttt{self} refers to the particular instance involved in the current method call.
+    \item Methods may query state, mutate state, or deliberately do both.
+    \item Assignment and parameter binding can create aliases to the same object.
+    \item \texttt{is} asks about object identity; equality is a separate concept.
+    \item Collections can store references to objects, and objects can contain collections or other objects.
+    \item The same reference model developed for lists now explains compound object structures.
+  \end{enumerate}
+
+  \begin{block}{Lab connection}
+    Lab Programming 3 will ask you to develop functions that operate on objects using these same state, reference, and interface ideas.
+  \end{block}
 \end{frame}
 
 \end{document}

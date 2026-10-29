@@ -1,11 +1,24 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-28/}}
+
+% Generated classroom visuals live in ../assets/lecture-28/.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{28}
-\lecturetitle{Objects I -- Compound Data}
-\lecturedate{November 2, 2026}
+\lecturetitle{Objects I --- Compound Data}
+\lecturedate{Fall 2026}
 \courseunit{11. Objects and Compound Data}
 
 \begin{document}
@@ -14,41 +27,657 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Objects I -- Compound Data
-    \item Placeholder for announcements and context.
+    \item Explain why related values sometimes need to represent one conceptual entity.
+    \item Define \textbf{class}, \textbf{instance}, \textbf{attribute}, and \textbf{object state}.
+    \item Define a simple class and initialize instance attributes with \texttt{\_\_init\_\_}.
+    \item Construct multiple independent instances from the same class definition.
+    \item Read and update attributes using dot notation.
+    \item Extend our existing name--reference model from lists to user-defined objects.
+    \item Compare an object representation with a dictionary representation of the same data.
   \end{itemize}
+
+  \begin{keyidea}
+    An object lets several related values collectively represent one thing; a class describes the structure shared by objects of that kind.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\begin{frame}{The Boundary for This Lecture}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Today}
+        \begin{itemize}
+          \item compound data
+          \item classes and instances
+          \item construction and initialization
+          \item instance attributes
+          \item object state
+          \item references to objects
+          \item object vs. dictionary representation
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Next lecture}
+        \begin{itemize}
+          \item general methods
+          \item deeper treatment of \texttt{self}
+          \item mutation through methods
+          \item object aliasing
+          \item identity and equality
+          \item lists of objects
+          \item objects containing collections
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 1: Why Compound Data?}
+
+\begin{frame}{One Entity Can Require Several Related Values}
+  Suppose a program needs to represent two cars.
+
+  \begin{block}{Separate variables}
+    \texttt{car1\_make = "Honda"}\\
+    \texttt{car1\_model = "Civic"}\\
+    \texttt{car1\_year = 2020}\\[0.08in]
+    \texttt{car2\_make = "Toyota"}\\
+    \texttt{car2\_model = "Corolla"}\\
+    \texttt{car2\_year = 2022}
+  \end{block}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item The program contains the necessary values.
+    \item Their relationship exists only in the variable names.
+    \item Adding another car requires another group of coordinated names.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{A List Groups the Values but Hides Their Roles}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{block}{List representation}
+        \texttt{car1 = ["Honda", "Civic", 2020]}
+      \end{block}
+
+      \begin{itemize}
+        \item One value now contains the three related components.
+        \item But their meaning depends on remembering a positional convention.
+        \item \texttt{car1[0]} means make only because the programmer decided that index 0 means make.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: a three-slot list labeled 0,1,2 contrasted with make/model/year labels.
+      \lectureimage[2.22in]{car-list-positional-fields.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{A Dictionary Gives the Components Meaningful Names}
+  \begin{block}{Dictionary representation}
+    \texttt{car1 = \{"make": "Honda", "model": "Civic", "year": 2020\}}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Access}
+        \texttt{car1["make"]}\\
+        \texttt{car1["model"]}\\
+        \texttt{car1["year"]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{itemize}
+        \item The keys document each component's role.
+        \item The values are still grouped into one structure.
+        \item This is often an excellent representation for associative data.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Definition: Compound Data}
+  \begin{cpdefinition}
+    \textbf{Compound data} represents one conceptual value using multiple related component values.
+  \end{cpdefinition}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item A date might contain a year, month, and day.
+    \item A student might contain a name, major, and GPA.
+    \item A point might contain an $x$ coordinate and a $y$ coordinate.
+    \item A car might contain a make, model, and year.
   \end{itemize}
-\end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+  \begin{block}{New question}
+    How can we define a reusable structure that says what components every \emph{Car} should contain?
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{Objects Combine Related State Under One Identity}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{cpdefinition}
+        An \textbf{object} is a value with its own identity and state. Its state can contain multiple related attributes.
+      \end{cpdefinition}
+
+      \begin{itemize}
+        \item \textbf{Attributes} store information associated with the object.
+        \item Objects can also have behavior through methods.
+        \item Today we focus on the \textbf{state} side of this model.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: one Car entity containing labeled make/model/year fields, with behavior faded for next lecture.
+      \lectureimage[2.22in]{object-state-and-behavior-overview.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 2: Classes and Instances}
+
+\begin{frame}{A Class Describes a Kind of Object}
+  \begin{cpdefinition}
+    A \textbf{class} is a program definition that describes the structure and behavior shared by objects of a particular kind.
+  \end{cpdefinition}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item The class is a reusable definition.
+    \item A class does not describe one particular Honda or Toyota.
+    \item It describes what information each \texttt{Car} instance should maintain.
   \end{itemize}
+
+  \begin{keyidea}
+    Think \textbf{class = definition of a kind}; \textbf{instance = one particular value of that kind}.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{First Class Definition}
+  \begin{block}{Car class}
+    \texttt{class Car:}\\
+    \hspace*{0.20in}\texttt{def \_\_init\_\_(self, make: str, model: str, year: int):}\\
+    \hspace*{0.40in}\texttt{self.make = make}\\
+    \hspace*{0.40in}\texttt{self.model = model}\\
+    \hspace*{0.40in}\texttt{self.year = year}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{class Car:} begins the definition of a new class.
+    \item The indented code belongs to that class definition.
+    \item \texttt{\_\_init\_\_} establishes the initial state of a new instance.
+    \item Type hints document intended types; Python does not enforce them automatically.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{An Instance Is One Particular Object}
+  \begin{cpdefinition}
+    An \textbf{instance} is an individual object created according to a class definition.
+  \end{cpdefinition}
+
+  \begin{block}{Construct two instances}
+    \texttt{car1 = Car("Honda", "Civic", 2020)}\\
+    \texttt{car2 = Car("Toyota", "Corolla", 2022)}
+  \end{block}
+
+  \begin{itemize}
+    \item Both objects are instances of \texttt{Car}.
+    \item Each instance has its own attribute state.
+    \item The variable names \texttt{car1} and \texttt{car2} refer to different instances.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{One Class, Many Possible Instances}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Construction}
+        \texttt{car1 = Car("Honda", "Civic", 2020)}\\[0.08in]
+        \texttt{car2 = Car("Toyota", "Corolla", 2022)}\\[0.08in]
+        \texttt{car3 = Car("Ford", "Mustang", 1967)}
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      % Intended visual: one Car class definition branching to three distinct instance cards.
+      \lectureimage[2.22in]{one-class-many-instances.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 3: Construction and Initialization}
+
+\begin{frame}{Calling the Class Constructs an Instance}
+  \begin{block}{Expression}
+    \centering
+    \Large\texttt{Car("Honda", "Civic", 2020)}
+  \end{block}
+
+  This expression produces a new \texttt{Car} instance.
+
+  \begin{enumerate}
+    \item Python creates a new instance of the class.
+    \item Python invokes the class's \texttt{\_\_init\_\_} method for that instance.
+    \item The supplied arguments initialize the instance's attributes.
+    \item The resulting instance becomes the value of the expression.
+  \end{enumerate}
+
+  \begin{keyidea}
+    We construct an object by calling the class. \texttt{\_\_init\_\_} initializes the state of the newly created instance.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{What Does \texttt{self} Mean Here?}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{itemize}
+        \item \texttt{self} is a parameter of the method.
+        \item During initialization, it refers to the new instance being initialized.
+        \item \texttt{self.make} means ``the \texttt{make} attribute belonging to this instance.''
+        \item Different constructor calls use different instances as \texttt{self}.
+      \end{itemize}
+
+      \begin{alertblock}{For today}
+        We only need enough \texttt{self} to understand initialization. Lecture 29 develops the method-call model in detail.
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: __init__ frame with self arrow pointing to one new Car instance.
+      \lectureimage[2.22in]{self-during-initialization.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Attribute Assignment Creates the Instance State}
+  Consider one line from \texttt{\_\_init\_\_}:
+
+  \begin{block}{Statement}
+    \centering
+    \Large\texttt{self.make = make}
+  \end{block}
+
+  \begin{enumerate}
+    \item Evaluate the right-hand side name \texttt{make}.
+    \item Follow \texttt{self} to the current instance.
+    \item Associate the attribute name \texttt{make} with that value on the instance.
+  \end{enumerate}
+
+  \begin{keyidea}
+    The assignment model has not disappeared: evaluate the right-hand side, then update program state. The destination is now an attribute on an object.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace the First Construction}
+  \begin{block}{Statement}
+    \texttt{car1 = Car("Honda", "Civic", 2020)}
+  \end{block}
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{Name during initialization} & \textbf{Value} \\\hline
+      \texttt{make} & \texttt{"Honda"} \\
+      \texttt{model} & \texttt{"Civic"} \\
+      \texttt{year} & \texttt{2020} \\
+      \texttt{self} & new \texttt{Car} instance
+    \end{tabular}
+  \end{center}
+
+  After the assignments, the instance contains three attributes: \texttt{make}, \texttt{model}, and \texttt{year}.
+\end{frame}
+
+\sectionframe{Part 4: Attributes and Object State}
+
+\begin{frame}{Dot Notation Accesses an Attribute}
+  \begin{block}{Given}
+    \texttt{car1 = Car("Honda", "Civic", 2020)}
+  \end{block}
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Expressions}
+        \texttt{car1.make} $\rightarrow$ \texttt{"Honda"}\\
+        \texttt{car1.model} $\rightarrow$ \texttt{"Civic"}\\
+        \texttt{car1.year} $\rightarrow$ \texttt{2020}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{itemize}
+        \item The expression left of the dot identifies an object.
+        \item The name right of the dot identifies one attribute on that object.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Object State Is the Collection of Current Attribute Values}
+  \begin{cpdefinition}
+    The \textbf{state} of an object is the collection of information currently stored in its attributes.
+  \end{cpdefinition}
+
+  \begin{block}{State of \texttt{car1}}
+    \texttt{make = "Honda"}, \texttt{model = "Civic"}, \texttt{year = 2020}
+  \end{block}
+
+  \begin{itemize}
+    \item State can be inspected through attribute access.
+    \item For mutable objects, state can change over time.
+    \item The object's identity can remain the same while its state changes.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Attribute Assignment Changes State}
+  \begin{block}{Before}
+    \texttt{car1.year} $\rightarrow$ \texttt{2020}
+  \end{block}
+
+  \begin{block}{Statement}
+    \texttt{car1.year = 2021}
+  \end{block}
+
+  \begin{block}{After}
+    \texttt{car1.year} $\rightarrow$ \texttt{2021}
+  \end{block}
+
+  \begin{keyidea}
+    The name \texttt{car1} still refers to the same instance; one component of that instance's state has changed.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Mutation and Rebinding Are Still Different}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Attribute mutation}
+        \texttt{car1.year = 2021}
+      \end{block}
+      The existing instance changes state.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Name rebinding}
+        \texttt{car1 = Car("Ford", "Focus", 2018)}
+      \end{block}
+      \texttt{car1} is bound to a different instance.
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    This is the same distinction we used for lists: changing a value through a reference is different from changing which value a name refers to.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Prediction: Which Object Changes?}
+  \begin{activity}
+    Predict every printed value before tracing the code.
+  \end{activity}
+
+  \begin{block}{Code}
+    \texttt{first = Car("Honda", "Civic", 2020)}\\
+    \texttt{second = Car("Honda", "Civic", 2020)}\\
+    \texttt{first.year = 2025}\\[0.06in]
+    \texttt{print(first.year)}\\
+    \texttt{print(second.year)}
+  \end{block}
+
+  \begin{itemize}
+    \item How many \texttt{Car} instances were constructed?
+    \item Does having the same attribute values make them one instance?
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Reveal: Same State Does Not Mean Same Instance}
+  The output is:
+
+  \begin{block}{Output}
+    \texttt{2025}\\
+    \texttt{2020}
+  \end{block}
+
+  Two calls to \texttt{Car(...)} constructed two distinct objects, even though their initial attribute values were equal.
+
+  \begin{center}
+    \texttt{first} $\rightarrow$ instance A \qquad\qquad
+    \texttt{second} $\rightarrow$ instance B
+  \end{center}
+\end{frame}
+
+\sectionframe{Part 5: References and Identity}
+
+\begin{frame}{Our Earlier Reference Model Now Generalizes}
+  Earlier in the course we used a focused vocabulary for mutable lists:
+
+  \begin{center}
+    name $\longrightarrow$ reference $\longrightarrow$ list
+  \end{center}
+
+  We can now generalize that model:
+
+  \begin{center}
+    \Large name $\longrightarrow$ reference $\longrightarrow$ object
+  \end{center}
+
+  \begin{keyidea}
+    Lists were not a special exception. They are one kind of object. User-defined class instances participate in the same reference model.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{A Variable Stores a Reference to the Instance}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.51\textwidth}
+      \begin{block}{Code}
+        \texttt{car1 = Car("Honda", "Civic", 2020)}
+      \end{block}
+
+      \begin{itemize}
+        \item The class call constructs a \texttt{Car} instance.
+        \item Assignment binds the name \texttt{car1} to that resulting object.
+        \item Access through \texttt{car1} follows that reference to the instance.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.43\textwidth}
+      % Intended visual: variable name car1 pointing to a Car instance with three attributes.
+      \lectureimage[2.22in]{name-reference-object.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Identity Asks Whether Two References Reach the Same Object}
+  \begin{cpdefinition}
+    \textbf{Object identity} distinguishes one particular object from every other object, even when their current state happens to look the same.
+  \end{cpdefinition}
+
+  \begin{block}{Example}
+    \texttt{a = Car("Honda", "Civic", 2020)}\\
+    \texttt{b = Car("Honda", "Civic", 2020)}\\
+    \texttt{a is b} $\rightarrow$ \texttt{False}
+  \end{block}
+
+  \begin{alertblock}{Next lecture}
+    We will use identity to reason about aliasing when two names actually refer to the same instance.
+  \end{alertblock}
+\end{frame}
+
+\sectionframe{Part 6: Objects as a Data Representation}
+
+\begin{frame}{Dictionary and Object Can Represent Similar Information}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Dictionary}
+        \texttt{car = \{}\\
+        \hspace*{0.15in}\texttt{"make": "Honda",}\\
+        \hspace*{0.15in}\texttt{"model": "Civic",}\\
+        \hspace*{0.15in}\texttt{"year": 2020}\\
+        \texttt{\}}\\[0.08in]
+        \texttt{car["year"]}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Object}
+        \texttt{car = Car(}\\
+        \hspace*{0.15in}\texttt{"Honda",}\\
+        \hspace*{0.15in}\texttt{"Civic",}\\
+        \hspace*{0.15in}\texttt{2020}\\
+        \texttt{)}\\[0.08in]
+        \texttt{car.year}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Object vs. Dictionary: What Changes?}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{l|l|l}
+      \textbf{Question} & \textbf{Dictionary} & \textbf{Class instance} \\\hline
+      field name & key & attribute \\
+      access & \texttt{data["year"]} & \texttt{car.year} \\
+      structure & convention among keys & described by class \\
+      create another & new dictionary & call class again \\
+      future behavior & separate functions & methods can belong to class
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Dictionaries remain useful. Classes become useful when the program benefits from defining a reusable kind of entity with a known structure and, eventually, associated behavior.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 7: Connecting to Python You Already Know}
+
+\begin{frame}{You Have Already Used Objects}
+  Python's built-in data types also produce objects.
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{List}
+        \texttt{values = [10, 20, 30]}\\
+        \texttt{values.append(40)}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{String}
+        \texttt{text = "hello"}\\
+        \texttt{text.upper()}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{itemize}
+    \item We previously concentrated on the sequence behavior we needed.
+    \item Now we have enough vocabulary to say that lists and strings are objects with methods provided by their classes.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Dot Notation Has Two Closely Related Roles}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Attribute access}
+        \texttt{car1.year}
+      \end{block}
+      Retrieve data associated with an object.
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Method call}
+        \texttt{values.append(40)}
+      \end{block}
+      Invoke behavior associated with an object.
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Today we defined our own attributes. Next lecture we define our own methods and connect method calls to particular instances.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Design Prompt: What Should a \texttt{Student} Store?}
+  \begin{activity}
+    We want one value to represent one student in a course. What attributes belong to that object?
+  \end{activity}
+
+  Possible design:
+
+  \begin{block}{Class}
+    \texttt{class Student:}\\
+    \hspace*{0.20in}\texttt{def \_\_init\_\_(self, name: str, major: str, gpa: float):}\\
+    \hspace*{0.40in}\texttt{self.name = name}\\
+    \hspace*{0.40in}\texttt{self.major = major}\\
+    \hspace*{0.40in}\texttt{self.gpa = gpa}
+  \end{block}
+\end{frame}
+
+\begin{frame}{The Data Model Should Match the Concept}
+  A good class does not simply collect every value a program might ever use.
+
+  \begin{itemize}
+    \item Attributes should describe the state of the conceptual entity.
+    \item Temporary calculations usually do not need to become attributes.
+    \item Two attributes should not redundantly store the same information unless the design requires it.
+    \item Attribute names should communicate what each component means.
+  \end{itemize}
+
+  \begin{exampleblockcp}
+    A student's \texttt{name}, \texttt{major}, and \texttt{gpa} describe student state. A temporary variable such as \texttt{new\_gpa} used during a calculation does not automatically belong in the object.
+  \end{exampleblockcp}
+\end{frame}
+
+\begin{frame}{Common Misconception: Attributes Are Local Variables}
+  Inside \texttt{\_\_init\_\_}:
+
+  \begin{block}{Different roles}
+    \texttt{make} --- parameter/local name for this call\\
+    \texttt{self.make} --- attribute stored on the instance
+  \end{block}
+
+  After \texttt{\_\_init\_\_} returns, the parameter name \texttt{make} is gone with that call frame, but \texttt{self.make} remains part of the object's state.
+
+  \begin{keyidea}
+    Parameters help initialize the object; attributes preserve the resulting state beyond the initialization call.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace Checklist for Object Construction}
+  When you encounter:
+
+  \begin{block}{Statement}
+    \texttt{name = ClassName(argument1, argument2, ...)}
+  \end{block}
+
+  trace it in this order:
+
+  \begin{enumerate}
+    \item evaluate the argument expressions;
+    \item construct a new instance;
+    \item bind initialization parameters;
+    \item let \texttt{self} refer to the new instance;
+    \item execute the attribute assignments;
+    \item finish the class-call expression with the initialized instance;
+    \item bind the result to the variable name.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Where We Stop Today}
+  By the end of Lecture 28, you should be able to:
+
+  \begin{itemize}
+    \item explain why an object is useful for compound data;
+    \item distinguish a class from an instance;
+    \item read a simple class containing \texttt{\_\_init\_\_};
+    \item trace construction of a new instance;
+    \item identify parameter names versus instance attributes;
+    \item access and update attributes with dot notation;
+    \item draw names as references to distinct object instances;
+    \item compare an object representation with a dictionary representation.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{enumerate}
+    \item Compound data represents one conceptual value using several related components.
+    \item A class defines a reusable kind of object; an instance is one particular object of that class.
+    \item Calling a class constructs a new instance and \texttt{\_\_init\_\_} establishes its initial state.
+    \item Attributes are named components of object state and are accessed with dot notation.
+    \item Separate constructor calls produce separate object identities, even when their state looks the same.
+    \item The reference model developed for lists generalizes naturally to user-defined objects.
+  \end{enumerate}
+
+  \begin{block}{Next: Objects II}
+    Methods connect behavior to specific instances; aliasing and collections determine how those instances interact with the rest of a program.
+  \end{block}
 \end{frame}
 
 \end{document}

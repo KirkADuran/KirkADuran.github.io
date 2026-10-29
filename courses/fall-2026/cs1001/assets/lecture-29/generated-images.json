@@ -1,0 +1,32 @@
+{
+  "tool": "Built-in image_gen.imagegen",
+  "use_case": "scientific-educational",
+  "images": [
+    {
+      "file": "object-state-and-behavior.png",
+      "prompt": "Use case: scientific-educational. Asset type: raster illustration for a CS1001 lecture slide, placed in a narrow right-hand column. Create one polished, very readable educational diagram on a white background, portrait or near-square composition, dark Cal Poly green #154734 outlines/text, light sage fills, restrained gold #BD8B13 accents. Large crisp sans-serif labels, generous spacing, flat illustration with a little warmth. Put all important content inside safe margins. No slide title, no watermark, no decorative filler. Exact labels and arrow directions matter. One friendly small white sheepdog illustration and a single object card labeled 'Dog instance'. Two stacked sections inside card: 'State' with rows 'name: Sofia', 'breed: Maremma', 'age: 1'; then 'Behavior' with readable method labels 'bark()', 'human_years()', 'birthday()'. Show these as behavior available through the class, not independent copies of the dog. Clear typography.",
+      "sha256": "bd9bdfd1764da68fa36f9577369a89af191c267930424c167b55b99744802a43"
+    },
+    {
+      "file": "self-method-binding.png",
+      "prompt": "Use case: scientific-educational. Asset type: raster illustration for a CS1001 lecture slide, placed in a narrow right-hand column. Create one polished, very readable educational diagram on a white background, portrait or near-square composition, dark Cal Poly green #154734 outlines/text, light sage fills, restrained gold #BD8B13 accents. Large crisp sans-serif labels, generous spacing, flat illustration with a little warmth. Put all important content inside safe margins. No slide title, no watermark, no decorative filler. Exact labels and arrow directions matter. Show 'dog1.bark()' at top. Below, one method call-frame card labeled 'bark call' containing the parameter 'self'. A separate name tag 'dog1' also shown. Two arrows, one STARTING at 'self' and one STARTING at 'dog1', converge onto the SAME single bottom card labeled 'Dog instance' with 'name: Sofia', 'age: 1'. No duplicated dog object. The method self and caller name reference same object. Very simple uncluttered.",
+      "sha256": "35acc597c493b838582fa19af87364a67024bacfa099cbd58777ef892ca7d074"
+    },
+    {
+      "file": "object-aliasing-two-names.png",
+      "prompt": "Use case: scientific-educational. Asset type: raster illustration for a CS1001 lecture slide, placed in a narrow right-hand column. Create one polished, very readable educational diagram on a white background, portrait or near-square composition, dark Cal Poly green #154734 outlines/text, light sage fills, restrained gold #BD8B13 accents. Large crisp sans-serif labels, generous spacing, flat illustration with a little warmth. Put all important content inside safe margins. No slide title, no watermark, no decorative filler. Exact labels and arrow directions matter. Two separate small name tags 'dog1' and 'dog2' at top, each with its own arrow pointing DOWN to the SAME one large card labeled 'Dog instance'. Inside the card 'name: Sofia', 'breed: Maremma', 'age: 1' and a small white sheepdog illustration. Exactly ONE dog instance and two converging reference arrows. Add small label 'one shared object' under the card. No copying.",
+      "sha256": "aee8b550677bbbf8f44080d3a1a5d8c27287f9ab6f43c8f648b903a4e0fd8540"
+    },
+    {
+      "file": "list-of-object-references.png",
+      "prompt": "Use case: scientific-educational. Asset type: raster illustration for a CS1001 lecture slide, placed in a narrow right-hand column. Create one polished, very readable educational diagram on a white background, portrait or near-square composition, dark Cal Poly green #154734 outlines/text, light sage fills, restrained gold #BD8B13 accents. Large crisp sans-serif labels, generous spacing, flat illustration with a little warmth. Put all important content inside safe margins. No slide title, no watermark, no decorative filler. Exact labels and arrow directions matter. Three separate list slots stacked on the left inside one container labeled 'students', slots labeled '0', '1', '2'. Each slot has a reference arrow pointing RIGHT to its own distinct Student object card. Card at index0: 'Alice', 'age: 20', 'gpa: 3.8'; card at index1: 'Bob', 'age: 21', 'gpa: 3.5'; card at index2: 'Charlie', 'age: 19', 'gpa: 3.9'. Each card labeled 'Student'. No embedded object copies in slots; arrows essential.",
+      "sha256": "39f980e22eb698d9deef75a04845d6d6c5c5e111d7216fd7b983e73cb6f7bd97"
+    },
+    {
+      "file": "nested-object-reference-graph.png",
+      "prompt": "Use case: scientific-educational. Asset type: raster illustration for a CS1001 lecture slide, placed in a narrow right-hand column. Create one polished, very readable educational diagram on a white background, portrait or near-square composition, dark Cal Poly green #154734 outlines/text, light sage fills, restrained gold #BD8B13 accents. Large crisp sans-serif labels, generous spacing, flat illustration with a little warmth. Put all important content inside safe margins. No slide title, no watermark, no decorative filler. Exact labels and arrow directions matter. Two vertically separated small reference examples. Top: card 'Person' with 'address' field arrow pointing to separate card 'Address', containing 'city: San Luis Obispo'. Bottom: card 'Classroom' with 'students' field arrow pointing to a separate list box containing two slots '0' and '1'; each slot has an arrow to a separate card labeled 'Student'. Clearly show Person -> Address and Classroom -> list -> two Student objects, no connection between the two examples. Minimal text, large legible labels.",
+      "sha256": "605f1b33a973b376252735dcb75259c258d7c5709829280990d7e1c22db7eb1d",
+      "refinement_prompt": "Change ONLY the two attribute labels 'id' inside the two Student cards to 'gpa'. Preserve all other labels, values, arrows, card positions, colors, and white background exactly. These Student objects have name and gpa attributes, not id. Do not add or remove any cards or arrows."
+    }
+  ]
+}

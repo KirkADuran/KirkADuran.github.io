@@ -1,11 +1,24 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+
+\graphicspath{{../assets/lecture-30/}}
+
+% Generated classroom visuals live in ../assets/lecture-30/.
+\newcommand{\lectureimage}[2][1.75in]{%
+  \includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}%
+}
+
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
 
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{30}
 \lecturetitle{Searching Algorithms}
-\lecturedate{November 6, 2026}
+\lecturedate{Fall 2026}
 \courseunit{12. Algorithms}
 
 \begin{document}
@@ -14,41 +27,679 @@
 
 \begin{frame}{Today}
   \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Searching Algorithms
-    \item Placeholder for announcements and context.
+    \item Define an \textbf{algorithm} as a precise procedure for solving a computational problem.
+    \item State the search problem independently of any particular Python implementation.
+    \item Implement and trace \textbf{linear search} and reason about how much work it performs.
+    \item Search lists of objects by examining selected attributes rather than comparing whole objects.
+    \item Search nested collections such as a list of courses, each containing a list of students.
+    \item Use a small predicate function or \texttt{lambda} to separate a search procedure from its matching rule.
+    \item Explain how \textbf{binary search} uses ordered data to eliminate large portions of the search space.
   \end{itemize}
+
+  \begin{keyidea}
+    A search algorithm specifies \emph{where to look next} and \emph{when enough information has been found to stop}.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
+\begin{frame}{The Boundary for This Lecture}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Today}
+        \begin{itemize}
+          \item algorithmic problem statements
+          \item pseudocode
+          \item linear search
+          \item searching object attributes
+          \item nested searches
+          \item simple predicate functions and \texttt{lambda}
+          \item binary search
+          \item best- and worst-case work
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Not today}
+        \begin{itemize}
+          \item sorting algorithms
+          \item formal correctness proofs
+          \item trees or graph search
+          \item hash-table implementation
+          \item recursive search algorithms
+          \item advanced asymptotic analysis
+        \end{itemize}
+      \end{alertblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 1: From Problems to Algorithms}
+
+\begin{frame}{Searching Is a Computational Problem}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.54\textwidth}
+      \begin{cpdefinition}
+        A \textbf{search problem} asks whether some desired value or condition occurs within a collection and, when useful, where or what the matching item is.
+      \end{cpdefinition}
+
+      \begin{itemize}
+        \item Is the number \texttt{42} in this list?
+        \item At what index does \texttt{"Ada"} occur?
+        \item Which student has ID \texttt{1042}?
+        \item Does any course contain a student with GPA above \texttt{3.8}?
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: magnifying glass moving across values, then across Student objects.
+      \lectureimage[2.22in]{search-problem-values-and-objects.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Definition: Algorithm}
+  \begin{cpdefinition}
+    An \textbf{algorithm} is a finite, well-defined sequence of steps for solving a problem or performing a computation.
+  \end{cpdefinition}
+
   \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
+    \item \textbf{Well-defined:} each step has an unambiguous meaning.
+    \item \textbf{Finite:} execution eventually terminates for inputs within the algorithm's intended domain.
+    \item \textbf{Effective:} each step can actually be carried out.
+    \item \textbf{General:} the procedure describes a family of inputs, not one memorized example.
   \end{itemize}
+
+  \begin{keyidea}
+    Python code is one way to express an algorithm; the algorithm itself is the underlying procedure.
+  \end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
+\begin{frame}{One Problem Can Have More Than One Algorithm}
+  Suppose we need to determine whether \texttt{37} appears in a collection.
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Strategy A}
+        Start at the beginning and examine each element until the target is found or the collection ends.
+      \end{block}
+      \begin{center}
+        \Large Linear Search
+      \end{center}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Strategy B}
+        If the values are ordered, examine the middle and repeatedly discard the half that cannot contain the target.
+      \end{block}
+      \begin{center}
+        \Large Binary Search
+      \end{center}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    The representation and organization of the data determine which algorithms are available.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Pseudocode Separates the Procedure from Python Syntax}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Linear-search pseudocode}
+        \texttt{LINEAR-SEARCH(values, target)}\\
+        \hspace*{0.20in}\texttt{for each position i from left to right}\\
+        \hspace*{0.40in}\texttt{if values[i] equals target}\\
+        \hspace*{0.60in}\texttt{return i}\\
+        \hspace*{0.20in}\texttt{return NOT-FOUND}
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{itemize}
+        \item Pseudocode communicates the computational structure.
+        \item It intentionally omits language-specific punctuation and details.
+        \item We can translate the same procedure into Python, Java, C++, or another language.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Correctness, Work, and the Search Contract}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Before efficiency}
+        A useful search must first be:
+        \begin{itemize}
+          \item \textbf{correct}: returned answers are right;
+          \item \textbf{complete}: a match is found when one exists;
+          \item \textbf{terminating}: the procedure eventually stops.
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{What should the function return?}
+        \begin{itemize}
+          \item existence $\rightarrow$ \texttt{True}/\texttt{False}
+          \item location $\rightarrow$ index
+          \item matching item $\rightarrow$ value/object
+          \item no match $\rightarrow$ \texttt{-1} or \texttt{None}
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Correctness comes first; then we ask how the work grows as the collection grows.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 2: Linear Search}
+
+\begin{frame}{Linear Search Examines Candidates in Sequence}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \begin{cpdefinition}
+        \textbf{Linear search} examines elements one at a time until a match is found or every candidate has been checked.
+      \end{cpdefinition}
+
+      \begin{itemize}
+        \item It does not require the data to be ordered.
+        \item It can stop immediately after finding the desired item.
+        \item If no match exists, every element must be ruled out.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\textwidth}
+      % Intended visual: boxes scanned left-to-right, with each examined box highlighted in sequence.
+      \lectureimage[2.22in]{linear-search-left-to-right.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Linear Search in Python}
+  \begin{block}{Return the index of the first match}
+    \texttt{def linear\_search(values: list[int], target: int) -> int:}\\
+    \hspace*{0.20in}\texttt{for index, value in enumerate(values):}\\
+    \hspace*{0.40in}\texttt{if value == target:}\\
+    \hspace*{0.60in}\texttt{return index}\\
+    \hspace*{0.20in}\texttt{return -1}
+  \end{block}
+
   \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
+    \item Each iteration considers exactly one candidate.
+    \item \texttt{return index} terminates the search as soon as the first match is known.
+    \item Reaching \texttt{return -1} means the loop exhausted every candidate.
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
+\begin{frame}{Trace: The Target Position Changes the Work}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.24}
+    \begin{tabular}{l|c|c|l}
+      \textbf{call} & \textbf{first match} & \textbf{checks} & \textbf{result} \\\hline
+      \texttt{linear\_search([3,7,2,9,5], 7)} & index 1 & 2 & \texttt{1} \\
+      \texttt{linear\_search([3,7,2,9,5], 5)} & index 4 & 5 & \texttt{4} \\
+      \texttt{linear\_search([3,7,2,9,5], 8)} & absent & 5 & \texttt{-1}
+    \end{tabular}
+  \end{center}
+
+  \begin{itemize}
+    \item A match near the beginning lets the function return early.
+    \item A match near the end requires more comparisons.
+    \item To conclude ``not found'' in unsorted data, every candidate must be ruled out.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Best Case, Worst Case, and Linear Growth}
+  For a list containing $n$ elements:
+
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Best case}
+        The first element matches: approximately one comparison.
+      \end{block}
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Worst case}
+        The target is last or absent: approximately $n$ comparisons.
+      \end{block}
+    \end{column}
+  \end{columns}
+
+  \begin{keyidea}
+    Worst-case linear search grows as $O(n)$: doubling the number of candidates can approximately double the required checks.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Linear Search Is More General Than Equality}
+  The search procedure can test any condition that identifies the desired item.
+
+  \begin{block}{Examples of matching rules}
+    \begin{itemize}
+      \item \texttt{value == 42}
+      \item \texttt{name == "Ada"}
+      \item \texttt{student.student\_id == 1042}
+      \item \texttt{student.gpa >= 3.8}
+      \item \texttt{course.code == "CS1001"}
+    \end{itemize}
+  \end{block}
+
+  \begin{keyidea}
+    Searching means examining candidates until one satisfies the condition that defines a match.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 3: Searching Collections of Objects}
+
+\begin{frame}{Objects Change What We Compare}
+  \begin{block}{Student class}
+    \texttt{class Student:}\\
+    \hspace*{0.20in}\texttt{def \_\_init\_\_(self, student\_id: int, name: str, gpa: float):}\\
+    \hspace*{0.40in}\texttt{self.student\_id = student\_id}\\
+    \hspace*{0.40in}\texttt{self.name = name}\\
+    \hspace*{0.40in}\texttt{self.gpa = gpa}
+  \end{block}
+
+  \begin{itemize}
+    \item A list can store references to \texttt{Student} instances.
+    \item The target may not be an entire object.
+    \item Usually we search by one meaningful attribute or condition.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Search a List of Objects by an Attribute}
+  \begin{block}{Return the matching student}
+    \texttt{def find\_student(students: list[Student], target\_id: int):}\\
+    \hspace*{0.20in}\texttt{for student in students:}\\
+    \hspace*{0.40in}\texttt{if student.student\_id == target\_id:}\\
+    \hspace*{0.60in}\texttt{return student}\\
+    \hspace*{0.20in}\texttt{return None}
+  \end{block}
+
+  \begin{keyidea}
+    The algorithm is still linear search. Only the matching rule changed from comparing primitive values to inspecting an object's attribute.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace: Object Search}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+      \begin{block}{Students}
+        \texttt{[Student(1008, "Maya", 3.4),}\\
+        \texttt{ Student(1042, "Luis", 3.8),}\\
+        \texttt{ Student(1091, "Nora", 3.6)]}
+      \end{block}
+
+      Search for ID \texttt{1042}:
+      \begin{enumerate}
+        \item inspect the object at position 0;
+        \item read \texttt{student.student\_id};
+        \item no match, advance;
+        \item inspect position 1;
+        \item matching attribute found, return that object.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.38\textwidth}
+      % Intended visual: list slots pointing to Student objects, with student_id field highlighted during search.
+      \lectureimage[2.22in]{linear-search-student-objects.png}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{What Should an Object Search Return?}
+  Suppose a matching \texttt{Student} is found.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.30}
+    \begin{tabular}{l|l}
+      \textbf{Return} & \textbf{Useful when the caller needs...} \\\hline
+      \texttt{True} & only whether a match exists \\
+      index & the object's position in the list \\
+      \texttt{Student} object & access to the matching student's state or methods \\
+      \texttt{None} & a clear ``no matching object'' result
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    Returning the matching object is often more useful than returning its index because the caller can immediately access its attributes and methods.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{From Specific Searches to a General Predicate}
+  Exact IDs are only one matching rule. A search can instead receive a function that answers whether one candidate matches.
+
+  \begin{block}{Reusable search}
+    \texttt{def find\_first(items, matches):}\\
+    \hspace*{0.20in}\texttt{for item in items:}\\
+    \hspace*{0.40in}\texttt{if matches(item):}\\
+    \hspace*{0.60in}\texttt{return item}\\
+    \hspace*{0.20in}\texttt{return None}
+  \end{block}
+
+  \begin{itemize}
+    \item \texttt{find\_first} controls \textbf{how} candidates are examined.
+    \item \texttt{matches} determines \textbf{which} candidates qualify.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{A Small Use for \texttt{lambda}}
+  A \texttt{lambda} expression creates a compact function value for a one-use matching rule.
+
+  \begin{block}{Same search procedure, different predicates}
+    \texttt{find\_first(students, lambda s: s.student\_id == 1042)}\\[0.05in]
+    \texttt{find\_first(students, lambda s: s.name == "Maya")}\\[0.05in]
+    \texttt{find\_first(students, lambda s: s.gpa >= 3.8)}
+  \end{block}
+
+  \begin{keyidea}
+    The \texttt{lambda} is not a new search algorithm. It only supplies the condition used by the existing linear search.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Searching Nested Collections}
+
+\begin{frame}{Objects Can Contain Collections of Other Objects}
+  \begin{block}{Course class}
+    \texttt{class Course:}\\
+    \hspace*{0.20in}\texttt{def \_\_init\_\_(self, code: str, students: list[Student]):}\\
+    \hspace*{0.40in}\texttt{self.code = code}\\
+    \hspace*{0.40in}\texttt{self.students = students}
+  \end{block}
+
+  A program might then store:
+  \begin{block}{Outer collection}
+    \texttt{courses = [course1, course2, course3]}
+  \end{block}
+
+  \begin{center}
+    \texttt{list[Course]} $\rightarrow$ each \texttt{Course} $\rightarrow$ \texttt{list[Student]}
+  \end{center}
+\end{frame}
+
+\begin{frame}{The Search Must Follow the Shape of the Data}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.53\textwidth}
+      To search every student across every course:
+      \begin{enumerate}
+        \item examine each \texttt{Course} in the outer list;
+        \item enter that course's \texttt{students} list;
+        \item examine each \texttt{Student};
+        \item stop as soon as the matching student is found.
+      \end{enumerate}
+
+      \begin{keyidea}
+        Nested structure naturally produces nested traversal.
+      \end{keyidea}
+    \end{column}
+    \begin{column}{0.40\textwidth}
+      % Intended visual: outer list of Course objects, each Course pointing to an inner list of Student objects.
+      \lectureimage[2.05in]{nested-course-student-search.png}
+    \end{column}
+  \end{columns}
+  {\footnotesize Student instances are labeled by ID; the list slots store references.}
+\end{frame}
+
+\begin{frame}{Search a List of Objects with Nested Lists of Objects}
+  \begin{block}{Return the first matching student}
+    \texttt{def find\_student\_in\_courses(courses: list[Course], target\_id: int):}\\
+    \hspace*{0.20in}\texttt{for course in courses:}\\
+    \hspace*{0.40in}\texttt{for student in course.students:}\\
+    \hspace*{0.60in}\texttt{if student.student\_id == target\_id:}\\
+    \hspace*{0.80in}\texttt{return student}\\
+    \hspace*{0.20in}\texttt{return None}
+  \end{block}
+
+  \begin{itemize}
+    \item The outer loop moves among course objects.
+    \item The inner loop moves among student objects belonging to the current course.
+    \item A successful inner comparison terminates the entire function.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Trace the Nested Search --- and Preserve Context}
+  Suppose \texttt{CS1001} contains IDs \texttt{[1008, 1014]} and \texttt{CS2020} contains \texttt{[1042, 1077]}.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.20}
+    \begin{tabular}{l|l|l}
+      \textbf{course} & \textbf{student ID} & \textbf{result} \\\hline
+      CS1001 & 1008 & continue \\
+      CS1001 & 1014 & continue \\
+      CS2020 & 1042 & match
+    \end{tabular}
+  \end{center}
+
+  Returning \texttt{student} gives the matching object. Returning \texttt{(course, student)} preserves both the match and the container in which it was found.
+
+  \begin{keyidea}
+    Search design includes deciding what context should accompany a successful match.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{How Much Work Does the Nested Search Perform?}
+  Suppose the courses contain \texttt{4}, \texttt{6}, and \texttt{5} students.
+
+  \begin{itemize}
+    \item A worst-case search can inspect all \texttt{4 + 6 + 5 = 15} students.
+    \item Count \textbf{all student entries} plus visits to the course containers.
+    \item The nested loops do not automatically mean the algorithm is ``quadratic.''
+  \end{itemize}
+
+  \begin{block}{General rule}
+    Total worst-case work is $O(C+S)$: $C$ is the number of courses and $S$ is the total number of student entries. Even an empty course requires an outer-loop visit.
   \end{block}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
+\begin{frame}{A Common Nested-Search Bug: Returning Too Early}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.47\textwidth}
+      \begin{alertblock}{Incorrect}
+        \footnotesize
+        \texttt{for course in courses:}\\
+        \hspace*{0.20in}\texttt{for student in course.students:}\\
+        \hspace*{0.40in}\texttt{if student.student\_id == target\_id:}\\
+        \hspace*{0.60in}\texttt{return student}\\
+        \hspace*{0.40in}\texttt{return None}
+      \end{alertblock}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \begin{block}{Problem}
+        The first nonmatching student immediately returns \texttt{None}. The function never examines later candidates.
+      \end{block}
+
+      \begin{keyidea}
+        ``Not found'' is justified only after every relevant candidate has been ruled out.
+      \end{keyidea}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\sectionframe{Part 5: Binary Search}
+
+\begin{frame}{Linear Search Does Not Use Ordering Information}
+  Consider an ordered list:
+
+  \begin{center}
+    \Large\texttt{[3, 7, 12, 18, 24, 31, 42, 50, 61]}
+  \end{center}
+
+  Searching for \texttt{42} linearly still begins at \texttt{3}, then \texttt{7}, then \texttt{12}, and so on.
+
+  \begin{block}{Observation}
+    Because the values are ordered, comparing the target with one carefully chosen element can rule out many positions at once.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Binary Search Requires Ordered Data}
+  \begin{cpdefinition}
+    \textbf{Binary search} repeatedly examines the middle of an ordered search interval and discards the half that cannot contain the target.
+  \end{cpdefinition}
+
   \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
+    \item If the middle value equals the target, stop.
+    \item If the target is smaller, continue in the left half.
+    \item If the target is larger, continue in the right half.
   \end{itemize}
+
+  \begin{alertblock}{Precondition}
+    Binary search depends on the collection being ordered in ascending order by the property being compared.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Binary Search Shrinks the Search Interval}
+  Search for \texttt{42}: compare with \texttt{24}, keep indices 5--8, then inspect index 6.
+  \begin{center}
+    \lectureimage[1.90in]{binary-search-halving-interval.png}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Binary Search Maintains a Shrinking Interval}
+  \small
+  Precondition: \texttt{values} is sorted in ascending order.
+  \begin{block}{Implementation}
+    \texttt{def binary\_search(values: list[int], target: int) -> int:}\\
+    \hspace*{0.20in}\texttt{left = 0}\\
+    \hspace*{0.20in}\texttt{right = len(values) - 1}\\
+    \hspace*{0.20in}\texttt{while left <= right:}\\
+    \hspace*{0.40in}\texttt{mid = (left + right) // 2}\\
+    \hspace*{0.40in}\texttt{if values[mid] == target: return mid}\\
+    \hspace*{0.40in}\texttt{elif values[mid] < target: left = mid + 1}\\
+    \hspace*{0.40in}\texttt{else: right = mid - 1}\\
+    \hspace*{0.20in}\texttt{return -1}
+  \end{block}
+
+  Each comparison finds a match or shrinks \texttt{left ... right}. With duplicate values, this version may return any matching index.
+\end{frame}
+
+\begin{frame}{Trace: Binary Search for \texttt{31}}
+  Search \texttt{[3, 7, 12, 18, 24, 31, 42, 50, 61]}.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.23}
+    \begin{tabular}{c|c|c|c|l}
+      \textbf{left} & \textbf{right} & \textbf{mid} & \textbf{value} & \textbf{action} \\\hline
+      0 & 8 & 4 & 24 & move \texttt{left} to 5 \\
+      5 & 8 & 6 & 42 & move \texttt{right} to 5 \\
+      5 & 5 & 5 & 31 & return 5
+    \end{tabular}
+  \end{center}
+
+  Only three elements were inspected.
+\end{frame}
+
+\begin{frame}{Why Binary Search Is Faster on Large Ordered Data}
+  \small
+  Each unsuccessful comparison removes approximately half of the remaining candidates.
+
+  \begin{center}
+    \renewcommand{\arraystretch}{1.20}
+    \begin{tabular}{c|c}
+      \textbf{number of candidates} & \textbf{about how many halvings?} \\\hline
+      8 & 3 \\
+      16 & 4 \\
+      1,024 & 10 \\
+      1,048,576 & 20
+    \end{tabular}
+  \end{center}
+
+  \begin{keyidea}
+    For $n\ge1$ candidates, this implementation inspects at most $\lfloor\log_2 n\rfloor+1$ middle elements. Halvings and inspected elements differ by up to one; growth is $O(\log n)$.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Binary Search Fails Without the Ordering Precondition}
+  Consider:
+  \begin{center}
+    \Large\texttt{[18, 3, 42, 7, 31, 12, 24]}
+  \end{center}
+
+  If the middle value is \texttt{7} and the target is \texttt{31}, we cannot conclude that \texttt{31} must lie to the right.
+
+  \begin{alertblock}{Why not?}
+    Values smaller and larger than \texttt{7} appear on both sides. The comparison does not identify a half that can safely be discarded.
+  \end{alertblock}
+
+  \begin{keyidea}
+    Binary search is powerful because ordering turns one comparison into information about many positions.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Binary Search Can Search Objects --- by the Ordering Attribute}
+  Suppose the list is ordered by \texttt{student\_id}.
+
+  \begin{block}{Middle comparison}
+    \texttt{student = students[mid]}\\
+    \texttt{if student.student\_id == target\_id: ...}\\
+    \texttt{elif student.student\_id < target\_id: ...}
+  \end{block}
+
+  \begin{itemize}
+    \item We compare the attribute that defines the ordering, not the entire object.
+    \item A list ordered by ID supports binary search by ID.
+    \item That same list is \emph{not} automatically suitable for binary search by GPA or name.
+  \end{itemize}
+
+  \begin{keyidea}
+    The ordering and the search comparison must refer to the same property.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Linear Search vs. Binary Search}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.32}
+    \begin{tabular}{l|c|c}
+      & \textbf{Linear Search} & \textbf{Binary Search} \\\hline
+      Requires ordered data? & No & Yes \\
+      Candidate examined next & next element & middle of interval \\
+      Worst-case growth & $O(n)$ & $O(\log n)$ \\
+      Works naturally on arbitrary predicates? & Yes & only with compatible ordering \\
+      Simple nested object search? & Yes & usually not directly
+    \end{tabular}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Representation Determines the Available Search}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.25}
+    \begin{tabular}{l|l}
+      \textbf{representation} & \textbf{natural search approach} \\\hline
+      unordered list & linear search \\
+      ordered list & linear or binary search \\
+      dictionary by key & dictionary key lookup \\
+      nested object collections & traversal following the nested structure
+    \end{tabular}
+  \end{center}
+
+  \begin{block}{Make assumptions visible}
+    A binary-search function should clearly communicate its precondition: the collection must already be ordered by the property being compared.
+  \end{block}
+
+  \begin{keyidea}
+    Choosing a data representation and choosing an algorithm are connected design decisions.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Integrated Trace: Which Search Is Appropriate?}
+  For each task, choose the most natural search strategy.
+
+  \begin{enumerate}
+    \item Find the first student with GPA above \texttt{3.8} in an unsorted list.
+    \item Find student ID \texttt{1042} in a list already ordered by student ID.
+    \item Find student ID \texttt{1042} somewhere inside a list of course objects, each containing its own student list.
+    \item Retrieve the value associated with key \texttt{"Ada"} from a dictionary.
+  \end{enumerate}
+
+  \begin{block}{Reason from structure}
+    Ask what organization the data already provides and what condition defines a match.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Takeaways}
+  \begin{enumerate}
+    \item An algorithm is a precise, finite procedure for solving a computational problem.
+    \item Linear search checks candidates sequentially and works even when the data is unordered.
+    \item Searching objects usually means examining a selected attribute or predicate.
+    \item Nested object structures require traversal that follows the nesting of the data.
+    \item A \texttt{lambda} can compactly provide a one-use matching rule to a reusable search function.
+    \item Binary search repeatedly discards half of an \textbf{ordered} search interval.
+    \item Linear search has worst-case growth $O(n)$; binary search has worst-case growth $O(\log n)$.
+    \item Data organization determines which search strategies are valid and useful.
+  \end{enumerate}
 \end{frame}
 
 \end{document}
