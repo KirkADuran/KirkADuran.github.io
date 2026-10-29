@@ -5,7 +5,7 @@
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs,array}
 \pdfstringdefDisableCommands{\def\translate#1{#1}}
-\graphicspath{{../assets/lecture-28/}}
+\graphicspath{{../assets/lecture-28/supplied/}{../assets/lecture-28/}}
 
 % Lecture 28: Generalization and Ensemble Learning. Nov 2, 2026.
 % Built to match the instructor's Lecture 26/27 Cal Poly Beamer conventions.
@@ -81,7 +81,7 @@
 \begin{frame}[t]{Three Ways Predictions Fail}
 \small
 \conceptlead{Ask whether the model is too simple, too specific, or facing a changed world.}
-\lecturevisual[1.58in]{three_failures.png}{}
+\lecturevisual[1.44in]{three_failures.png}{}
 \begin{itemize}
  \item \textbf{Underfitting:} a depth-one tree misses important interactions.
  \item \textbf{Overfitting:} a deep tree turns unusual training examples into fragile rules.
@@ -126,7 +126,7 @@
 \conceptlead{Rotate held-out groups, refit, and summarize the validation scores.}
 \begin{columns}[T,onlytextwidth]
 \begin{column}{.53\textwidth}
-\lecturevisual[1.13in]{group_folds.png}{T = train; V = validate; test stays untouched.}
+\lecturevisual[1.13in]{group_folds.png}{Whole runs stay intact; the final test is separate.}
 \end{column}
 \begin{column}{.44\textwidth}
 \begin{itemize}
@@ -321,7 +321,7 @@ $\mathbf x$: one case; $\widehat y_b$: label from tree $b$; $B$: tree count. \em
 \begin{frame}[t]{Random Forests Add a Second Source of Randomness}
 \small
 \conceptlead{Random forests randomize the rows used per tree and the candidate features considered at each split.}
-\lecturevisual[1.36in]{forest_two_randomness.png}{Randomized observations and random feature subsets encourage diverse trees.}
+\lecturevisual[1.36in]{../assets/lecture-28/forest_two_randomness.png}{Randomized observations and random feature subsets encourage diverse trees.}
 \begin{itemize}
  \item \textbf{Bootstrap rows:} different training samples for different trees.
  \item \textbf{Random feature candidates:} each split searches only a subset of the inputs.
@@ -382,7 +382,7 @@ With $d$ input features, \texttt{max\_features="sqrt"} considers about $\sqrt d$
 \conceptlead{A tree fitted on all data illustrates rules; it does not measure generalization.}
 \begin{columns}[T,onlytextwidth]
 \begin{column}{.40\textwidth}
-\lecturevisual[1.70in]{wine_tree.png}{Top levels of the depth-4 Wine tree from Lecture 27; fitted on all data.}
+\lecturevisual[1.70in]{wine_tree.png}{Supplied full depth-4 Wine tree. The code plots its top levels.}
 \end{column}
 \begin{column}{.57\textwidth}
 \scriptsize
@@ -450,7 +450,7 @@ print("Test:", best.score(X_test, y_test))
 \conceptlead{A regression tree predicts a leaf's mean target for the squared-error criterion.}
 \begin{columns}[T,onlytextwidth]
 \begin{column}{.40\textwidth}
-\lecturevisual[1.70in]{california_tree.png}{Top levels of the depth-4 California Housing tree from Lecture 27.}
+\lecturevisual[1.70in]{california_tree.png}{Supplied full depth-4 Housing tree. The code plots its top levels.}
 \end{column}
 \begin{column}{.57\textwidth}
 \scriptsize

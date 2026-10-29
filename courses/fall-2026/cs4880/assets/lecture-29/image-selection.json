@@ -1,0 +1,22 @@
+{
+  "source_archive": "Lecture_28_and_29_Image_Sets.zip",
+  "lecture_28": {
+    "image_search_order": [
+      "supplied/",
+      "./"
+    ],
+    "retained_reviewed_figure": "forest_two_randomness.png",
+    "reason": "The supplied version labels tree predictions independent. The reviewed diagram correctly emphasizes fresh feature candidates at each split without implying independent errors.",
+    "supplied_tree_images": "Full depth-4 trees; slide code displays their top levels.",
+    "backup_figures": "Existing generated figures and figure-checks.json remain reproducible backups; supplied/ images take priority in the rendered deck except the corrected forest diagram."
+  },
+  "lecture_29": {
+    "images": "All 14 supplied images are preserved without raster edits.",
+    "historical_results": [
+      "source_breast_cancer_results.png",
+      "source_mnist_grid.png",
+      "source_mnist_confusion.png"
+    ],
+    "note": "Supplied historical outputs are explicitly distinguished from newly executed code and illustrative figures."
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "tensorflow_version": "2.21.0",
+  "sklearn_version": "1.9.1",
+  "equations": {
+    "xor": [
+      0,
+      1,
+      1,
+      0
+    ],
+    "chain_rule": {
+      "analytic": -0.1691303733670684,
+      "finite_difference": -0.16913037337307202
+    },
+    "activations": {
+      "sigmoid_minus_one": 0.2689414213699951,
+      "tanh_minus_one": -0.7615941559557649,
+      "relu_minus_one": 0
+    },
+    "softmax_sum": 1.0
+  },
+  "examples": [
+    {
+      "title": "Prepare One Shared Train, Validation, and Test Split",
+      "output": "",
+      "partitions": [
+        364,
+        91,
+        114
+      ]
+    },
+    {
+      "title": "Python Example: Breast-Cancer Perceptron",
+      "output": "Validation Accuracy: 0.96"
+    },
+    {
+      "title": "Breast-Cancer Example: Define the Neural Network",
+      "output": ""
+    },
+    {
+      "title": "Breast-Cancer Example: Compile the Model",
+      "output": ""
+    },
+    {
+      "title": "Breast-Cancer Example: Fit for 30 Epochs",
+      "output": "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m23/23\u001b[0m \u001b[32m\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 1ms/step - accuracy: 1.0000 - loss: 0.0064 - val_accuracy: 0.9670 - val_loss: 0.0840\nEpoch 28/30\n\r\u001b[1m 1/23\u001b[0m \u001b[37m\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u001b[0m \u001b[1m0s\u001b[0m 7ms/step - accuracy: 1.0000 - loss: 5.8052e-05\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m23/23\u001b[0m \u001b[32m\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 1ms/step - accuracy: 1.0000 - loss: 0.0057 - val_accuracy: 0.9670 - val_loss: 0.0842\nEpoch 29/30\n\r\u001b[1m 1/23\u001b[0m \u001b[37m\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u001b[0m \u001b[1m0s\u001b[0m 8ms/step - accuracy: 1.0000 - loss: 4.6404e-05\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m23/23\u001b[0m \u001b[32m\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 1ms/step - accuracy: 1.0000 - loss: 0.0053 - val_accuracy: 0.9560 - val_loss: 0.0847\nEpoch 30/30\n\r\u001b[1m 1/23\u001b[0m \u001b[37m\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u001b[0m \u001b[1m0s\u001b[0m 8ms/step - accuracy: 1.0000 - loss: 4.0105e-05\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\r\u001b[1m23/23\u001b[0m \u001b[32m\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u001b[0m\u001b[37m\u001b[0m \u001b[1m0s\u001b[0m 1ms/step - accuracy: 1.0000 - loss: 0.0048 - val_accuracy: 0.9560 - val_loss: 0.0846",
+      "test_loss_accuracy": [
+        0.09704513847827911,
+        0.9649122953414917
+      ]
+    },
+    {
+      "title": "Original Python Example: Learning a Sine Wave",
+      "output": "",
+      "training_mse": 0.00024546523667096326
+    },
+    {
+      "title": "Original Python Example: A Dense MNIST Classifier",
+      "output": ""
+    },
+    {
+      "title": "MNIST: Train With Integer Labels and Test Once",
+      "output": "MNIST test: [0.10440795868635178, 0.9678000211715698]"
+    }
+  ]
+}

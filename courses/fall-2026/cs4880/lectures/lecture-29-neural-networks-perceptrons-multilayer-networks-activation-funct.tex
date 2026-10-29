@@ -1,54 +1,751 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
-
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+\graphicspath{{../assets/lecture-29/}}
+% Adapted from instructor-supplied Lecture 20 (40-page) neural-networks PDF.
+% Lecture sequence continues Lectures 26-28. Preserve instructor examples:
+% breast-cancer perceptron, Keras breast-cancer MLP, sine regression, MNIST.
+% Source historical story preserved with careful qualifications.
+% Approx. 50 minutes: 5 motivation, 10 perceptrons/XOR, 10 MLP/activation,
+% 9 backprop/history, 8 cancer practical, 6 sine/MNIST, 2 limitations/synthesis.
+% Technical support in calculation boxes; students need not know advanced calculus.
+% Checked against Keras Model training APIs, scikit-learn load_breast_cancer,
+% and Rumelhart, Hinton & Williams (1986), https://www.cs.toronto.edu/~hinton/absps/naturebp.pdf
+% https://keras.io/api/models/model_training_apis/
+% https://scikit-learn.org/stable/modules/generated/sklearn.datasets.load_breast_cancer.html
+\newcommand{\lecturevisual}[3][2.15in]{%
+ \par\vspace{2pt}{\centering\includegraphics[width=.98\linewidth,height=#1,keepaspectratio]{#2}\par}\vspace{2pt}%
+}
+\newcommand{\conceptlead}[1]{{\small\bfseries\color{CalPolyGreen}#1\par}}
+\newenvironment{calculation}[1][Mathematical description]{%
+ \par\begingroup\setbeamercolor{calculation body}{bg=DeckSoft,fg=DeckInk}%
+ \begin{beamercolorbox}[sep=3pt,wd=\linewidth]{calculation body}%
+ \footnotesize{\bfseries\color{DeckMuted}#1\par}%
+ \setlength{\abovedisplayskip}{3pt}\setlength{\belowdisplayskip}{3pt}\setlength{\jot}{0pt}%
+}{\end{beamercolorbox}\endgroup}
+\setbeamersize{text margin left=.42in,text margin right=.42in}
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{29}
-\lecturetitle{Neural Networks -- perceptrons, multilayer networks, activation functions, backpropagation}
+\lecturetitle{Neural Networks: From Perceptrons to Deep Learning}
 \lecturedate{November 4, 2026}
-\courseunit{Course sequence}
-
+\courseunit{Learning Agents and Machine Learning}
 \begin{document}
-
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Neural Networks -- perceptrons, multilayer networks, activation functions, backpropagation
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{Why Another Model Family?}
+\begin{frame}[t]{Where a Decision Tree Struggles}
+\small
+\conceptlead{Trees partition the world into regions; some targets change smoothly across those regions.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.48\textwidth}
+ \begin{itemize}
+  \item A standard decision tree predicts one value throughout each regression leaf: a \textbf{step-shaped approximation}.
+  \item A curved or diagonal boundary may require many axis-aligned splits.
+  \item Small changes in training records can produce a very different tree; ensembles reduce some of this instability.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.49\textwidth}
+ \lecturevisual[1.95in]{tree_vs_smooth.png}{A depth-limited tree versus a smooth underlying function.}
+ \end{column}
+\end{columns}
+\begin{keyidea}Neural networks learn connected numerical transformations rather than a sequence of hard feature tests.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}[t]{Learning a Category Without a Rulebook}
+\small
+\conceptlead{We can recognize many different dogs without writing a rule for every breed.}
+\begin{itemize}
+ \item A child sees large, small, fluffy, and short-haired dogs; examples establish a useful category despite differences.
+ \item Correlated clues such as shape, ears, tails, and movement can collectively support recognition.
+ \item In supervised learning, we give a model examples with known labels; it learns adjustable combinations of clues.
+ \item The model may learn statistical associations rather than the real-world meaning of ``dog.''
+\end{itemize}
+\begin{block}{Connect to learning agents}
+The agent's \textbf{learning element} updates a predictor using feedback. Its \textbf{performance element} can then use that predictor to select actions. A neural network is a model inside this larger loop, not an entire learning agent by itself.
+\end{block}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}[t]{Biological Inspiration: Neurons and Plasticity}
+\small
+\conceptlead{The biological analogy is useful for intuition, but an artificial neuron is a mathematical simplification.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.54\textwidth}
+ \begin{itemize}
+  \item Biological neurons receive signals through connections, integrate inputs, and can produce an output signal.
+  \item The strength of connections can change through experience, a phenomenon called \textbf{synaptic plasticity}.
+  \item The Hebbian slogan ``neurons that fire together wire together'' captures one form of association learning.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.43\textwidth}
+ \begin{block}{Artificial analogue}
+ Inputs $\longrightarrow$ weighted sum $\longrightarrow$ activation $\longrightarrow$ output.
+ \par\medskip
+ Training modifies numerical \textbf{weights} to improve predictions. Modern backpropagation is not intended as a literal model of brain learning.
+ \end{block}
+ \end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\section{Perceptrons: Learning a Linear Classifier}
+\begin{frame}[t]{The Perceptron: A Trainable Artificial Neuron}
+\small
+\conceptlead{A perceptron makes a binary decision from a weighted vote of its inputs.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.53\textwidth}
+ \lecturevisual[1.06in]{perceptron_structure.png}{Inputs, weights, bias, and threshold.}
+ \end{column}
+ \begin{column}{.43\textwidth}
+ \begin{itemize}
+  \item Feature weights increase or decrease influence.
+  \item Add the weighted inputs and a bias (the decision's starting offset).
+  \item Threshold the score to obtain 0 or 1.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\begin{calculation}[Weighted score followed by a threshold]
+\[z=b+\sum_{j=1}^{d}w_jx_j,\qquad \widehat y=\mathrm{step}(z).\]
+$d$: feature count; $j$: feature index; $x_j$: input; $w_j$: weight; $b$: bias; $z$: weighted score; $\widehat y$: predicted label. Here $\mathrm{step}(z)=1$ when $z\geq0$, otherwise $0$.
+\end{calculation}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}[t]{How a Perceptron Learns from Mistakes}
+\small
+\conceptlead{When the label is wrong, adjust the weights toward the correct answer.}
+\begin{enumerate}
+ \item Compute the current prediction from the feature values.
+ \item Compare the predicted label with the actual training label.
+ \item If the prediction is correct, leave the weights unchanged for that example.
+ \item If it is wrong, change each weight in proportion to its input feature.
+\end{enumerate}
+\begin{calculation}[Per-example perceptron update]
+\[w_j\leftarrow w_j+\eta(y-\widehat y)x_j,\qquad
+b\leftarrow b+\eta(y-\widehat y).\]
+$y$: true 0/1 label; $\widehat y$: prediction; $\eta>0$: learning rate; $x_j$: feature; $w_j,b$: weight and bias. $\leftarrow$: replace with the updated value. The error $y-\widehat y$ is $+1$ for a missed class-1 example, $-1$ for a false class-1 prediction, and $0$ if correct.
+\end{calculation}
+\begin{keyidea}This is supervised learning: observed labels change the model rather than being stored as independent handwritten rules.\end{keyidea}
 \end{frame}
 
+\begin{frame}[fragile,t]{Prepare One Shared Train, Validation, and Test Split}
+\small
+\conceptlead{Use the same 30 features and partitions for the perceptron and the later MLP.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.56\textwidth}
+\scriptsize
+\begin{verbatim}
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+X, y = load_breast_cancer(return_X_y=True)
+X_dev, X_test, y_dev, y_test = train_test_split(
+    X, y, test_size=.2, stratify=y, random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(
+    X_dev, y_dev, test_size=.2, stratify=y_dev,
+    random_state=42)
+\end{verbatim}
+\end{column}
+\begin{column}{.41\textwidth}
+\scriptsize
+\begin{verbatim}
+scaler = StandardScaler().fit(X_train)
+X_train = scaler.transform(X_train)
+X_val = scaler.transform(X_val)
+X_test = scaler.transform(X_test)
+\end{verbatim}
+\end{column}
+\end{columns}
+\begin{keyidea}Fit the scaler only on training rows. Dataset labels: $0$ = malignant; $1$ = benign. A sigmoid score for class 1 is a benign score, not a cancer-risk score.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile,t]{Python Example: Breast-Cancer Perceptron}
+\small
+\conceptlead{Fit a linear classifier, predict held-out labels, then measure accuracy.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.52\textwidth}
+{\footnotesize\begin{verbatim}
+from sklearn.linear_model import Perceptron
+from sklearn.metrics import accuracy_score
+
+clf = Perceptron(max_iter=1000,
+                 tol=1e-3,
+                 random_state=42)
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_val)
+acc = accuracy_score(y_val, y_pred)
+print(f"Validation Accuracy: {acc:.2f}")
+\end{verbatim}}
+ \end{column}
+ \begin{column}{.44\textwidth}
+ \begin{block}{What each call means}
+ \texttt{fit}: learn the feature weights.\\[5pt]
+ \texttt{predict}: apply the learned boundary to held-out records.\\[5pt]
+ \texttt{accuracy\_score}: count correct predictions.
+ \end{block}
+ \end{column}
+\end{columns}
+\begin{keyidea}The previous slide supplies the scaled data. Compare this baseline on validation; keep the final test out of model and epoch selection.\end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{What Can That Perceptron Represent?}
+\small
+\conceptlead{The learned weights tilt and move one linear boundary through the feature space.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.54\textwidth}
+ \lecturevisual[2.53in]{perceptron_cancer_boundary.png}{Example boundary using two breast-cancer features; not the 30-feature model.}
+ \end{column}
+ \begin{column}{.42\textwidth}
+ \begin{itemize}
+  \item This supplied plot uses mean radius and mean texture; it is not the 30-feature model fitted by our code.
+  \item A single boundary cannot wrap around disconnected or highly curved clusters.
+  \item Better features can help; adding hidden layers changes what the model can represent.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[t]{XOR: A Simple Problem One Perceptron Cannot Solve}
+\small
+\conceptlead{Some patterns have no single straight line separating the labels.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.53\textwidth}
+ \lecturevisual[2.35in]{xor_points.png}{The XOR positive class occupies opposite corners.}
+ \end{column}
+ \begin{column}{.43\textwidth}
+ \begin{itemize}
+  \item In \textbf{XOR}, exactly one input must be 1.
+  \item The positive cases are $(0,1)$ and $(1,0)$; the negative cases are $(0,0)$ and $(1,1)$.
+  \item Every proposed straight line misclassifies at least one corner.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\begin{calculation}[XOR truth table]
+$0\oplus0=0$, $0\oplus1=1$, $1\oplus0=1$, $1\oplus1=0$. $\oplus$ denotes exclusive OR; $x_1,x_2$ are binary inputs, $w_1,w_2$ are weights, and $b$ is bias. No single affine threshold matches all four cases.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[t]{The First Wave: A Breakthrough and a Boundary}
+\small
+\conceptlead{The perceptron made learning from data tangible, but its expressive limits were real.}
+\begin{itemize}
+ \item \textbf{1958:} Frank Rosenblatt's perceptron popularized trainable pattern recognition, building on earlier threshold-neuron models.
+ \item \textbf{1969:} Minsky and Papert analyzed important limits of single-layer perceptron architectures, including XOR-like problems.
+ \item Enthusiasm for perceptrons faded; this contributed to broader skepticism surrounding early AI research.
+ \item The first AI winter had \emph{multiple} technical, funding, and expectation-related causes, not one mathematical counterexample.
+\end{itemize}
+\begin{keyidea}One layer was not expressive enough for every classification problem. The next question: can we combine simple units into a more capable model?\end{keyidea}
+\end{frame}
+
+\section{From a Neuron to a Network}
+\begin{frame}[t]{A Multilayer Perceptron Combines Learned Features}
+\small
+\conceptlead{Hidden units can transform the original inputs before the final decision.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.55\textwidth}
+ \lecturevisual[2.64in]{multilayer_network.png}{A fully connected feedforward multilayer network.}
+ \end{column}
+ \begin{column}{.41\textwidth}
+ \begin{itemize}
+  \item \textbf{Input layer:} the feature values.
+  \item \textbf{Hidden layers:} combinations of earlier signals, followed by nonlinear activations.
+  \item \textbf{Output layer:} a class score, class probabilities, or a number.
+  \item Stacking transformations can represent boundaries unavailable to one linear unit.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[t]{How Hidden Units Make XOR Possible}
+\small
+\conceptlead{A hidden layer can ask simpler questions whose answers solve a harder one.}
+\lecturevisual[0.92in]{xor_hidden_features.png}{Two intermediate Boolean patterns: OR and AND.}
+One hidden unit detects whether \emph{either} input is on (OR); another detects whether \emph{both} are on (AND). The output combines their answers: \textbf{XOR = OR and not AND}.
+\begin{calculation}[A small network implementing XOR with step activations]
+\[\begin{aligned}
+h_{\rm OR}&=\mathrm{step}(x_1+x_2-0.5),\quad
+h_{\rm AND}=\mathrm{step}(x_1+x_2-1.5),\\
+\widehat y&=\mathrm{step}(h_{\rm OR}-h_{\rm AND}-0.5).
+\end{aligned}\]
+$x_1,x_2$: binary inputs; $h_{\rm OR},h_{\rm AND}$: hidden outputs; $\widehat y$: prediction. Check $(1,1)$: both hidden values are 1, so the output is 0. These weights are hand-chosen, not gradient-trained.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[t]{Inside One Hidden Unit}
+\small
+\conceptlead{Every hidden unit repeats the same two steps: combine inputs, then activate.}
+\begin{enumerate}
+ \item Multiply each incoming feature by the weight on its connection.
+ \item Add those contributions and a bias.
+ \item Apply an activation function to the sum.
+ \item Send the resulting value to the next layer.
+\end{enumerate}
+\begin{calculation}[Forward computation for a hidden unit]
+\[z_j=b_j+\sum_k w_{jk}a_k,\qquad a_j=\phi(z_j).\]
+$j$: current unit; $k$: previous-layer unit; $a_k$: incoming activation; $w_{jk}$: connection weight; $b_j$: bias; $z_j$: weighted score; $\phi$: nonlinearity; $a_j$: resulting activation. Sum over all incoming units.
+\end{calculation}
+\smallskip
+\textbf{Why nonlinear?} Stacked affine transformations (linear weights plus biases) collapse to one affine transformation. Nonlinear activations change what can be represented.
+\end{frame}
+
+\begin{frame}[t]{Activations: Threshold, Sigmoid/Tanh, and ReLU}
+\small
+\conceptlead{The activation determines how a unit responds to its combined input.}
+\lecturevisual[0.81in]{activations.png}{Common activation functions; the middle plot includes sigmoid and tanh.}
+\begin{itemize}
+ \item \textbf{Step:} a hard 0/1 decision, useful for the original perceptron but unsuitable for ordinary gradient training.
+ \item \textbf{Sigmoid/tanh:} smooth nonlinear functions; large positive/negative scores can cause nearly flat responses.
+ \item \textbf{ReLU:} leaves positive inputs unchanged and sets negative inputs to zero; a practical default for many hidden layers.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[t]{Activation Formulas: What Each Curve Computes}
+\small
+\conceptlead{The same weighted score can produce very different activations.}
+\begin{calculation}[Common formulas]
+\[\sigma(z)=\frac1{1+e^{-z}},\qquad\tanh(z)=\frac{e^z-e^{-z}}{e^z+e^{-z}},\qquad\mathrm{ReLU}(z)=\max(0,z).\]
+$z$: weighted input; $e$: Euler's number; $\sigma$: sigmoid; $\tanh$: hyperbolic tangent; ReLU: rectified linear unit; $\max$: take the larger value. ReLU has a kink at zero; implementations choose a derivative convention there.
+\end{calculation}
+\begin{block}{Check one input: $z=-1$}
+Sigmoid gives about $0.269$; tanh gives about $-0.762$; ReLU gives $0$.
+\end{block}
+\begin{keyidea}Sigmoid is bounded between 0 and 1; tanh between $-1$ and 1; ReLU is unbounded above. A hidden activation is not automatically a class probability.\end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{The Missing Piece: How Do Hidden Layers Learn?}
+\small
+\conceptlead{The correct output tells us the network is wrong; it does not say which internal weight caused the error.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.50\textwidth}
+ \begin{itemize}
+  \item A perceptron's output directly exposes its decision error.
+  \item A multilayer network has many hidden weights affecting the same output.
+  \item If the final prediction is wrong, should we change an early connection, a late connection, or both?
+  \item Hard thresholds offer no useful local slope for gradient-based credit assignment.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.46\textwidth}
+ \begin{block}{Historical distinction}
+Multilayer networks can \textbf{represent} XOR, even with step activations. But efficient, scalable \textbf{training} requires a way to assign responsibility for error across layers.
+ \par\medskip
+ \textbf{Representability is not trainability.}
+ \end{block}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\section{Backpropagation Makes Hidden Layers Trainable}
+\begin{frame}[t]{Backpropagation: Send Error Information Backward}
+\small
+\conceptlead{Compute how a small change to each weight would affect the current loss.}
+\lecturevisual[1.40in]{backprop_flow.png}{Forward prediction and backward gradient propagation.}
+\begin{itemize}
+ \item \textbf{Forward pass:} compute each activation and the final prediction.
+ \item \textbf{Loss:} measure how different the prediction is from the label.
+ \item \textbf{Backward pass:} compute the loss gradient with respect to each weight.
+ \item \textbf{Optimizer:} use those sensitivities to update the weights.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[t]{The Chain Rule: Assigning Responsibility}
+\small
+\conceptlead{A weight affects the loss through a chain of intermediate calculations.}
+\begin{itemize}
+ \item Picture a weight changing a hidden score, which changes an activation, which changes a prediction, which changes the loss.
+ \item A \textbf{derivative} expresses how strongly one value changes as another changes slightly.
+ \item Backpropagation multiplies the sensitivities along the chain so each weight gets a meaningful update direction.
+\end{itemize}
+\begin{calculation}[For a weight $w$ that affects a single downstream activation]
+\[\frac{\partial L}{\partial w}
+=\underbrace{\frac{\partial L}{\partial a}}_{\text{activation to loss}}
+\underbrace{\frac{\partial a}{\partial z}}_{\text{score to activation}}
+\underbrace{\frac{\partial z}{\partial w}}_{\text{weight to score}}.\]
+$L$: loss; $w$: one weight; $z$: pre-activation score; $a$: activation; $\partial L/\partial w$: local loss sensitivity to that weight, holding other weights fixed. If a value feeds several downstream paths, their gradient contributions are added.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[t]{Backpropagation and Gradient Descent Have Different Jobs}
+\small
+\conceptlead{Backpropagation finds the sensitivities; the optimizer decides how to use them.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.48\textwidth}
+ \begin{block}{Backpropagation}
+ \textbf{Calculates} how each weight influences the current loss using the chain rule.
+ \end{block}
+ \end{column}
+ \begin{column}{.48\textwidth}
+ \begin{block}{Gradient descent / Adam}
+ \textbf{Changes} weights in ways expected to lower loss; Adam adapts update sizes using gradient history.
+ \end{block}
+ \end{column}
+\end{columns}
+\begin{calculation}[One basic gradient-descent step]
+\[w^{(t+1)}=w^{(t)}-\eta\frac{\partial L}{\partial w}.\]
+$t$: update index; $w^{(t)},w^{(t+1)}$: old/new weight; $\eta>0$: learning rate; $\partial L/\partial w$: gradient evaluated at the current weights. A batch is a group used for one update; an epoch is one pass through the training examples.
+\end{calculation}
+\begin{keyidea}Backpropagation is an efficient way to compute gradients for many connected parameters; it is not itself the weight-update policy.\end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{1986 and the Return of Multilayer Learning}
+\small
+\conceptlead{Efficient error propagation made multilayer networks trainable in practice.}
+\begin{itemize}
+ \item Work on reverse-mode differentiation and error propagation predates 1986.
+ \item The influential 1986 work of \textbf{Rumelhart, Hinton, and Williams} helped popularize backpropagation for multilayer connectionist models.
+ \item Smooth activations and computed gradients supplied a practical procedure for learning hidden representations.
+ \item Better training algorithms did not immediately make deep networks dominant: computational power and useful datasets were still limited.
+\end{itemize}
+\begin{keyidea}The conceptual breakthrough was an algorithm to \textbf{train} internal layers, not merely a drawing of a deeper network.\end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{Why Deep Networks Still Struggled in the 1990s}
+\small
+\conceptlead{A successful training principle still depends on data, compute, and numerical behavior.}
+\begin{itemize}
+ \item \textbf{Data:} many tasks lacked large, labeled datasets.
+ \item \textbf{Compute:} training many layers with the available hardware was expensive.
+ \item \textbf{Vanishing gradients:} saturated sigmoid/tanh units could pass tiny update signals through many layers.
+ \item \textbf{Optimization and initialization:} training could proceed slowly or unpredictably.
+\end{itemize}
+\begin{block}{Historical context}
+The late-1980s/early-1990s AI funding downturn had several causes, including disappointment with expert systems. Neural-network research continued; these periods should not be explained by a single architecture or training problem.
+\end{block}
+\end{frame}
+
+\begin{frame}[t]{The 2010s: Data, Compute, and Better Training}
+\small
+\conceptlead{Deep learning became practically effective when several enabling conditions came together.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.53\textwidth}
+ \begin{itemize}
+  \item \textbf{Larger datasets:} ImageNet, speech corpora, and other large collections supported richer models.
+  \item \textbf{Accelerators:} GPUs and distributed computation made larger training runs possible.
+  \item \textbf{Improved training:} ReLU, better initialization, normalization, regularization, and more capable optimizers helped stabilize learning.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.43\textwidth}
+ \lecturevisual[2.21in]{multilayer_network.png}{The same weighted-layer idea can be repeated at larger scale.}
+ \end{column}
+\end{columns}
+\begin{keyidea}Deep learning was not one new neuron formula: it was old core ideas plus advances in data, hardware, architecture, and optimization.\end{keyidea}
+\end{frame}
+
+\section{Practical Python: Breast-Cancer Classification}
+\begin{frame}[t]{A Modern Feedforward Network: What Gets Learned?}
+\small
+\conceptlead{Training adjusts weights and biases; the architecture specifies how they are connected.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.55\textwidth}
+ \lecturevisual[2.60in]{multilayer_network.png}{Fully connected input, hidden, and output layers.}
+ \end{column}
+ \begin{column}{.41\textwidth}
+ \begin{itemize}
+  \item \textbf{Parameters:} weights and biases fitted from labeled examples.
+  \item \textbf{Hyperparameters:} number of layers, units, activation functions, batch size, epochs, learning rate.
+  \item \textbf{Loss:} tells us how far the outputs are from the desired targets.
+  \item \textbf{Validation:} helps assess whether improvements extend to unseen examples.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[t]{Breast-Cancer Example: Reuse the Same Evaluation Protocol}
+\small
+\conceptlead{Change the model, keeping the data and evaluation rules fixed.}
+\begin{itemize}
+ \item Use the training, validation, and test arrays prepared before the perceptron example.
+ \item Every record is a vector of 30 numerical measurements.
+ \item The scaler was fitted only on training rows; validation and test use those same training statistics.
+ \item The MLP learns from training rows and monitors validation rows; neither model trains on the final test.
+\end{itemize}
+\begin{keyidea}This lets us compare model families fairly. The data label $1$ still means benign; increasing a sigmoid score does not mean increasing malignancy risk.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile,t]{Breast-Cancer Example: Define the Neural Network}
+\small
+\conceptlead{The architecture stacks two nonlinear hidden layers and one binary output.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.57\textwidth}
+{\footnotesize\begin{verbatim}
+import tensorflow as tf
+tf.keras.utils.set_random_seed(42)
+model = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(30,)),
+    tf.keras.layers.Dense(64, activation='relu'),
+    tf.keras.layers.Dense(32, activation='relu'),
+    tf.keras.layers.Dense(1, activation='sigmoid')
+])
+\end{verbatim}}
+ \end{column}
+ \begin{column}{.40\textwidth}
+ \begin{itemize}
+  \item \texttt{Input(30)}: 30 measurements.
+  \item \texttt{Dense(64)}: 64 learned feature combinations.
+  \item \texttt{Dense(32)}: 32 more transformations.
+  \item \texttt{Dense(1)} with sigmoid: one score between 0 and 1.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile,t]{Breast-Cancer Example: Compile the Model}
+\small
+\conceptlead{Compilation specifies what error means and how the weights will change.}
+{\footnotesize\begin{verbatim}
+model.compile(
+    optimizer='adam',
+    loss='binary_crossentropy',
+    metrics=['accuracy']
+)
+\end{verbatim}}
+\begin{itemize}
+ \item \textbf{Loss:} binary cross-entropy penalizes confident probability mistakes.
+ \item \textbf{Optimizer:} Adam uses backpropagated gradients to update trainable parameters.
+ \item \textbf{Metric:} accuracy counts correct labels at the evaluation threshold.
+\end{itemize}
+\begin{calculation}[Loss for one binary-labeled observation]
+\[\ell(p,y)=-\bigl[y\ln p+(1-y)\ln(1-p)\bigr].\]
+$y\in\{0,1\}$: true label; $p\in(0,1)$: predicted probability of class 1; $\ell$: one-example loss; $\ln$: natural logarithm. For $y=1$, loss is $-\ln p$; for $y=0$, it is $-\ln(1-p)$. $L$ usually averages such losses over a batch.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile,t]{Breast-Cancer Example: Fit for 30 Epochs}
+\small
+\conceptlead{An epoch is one pass through the training examples; batches make several updates per epoch.}
+{\footnotesize\begin{verbatim}
+history = model.fit(
+    X_train, y_train,
+    epochs=30,
+    batch_size=16,
+    validation_data=(X_val, y_val),
+    verbose=1
+)
+\end{verbatim}}
+\begin{itemize}
+ \item \texttt{batch\_size=16}: update weights after processing groups of sixteen examples.
+ \item \texttt{validation\_data}: monitor the separate validation rows without training on them.
+ \item \texttt{history}: stores epoch-by-epoch loss and accuracy for plotting.
+\end{itemize}
+\begin{keyidea}Freeze settings chosen using validation, then report \texttt{model.evaluate(X\_test, y\_test)} once.\end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{Reading Training Histories}
+\small
+\conceptlead{Look for generalization, not only rising training accuracy.}
+\lecturevisual[1.08in]{training_curves_illustrative.png}{Illustrative training and validation curves (not a measured Keras run).}
+\begin{itemize}
+ \item Accuracy should improve as useful relationships are learned, but fluctuations are normal.
+ \item If training loss falls while validation loss rises, the model may be overfitting.
+ \item A high validation accuracy in a small sample is not a guarantee of future reliability.
+\end{itemize}
+\begin{calculation}[Retrieving the arrays returned by Keras]
+\texttt{history.history['loss']} and \texttt{history.history['val\_loss']} are loss curves; the \texttt{accuracy} and \texttt{val\_accuracy} entries are classification curves.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[t]{Compare the Supplied Training History Carefully}
+\small
+\conceptlead{A supplied result illustrates a run; it is not a guaranteed outcome of our revised split.}
+\lecturevisual[1.62in]{source_breast_cancer_results.png}{Training and validation history supplied by the instructor.}
+\begin{itemize}
+ \item Both validation curves improve here; compare this with the illustrative overfitting curves on the previous slide.
+ \item Split choices, preprocessing, random seeds, and training details affect the numbers.
+\end{itemize}
+\end{frame}
+
+\section{What Networks Can Approximate}
+\begin{frame}[t]{Continuous Outputs and Universal Approximation}
+\small
+\conceptlead{A neural network is not limited to classification: it can predict continuous quantities.}
+\begin{itemize}
+ \item Replacing the final sigmoid with a linear output lets a network predict a numerical value.
+ \item With a suitable nonlinear activation and enough hidden units, certain neural networks can approximate any continuous target on a bounded input region.
+ \item This is an \textbf{existence result}, not a promise that a particular dataset or optimizer will find the desired approximation.
+ \item Depth can provide more efficient representations for some structured functions; it is not automatically superior on every task.
+\end{itemize}
+\begin{calculation}[The theorem's practical reading]
+For a continuous target $g$ on a closed, bounded region $K$, suitable networks can be constructed such that
+\[\max_{x\in K}|f_{\theta}(x)-g(x)|<\varepsilon\qquad\text{for any chosen }\varepsilon>0.\]
+$K$: compact (closed, bounded) input set; $x$: input; $g$: continuous target; $f_\theta$: network output; $\theta$: all weights and biases; $\varepsilon>0$: chosen error tolerance. $\max$ measures the worst absolute error throughout $K$. The result does not guarantee a feasible size or a successful training procedure.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile,t]{Original Python Example: Learning a Sine Wave}
+\small
+\conceptlead{Use the same feedforward architecture for a numerical target instead of a class label.}
+{\scriptsize\begin{verbatim}
+import numpy as np
+import tensorflow as tf
+
+X = np.linspace(0, 2 * np.pi, 1000).reshape(-1, 1)
+y = np.sin(X)
+model = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(1,)),
+    tf.keras.layers.Dense(64, activation='tanh'),
+    tf.keras.layers.Dense(64, activation='tanh'),
+    tf.keras.layers.Dense(1)
+])
+model.compile(optimizer='adam', loss='mse')
+model.fit(X, y, epochs=100, batch_size=32, verbose=0)
+\end{verbatim}}
+\begin{keyidea}The last layer has \textbf{no sigmoid}, so it can produce any real number. Mean squared error measures numerical prediction differences.\end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{A Network Can Fit a Smooth Function}
+\small
+\conceptlead{The network learns to combine smooth nonlinear transformations into a smooth prediction.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.57\textwidth}
+ \lecturevisual[2.53in]{sine_approx_illustrative.png}{Illustrative sine approximation, not the output of the original Keras run.}
+ \end{column}
+ \begin{column}{.39\textwidth}
+ \begin{itemize}
+  \item The input is one position $x$; the target is $\sin(x)$. The supplied curve is illustrative, not a rerun.
+  \item Two hidden layers with \texttt{tanh} allow a curved numerical relationship.
+  \item Training MSE asks how well the approximation matches observed targets.
+  \item Evaluation on new inputs is needed to assess interpolation and generalization.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[t]{MNIST: Recognizing Handwritten Digits}
+\small
+\conceptlead{The same model family can classify images by treating their pixel values as features.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.52\textwidth}
+ \lecturevisual[2.52in]{source_mnist_grid.png}{Examples from the instructor's original MNIST slide.}
+ \end{column}
+ \begin{column}{.44\textwidth}
+ \begin{itemize}
+  \item Each grayscale image has $28\times28=784$ pixels.
+  \item Flatten the image to a vector of 784 input values.
+  \item Normalize intensities from 0--255 into the 0--1 range.
+  \item Predict one of ten classes: the digits 0 through 9.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile,t]{Original Python Example: A Dense MNIST Classifier}
+\small
+\conceptlead{Replace the binary sigmoid with a ten-way softmax output.}
+{\scriptsize\begin{verbatim}
+(X_train, y_train), (X_test, y_test) = (
+    tf.keras.datasets.mnist.load_data())
+X_train = X_train.reshape(-1, 784).astype('float32') / 255.0
+X_test  = X_test.reshape(-1, 784).astype('float32') / 255.0
+model = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(784,)),
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dense(64, activation='relu'),
+    tf.keras.layers.Dense(10, activation='softmax')
+])
+\end{verbatim}}
+\begin{calculation}[Why softmax at the output?]
+\[p_k=\frac{e^{z_k}}{\sum_{j=0}^{9}e^{z_j}},\qquad \sum_{k=0}^{9}p_k=1.\]
+$z_k$: raw output score (logit) for digit $k$; $e$: Euler's number; $j,k\in\{0,\ldots,9\}$: class indices; $p_k$: estimated class probability. Choose the largest $p_k$; normalization alone does not guarantee calibration.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile,t]{MNIST: Train With Integer Labels and Test Once}
+\small
+\conceptlead{Keep a validation subset of the 60,000 training images; preserve the official test set.}
+{\footnotesize
+\begin{verbatim}
+X_train, X_val, y_train, y_val = train_test_split(
+    X_train, y_train, test_size=10000,
+    stratify=y_train, random_state=42)
+model.compile(optimizer='adam',
+    loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.fit(X_train, y_train, epochs=3, batch_size=128,
+    validation_data=(X_val, y_val), verbose=0)
+print("MNIST test:", model.evaluate(X_test, y_test, verbose=0))
+\end{verbatim}}
+\begin{itemize}
+ \item \texttt{sparse\_categorical\_crossentropy} expects integer labels $0$ through $9$, not one-hot vectors.
+ \item Three epochs is a preset demonstration budget; use validation if you change it.
+\end{itemize}
+\begin{keyidea}The supplied confusion matrix is a separate earlier result. A newly trained model must be evaluated on its own predictions.\end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{MNIST: Evaluate Confusion, Not Only Accuracy}
+\small
+\conceptlead{A high overall score can still hide systematic confusion between particular digits.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.53\textwidth}
+ \lecturevisual[2.08in]{source_mnist_confusion.png}{Confusion matrix displayed in the instructor's original MNIST example.}
+ \end{column}
+ \begin{column}{.43\textwidth}
+ \begin{itemize}
+  \item \textbf{Diagonal cells:} images assigned the correct digit.
+  \item \textbf{Off-diagonal cells:} confusion between two digits.
+  \item This supplied chart is not a result of our new run. Axis direction and counts must be labeled before reporting which digits are confused.
+  \item Flattening retains pixel positions as vector indices. Dense layers do not build in local neighborhoods or shared filters; CNNs do.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\end{frame}
+
+\section{Limitations and Model Choices}
+\begin{frame}[t]{Downsides of Neural Networks}
+\small
+\conceptlead{More expressive models come with costs and failure modes.}
+\begin{columns}[T,onlytextwidth]
+ \begin{column}{.49\textwidth}
+ \begin{itemize}
+  \item Large labeled datasets may be needed to fit many parameters reliably.
+  \item Deep internal representations are harder to interpret than short decision rules.
+  \item Larger networks may demand substantial computation and memory.
+ \end{itemize}
+ \end{column}
+ \begin{column}{.48\textwidth}
+ \begin{itemize}
+  \item Overfitting can still occur, especially with small or noisy samples.
+  \item Prediction confidence is not automatically calibrated uncertainty.
+  \item Training depends on architecture, initialization, learning rate, and other choices.
+ \end{itemize}
+ \end{column}
+\end{columns}
+\lecturevisual[0.96in]{neural_overfitting.png}{Illustrative stable versus noise-sensitive fits.}
+\end{frame}
+
+\begin{frame}[t]{Hyperparameters: What We Choose Before Training}
+\small
+\conceptlead{Learn weights from data; use validation evidence to choose the training design.}
+\begin{center}
+\renewcommand{\arraystretch}{1.13}
+\begin{tabular}{>{\raggedright\arraybackslash}p{.26\linewidth}>{\raggedright\arraybackslash}p{.34\linewidth}>{\raggedright\arraybackslash}p{.30\linewidth}}
+\toprule
+\textbf{Choice} & \textbf{What it controls} & \textbf{Common examples}\\
+\midrule
+Layers, units & Network depth and width & 2 layers; 64 or 128 units\\
+Activation & How a neuron transforms input & ReLU, tanh, sigmoid\\
+Learning rate / optimizer & How fast and how weights change & Adam, SGD\\
+Batch size / epochs & Updates per pass; passes through data & 16, 32 / 30, 100\\
+Regularization & Controls overly complex fits & Dropout, weight decay\\
+Stopping & When training should end & Early stopping\\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{keyidea}Use training data to \textbf{fit} weights, validation data to \textbf{choose} hyperparameters, and a final untouched test set to \textbf{evaluate} the selected model.\end{keyidea}
+\end{frame}
+
+\begin{frame}[t]{From One Perceptron to Deep Learning}
+\small
+\begin{enumerate}
+ \item A perceptron learns a linear boundary by changing feature weights after mistakes.
+ \item Hidden layers make more complex functions possible, including XOR.
+ \item Nonlinear activation functions provide useful intermediate representations and gradients.
+ \item Backpropagation calculates weight sensitivities; the optimizer updates the parameters.
+ \item Data, accelerators, and improved training methods made deep learning practical at larger scale.
+ \item The same basic framework supports binary classification, continuous regression, and multiclass image recognition.
+\end{enumerate}
+\begin{keyidea}Representability asks \emph{what the network could express}; optimization asks \emph{what training can find}; generalization asks \emph{whether it works on new cases}.\end{keyidea}
+\smallskip
+\centering\scriptsize Next: architectures that exploit structure in images and sequences (CNNs and RNNs); generative networks are another extension.
+\end{frame}
 \end{document}

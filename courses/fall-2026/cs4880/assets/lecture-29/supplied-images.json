@@ -1,0 +1,61 @@
+{
+  "archive": "Lecture_28_and_29_Image_Sets.zip",
+  "assets": [
+    {
+      "filename": "neural_overfitting.png",
+      "sha256": "e2f5c95f2944aca56fb5b7c568839f0235958760e33b1af366bd9bf6992b22e8"
+    },
+    {
+      "filename": "xor_hidden_features.png",
+      "sha256": "3b1426ecb0920be2722e1d4f05863205e2de15ef23b396f77d96721870f5bb73"
+    },
+    {
+      "filename": "source_breast_cancer_results.png",
+      "sha256": "8b5785a461c971348eb9b910fdb66818312df48636ba60dfc0a701afec60a7bc"
+    },
+    {
+      "filename": "backprop_flow.png",
+      "sha256": "580fb53cce078fdbe24944c86c11bfa3d20d24f88b18b66eb3ac6ecc7dbf2ccd"
+    },
+    {
+      "filename": "training_curves_illustrative.png",
+      "sha256": "826e297eb08cdcd44c5b1719d366200624e673457192f18387e68a076dd40d21"
+    },
+    {
+      "filename": "tree_vs_smooth.png",
+      "sha256": "ebc8b72e0874967053dee7a514e65ac129c66a5dcce367379096965516767b8c"
+    },
+    {
+      "filename": "source_mnist_grid.png",
+      "sha256": "2ecc9b4466e762fbc2f9ebb8dcc6be464974e7d3cb47abc005e086d211a8591c"
+    },
+    {
+      "filename": "sine_approx_illustrative.png",
+      "sha256": "64cb43003b523cf23215255e1ca7473902ed31bf81ce539eed49b26005578c31"
+    },
+    {
+      "filename": "perceptron_structure.png",
+      "sha256": "07b24f0369c2c34bbef0dd8bc263363598acae5b5219f1fb73b68c08890ceefb"
+    },
+    {
+      "filename": "xor_points.png",
+      "sha256": "38bfdf7c8e329e1b1d4ff733d4a42c3332a8ee24b0ea81c5ab1f3a11dae56022"
+    },
+    {
+      "filename": "multilayer_network.png",
+      "sha256": "960e2dada2cdc1b2c2b69230ebe938d1f552fafca2cb4e04ac5965715170a5a0"
+    },
+    {
+      "filename": "source_mnist_confusion.png",
+      "sha256": "5ceb6212e58468cba3349822766869607e617180927de77dee4fa92f360f8d38"
+    },
+    {
+      "filename": "activations.png",
+      "sha256": "a59f4aee2c3d741c22523cd51668161050c87fe2c76ef4883e509c8e8026161d"
+    },
+    {
+      "filename": "perceptron_cancer_boundary.png",
+      "sha256": "7c53a3cd4ecb84a85a489b20cfe70fc2e0d5febffca9caa0bcbda5439aed0c59"
+    }
+  ]
+}

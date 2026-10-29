@@ -1,0 +1,65 @@
+{
+  "archive": "Lecture_28_and_29_Image_Sets.zip",
+  "assets": [
+    {
+      "filename": "three_failures.png",
+      "sha256": "4d2735049e2c0caccf1518f6721de6b246adf80a2662d4f9128a95196a670f04"
+    },
+    {
+      "filename": "wine_tree.png",
+      "sha256": "ec11208cc7da43b3df1e3d21659869dc81eaabdd1e10349fa16b7e47c64459f7"
+    },
+    {
+      "filename": "ensemble_families.png",
+      "sha256": "02798453a419369ad01e8e1d987cffa7d58a10f7ca37ec0c567acdc236213e7a"
+    },
+    {
+      "filename": "threshold_tradeoff.png",
+      "sha256": "cbc3f958ec96cb00dbfee228f20af4f4dad2a7c929bef3ecc87c3cb7771a001b"
+    },
+    {
+      "filename": "forest_runtime.png",
+      "sha256": "d1ea27ad6a7ed14d1084346bd10218f8595de32056d82636516a9119b881582c"
+    },
+    {
+      "filename": "group_folds.png",
+      "sha256": "e91d680f77684184a663326b3d056f9607246a06f34eebd794c6050896225f70"
+    },
+    {
+      "filename": "correlated_errors.png",
+      "sha256": "93cef1c0c265ae393d48e207e7db846e8c3bec8e0eff0c0769028a6fbe8129d4"
+    },
+    {
+      "filename": "model_validation.png",
+      "sha256": "67ee6f722b5f7eaa3f7765c7d93a50c6e9a7a45323a84acfc255a54cd704bf97"
+    },
+    {
+      "filename": "california_tree.png",
+      "sha256": "f6963dd1d164fe2fe12dba4a068a6071cf1fa55fc650f8a308a1a9bb0ae9413a"
+    },
+    {
+      "filename": "bagging_pipeline.png",
+      "sha256": "99de237d352c0b91fbfce7d55fb585d3b8846d21f3f51ed1396c0c26c967091d"
+    },
+    {
+      "filename": "forest_two_randomness.png",
+      "sha256": "1bac6f435a7c02343124800030f75c90a4901d42a3a7d87ce7648b4a822ea0eb"
+    },
+    {
+      "filename": "controlled_protocol.png",
+      "sha256": "394cdeb0b97f4c271db80d32c14ab1b0f2c779a108c96c362a84b031164142b9"
+    },
+    {
+      "filename": "learning_curve.png",
+      "sha256": "8a2a27889e26c9b67099eabcee02376cddcb877e198beecf6e11eb8380132d80"
+    },
+    {
+      "filename": "vote_five.png",
+      "sha256": "3a93710d102a9e8b40660ec257346d2165271940be079d78fe1ba1d1ae035d2d"
+    },
+    {
+      "filename": "leakage_groups.png",
+      "sha256": "0d7aa2509c3fb978235d8c3ae723951666ef8592821e7f318f9a269b7c84b095"
+    }
+  ]
+}
