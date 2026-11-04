@@ -31,7 +31,8 @@
     \item Explain how \texttt{self} identifies the particular instance involved in a method call.
     \item Distinguish methods that return information from methods that mutate object state.
     \item Extend the reference and aliasing model to user-defined objects.
-    \item Distinguish object identity from equality at a basic level.
+    \item Define value equality with \texttt{\_\_eq\_\_} and distinguish it from identity.
+    \item Customize object descriptions with \texttt{\_\_str\_\_} and \texttt{\_\_repr\_\_}.
     \item Store objects inside lists and dictionaries and iterate over those collections.
     \item Build objects that themselves contain collections or other objects.
   \end{itemize}
@@ -60,7 +61,8 @@
           \item behavior through methods
           \item deeper meaning of \texttt{self}
           \item mutation and aliasing
-          \item identity and equality
+          \item identity and custom equality
+          \item readable object descriptions
           \item collections of objects
           \item nested compound structures
         \end{itemize}
@@ -371,7 +373,7 @@
   \begin{itemize}
     \item Identity is built into the reference model.
     \item A class can define its own notion of value equality.
-    \item Our \texttt{Dog} class has no custom equality rule: distinct instances compare unequal with \texttt{==}, even if their attributes match.
+    \item So far, our \texttt{Dog} class has no custom equality rule: distinct instances compare unequal with \texttt{==}, even if their attributes match.
   \end{itemize}
 \end{frame}
 
@@ -393,7 +395,145 @@
   \end{keyidea}
 \end{frame}
 
-\sectionframe{Part 4: Collections of Objects}
+\sectionframe{Part 4: Equality and Object Descriptions}
+
+\begin{frame}{Special Methods Connect Objects to Python Operations}
+  \begin{cpdefinition}
+    A \textbf{special method} has a name surrounded by double underscores. Python uses these methods to support familiar operations on our objects.
+  \end{cpdefinition}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l}
+      \textbf{Operation} & \textbf{Method} & \textbf{Purpose} \\\hline
+      \texttt{a == b} & \texttt{\_\_eq\_\_(self, other)} & value equality \\
+      \texttt{str(a)}, \texttt{print(a)} & \texttt{\_\_str\_\_(self)} & readable description \\
+      \texttt{repr(a)} & \texttt{\_\_repr\_\_(self)} & debugging description
+    \end{tabular}
+  \end{center}
+  \begin{keyidea}
+    We define the methods inside the class; callers normally use the corresponding Python operations. These examples read state without changing it.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Define Value Equality with \texttt{\_\_eq\_\_}}
+  \small
+  For this example, two Dogs are equal when name, breed, and age all match.
+  \begin{block}{Add inside the existing Dog class}
+    \texttt{def \_\_eq\_\_(self, other: object):}\\
+    \hspace*{0.20in}\texttt{if not isinstance(other, Dog):}\\
+    \hspace*{0.40in}\texttt{return NotImplemented}\\
+    \hspace*{0.20in}\texttt{return (self.name == other.name}\\
+    \hspace*{0.60in}\texttt{and self.breed == other.breed}\\
+    \hspace*{0.60in}\texttt{and self.age == other.age)}
+  \end{block}
+  \begin{itemize}
+    \item \texttt{self} is one operand; \texttt{other} is the value being compared.
+    \item Check the type before reading \texttt{other}'s attributes.
+    \item \texttt{NotImplemented} lets Python try the other operand's comparison. If neither supports equality, Python falls back to identity.
+    \item This is a chosen rule for this model, not proof that two records represent the same real dog.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Equal Values Can Still Be Separate Objects}
+  After adding \texttt{\_\_eq\_\_}, construct two Dogs with matching attributes:
+  \begin{center}
+    \includegraphics[width=0.90\linewidth,height=1.65in,keepaspectratio]{object-value-equality.png}
+  \end{center}
+  \begin{keyidea}
+    \texttt{\_\_eq\_\_} changes the meaning of \texttt{==}; it does not change \texttt{is}, copy objects, or merge their state.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Make Objects Readable with \texttt{\_\_str\_\_}}
+  \begin{block}{Add inside Dog}
+    \texttt{def \_\_str\_\_(self) -> str:}\\
+    \hspace*{0.20in}\texttt{return f"\{self.name\} (\{self.breed\}), age \{self.age\}"}
+  \end{block}
+  \begin{block}{Calls and output}
+    \texttt{dog1 = Dog("Sofia", "Maremma", 1)}\\
+    \texttt{text = str(dog1)}\\
+    \texttt{print(dog1)}\\[0.06in]
+    Output: \texttt{Sofia (Maremma), age 1}
+  \end{block}
+  \begin{itemize}
+    \item \texttt{str(dog1)} returns the description as a string.
+    \item \texttt{print(dog1)} uses that description and displays it.
+    \item \texttt{\_\_str\_\_} must \textbf{return a string}; printing inside the method is not a substitute.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Expose Useful Details with \texttt{\_\_repr\_\_}}
+  \begin{block}{Add inside Dog}
+    \texttt{def \_\_repr\_\_(self) -> str:}\\
+    \hspace*{0.20in}\texttt{return (f"Dog(\{self.name!r\}, \{self.breed!r\}, "}\\
+    \hspace*{0.60in}\texttt{f"\{self.age!r\})")}
+  \end{block}
+  \begin{block}{Call and returned string contents}
+    \texttt{repr(dog1)} $\rightarrow$ \texttt{Dog('Sofia', 'Maremma', 1)}
+  \end{block}
+  \begin{itemize}
+    \item Aim for a precise description useful while debugging.
+    \item The f-string conversion \texttt{!r} uses \texttt{repr} on each attribute, so strings include quotes and escapes.
+    \item Constructor-like output is useful when practical, but not required.
+    \item This method also returns a string; it does not construct another Dog.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{One Object, Two Descriptions}
+  \begin{center}
+    \includegraphics[width=0.85\linewidth,height=1.50in,keepaspectratio]{object-str-and-repr.png}
+  \end{center}
+  \begin{block}{Containers use their elements' debugging descriptions}
+    \texttt{print([dog1])}\\
+    Output: \texttt{[Dog('Sofia', 'Maremma', 1)]}
+  \end{block}
+  \small \texttt{print(dog1)} uses \texttt{\_\_str\_\_}; the list uses each element's \texttt{\_\_repr\_\_}.
+\end{frame}
+
+\begin{frame}{What Happens If a Description Method Is Missing?}
+  \begin{itemize}
+    \item With both methods: \texttt{str} uses \texttt{\_\_str\_\_}; \texttt{repr} uses \texttt{\_\_repr\_\_}.
+    \item With only \texttt{\_\_repr\_\_}: the inherited \texttt{\_\_str\_\_} falls back to that representation too.
+    \item With only \texttt{\_\_str\_\_}: \texttt{repr} still uses the default object representation.
+    \item With neither: this simple class gets a default representation such as \texttt{<\_\_main\_\_.Dog object at 0x...>}.
+  \end{itemize}
+  \begin{keyidea}
+    A readable description does not define equality. Two objects can print the same text and still compare unequal unless the class defines an appropriate equality rule.
+  \end{keyidea}
+\end{frame}
+
+\begin{frame}{Predict: Equality After Mutation}
+  Use Dog with all three special methods, plus \texttt{birthday} from earlier.
+  \begin{block}{Program}
+    \texttt{a = Dog("Sofia", "Maremma", 1)}\\
+    \texttt{b = Dog("Sofia", "Maremma", 1)}\\
+    \texttt{c = a}\\
+    \texttt{b.birthday()}
+  \end{block}
+  \begin{activity}
+    Predict \texttt{a == b}, \texttt{a is c}, \texttt{a == c}, and the output of \texttt{print([a, b])}.
+  \end{activity}
+\end{frame}
+
+\begin{frame}{Reveal: Equality Reads the Current State}
+  \begin{center}
+    \renewcommand{\arraystretch}{1.35}
+    \begin{tabular}{l|l|l}
+      \textbf{Expression} & \textbf{Result} & \textbf{Reason} \\\hline
+      \texttt{a == b} & \texttt{False} & ages now differ \\
+      \texttt{a is c} & \texttt{True} & same instance \\
+      \texttt{a == c} & \texttt{True} & same current attribute values
+    \end{tabular}
+  \end{center}
+  \begin{block}{Output of \texttt{print([a, b])}}
+    \texttt{[Dog('Sofia', 'Maremma', 1), Dog('Sofia', 'Maremma', 2)]}
+  \end{block}
+  \begin{keyidea}
+    Mutating \texttt{b} changes its value comparison with \texttt{a}. The alias \texttt{c} still reaches \texttt{a}; neither comparison nor formatting copies an object.
+  \end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Collections of Objects}
 
 \begin{frame}{Define the Student Used in These Collections}
   \begin{block}{A class for the next examples}
@@ -511,7 +651,7 @@
   \end{itemize}
 \end{frame}
 
-\sectionframe{Part 5: Objects Containing Structured Data}
+\sectionframe{Part 6: Objects Containing Structured Data}
 
 \begin{frame}{An Object Attribute Can Itself Be a Collection}
   \begin{block}{Example}
@@ -596,7 +736,7 @@
   \end{keyidea}
 \end{frame}
 
-\sectionframe{Part 6: Integrated Tracing}
+\sectionframe{Part 7: Integrated Tracing}
 
 \begin{frame}{Integrated Example}
   For this final trace, use a fresh, smaller Student definition (name and GPA only).
@@ -686,7 +826,7 @@
     \item inheritance and class hierarchies
     \item private attributes or property decorators
     \item class variables and static methods
-    \item custom operator behavior
+    \item operator customization beyond equality
     \item abstract classes or interfaces
     \item advanced object-oriented design patterns
   \end{itemize}
@@ -702,7 +842,8 @@
     \item \texttt{self} refers to the particular instance involved in the current method call.
     \item Methods may query state, mutate state, or deliberately do both.
     \item Assignment and parameter binding can create aliases to the same object.
-    \item \texttt{is} asks about object identity; equality is a separate concept.
+    \item \texttt{is} asks about identity; \texttt{\_\_eq\_\_} defines value equality for \texttt{==}.
+    \item \texttt{\_\_str\_\_} gives a readable description; \texttt{\_\_repr\_\_} gives debugging details.
     \item Collections can store references to objects, and objects can contain collections or other objects.
     \item The same reference model developed for lists now explains compound object structures.
   \end{enumerate}
