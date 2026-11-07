@@ -1,54 +1,760 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
+
 \input{../../common/preamble.tex}
 
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+\graphicspath{{../assets/lecture-31/}}
+
+% Cal Poly CS 4880, Lecture 31, November 9, 2026.
+% Continuation of Lecture 30's style, architecture-first teaching, and transparent results.
+% About 50 minutes: motivation 5, clustering 18, representations/PCA 20,
+% novelty/SVM 4, synthesis 3. Code is for scikit-learn 1.8.0 (no external downloads).
+% Walk through code at a high level; full runnable examples live in the companion script.
+% All displayed numeric results and images are reproduced by the companion script
+% with random_state=4880 and are NOT predictions of results in another environment.
+% Hidden ground-truth labels are used only to COLOR or EVALUATE certain toy figures,
+% never to train the unsupervised models.
+
+\newcommand{\lecturevisual}[2][2.15in]{%
+  \par\vspace{2pt}{\centering\includegraphics[width=.98\linewidth,height=#1,keepaspectratio]{#2}\par}\vspace{2pt}%
+}
+\newcommand{\architecturestage}[1]{%
+  {\centering\setlength{\fboxsep}{5pt}%
+  \fcolorbox{CalPolyGreen}{DeckSoft}{\parbox{.86\linewidth}{\centering\small #1}}\par}%
+}
+\newcommand{\conceptlead}[1]{{\small\bfseries\color{CalPolyGreen}#1\par}}
+\newenvironment{calculation}[1][Mathematical description]{%
+  \par\begingroup\setbeamercolor{calculation body}{bg=DeckSoft,fg=DeckInk}%
+  \begin{beamercolorbox}[sep=3pt,wd=\linewidth]{calculation body}%
+  \footnotesize{\bfseries\color{DeckMuted}#1\par}%
+  \setlength{\jot}{0pt}\setlength{\abovedisplayskip}{3pt}\setlength{\belowdisplayskip}{3pt}%
+}{\end{beamercolorbox}\endgroup}
+
+\setbeamersize{text margin left=.42in,text margin right=.42in}
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{31}
-\lecturetitle{Unsupervised Learning -- clustering, dimensionality reduction, learned representations}
+\lecturetitle{Unsupervised Learning: Structure, Clustering, and Representations}
 \lecturedate{November 9, 2026}
-\courseunit{Course sequence}
+\courseunit{Learning Agents and Machine Learning}
 
 \begin{document}
-
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Unsupervised Learning -- clustering, dimensionality reduction, learned representations
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{What Can We Learn Without Labels?}
+
+\begin{frame}{A Dataset Can Be Valuable Without Ground-Truth Answers}
+\small
+\conceptlead{In supervised learning, labels define a target; in unsupervised learning, structure in the inputs is the target.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.56\textwidth}
+\lecturevisual[2.35in]{unlabeled_vs_labels.png}
+\end{column}
+\begin{column}{.41\textwidth}
+\begin{itemize}
+  \item We observe feature vectors $x_i\in\mathbb R^d$ without provided class labels $y_i$.
+  \item We can ask which observations resemble each other, what varies, and which are unusual.
+  \item The colors at right are \emph{hidden synthetic truth}, shown after the fact for teaching.
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{keyidea}Discovering a pattern is not the same as discovering its real-world meaning.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}{Three Unsupervised Learning Problems}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.32\textwidth}
+\begin{block}{Clustering}
+Which observations belong to similar groups?\\[5pt]
+\textbf{Examples:} K-means, DBSCAN, agglomerative clustering.
+\end{block}
+\end{column}
+\begin{column}{.32\textwidth}
+\begin{block}{Representations}
+Can we describe an observation with fewer, more useful coordinates?\\[5pt]
+\textbf{Examples:} PCA, NMF, t-SNE.
+\end{block}
+\end{column}
+\begin{column}{.32\textwidth}
+\begin{block}{Novelty detection}
+Does a new observation resemble the training population?\\[5pt]
+\textbf{Example:} One-Class SVM.
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}We still need a notion of similarity, an inductive assumption, and an honest evaluation.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{Even Without Labels, We Make Assumptions}
+\small
+\conceptlead{Similarity depends on the representation and the units we choose.}
+\lecturevisual[1.08in]{why_scaling_matters.png}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.64\textwidth}
+\begin{itemize}
+\item Raw Euclidean distance gives equal weight to a unit of temperature and a unit of distance.
+\item Standardize nonconstant training features to mean 0 and standard deviation 1; reuse those statistics for new inputs.
+\item Rescaling can change neighborhoods, centroids, and clusters.
+\end{itemize}
+\end{column}
+\begin{column}{.33\textwidth}
+\begin{calculation}[Euclidean distance]
+\[d(x_i,x_j)=\sqrt{\sum_{r=1}^{d}(x_{ir}-x_{jr})^2}.\]
+Here $d$ is the number of features; $r$ indexes one coordinate.
+\end{calculation}
+\end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\begin{frame}{How Can We Evaluate an Unsupervised Result?}
+\small
+\begin{itemize}
+\item \textbf{Internal:} is a geometric objective small, or are clusters compact and separated? No class labels required.
+\item \textbf{External:} compare with labels reserved for analysis. Adjusted Rand index (ARI) measures agreement regardless of cluster IDs: 1 means identical partitions, around 0 means chance agreement.
+\item \textbf{Stability:} do reasonable changes to sampling, initialization, or hyperparameters change the answer?
+\item \textbf{Utility:} does the discovered representation help a later task or scientific investigation?
+\end{itemize}
+\begin{keyidea}A compelling two-dimensional plot is neither proof of correctness nor evidence of causation.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\section{Clustering: K-Means and Alternatives}
+
+\begin{frame}{K-Means: Build Groups Around Representative Centers}
+\small
+\conceptlead{K-means assumes a useful grouping can be described with $k$ centroids.}
+\begin{enumerate}
+\item Choose the number of groups $k$ and initialize $k$ centers.
+\item \textbf{Assignment:} send each point to its nearest center.
+\item \textbf{Update:} move each center to the mean of its assigned points.
+\item Repeat until assignments or the objective stabilize.
+\end{enumerate}
+\begin{calculation}[K-means objective, also called inertia]
+\[J=\sum_{i=1}^{n}\|x_i-\mu_{z_i}\|_2^2.\]
+$z_i\in\{1,\ldots,k\}$ is the cluster assignment of point $i$; $\mu_j$ is centroid $j$.
+The algorithm reduces $J$ iteratively but need not find its global minimum.
+\end{calculation}
 \end{frame}
 
+\begin{frame}{K-Means in Motion: Assign, Update, Repeat}
+\small
+\conceptlead{The optimization alternates between assigning points and moving the centers.}
+\lecturevisual[2.55in]{kmeans_iteration.png}
+\begin{itemize}
+\item The large \textsf{X} markers denote the current centroid locations.
+\item Initialization matters; scikit-learn can run several starts and keep the best solution.
+\item A cluster ID is only a numerical index, not a semantic category such as ``safe.''
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 1: Fit K-Means with scikit-learn}
+\small
+\conceptlead{The labels are generated as a teaching check, but never passed to K-means.}
+{\footnotesize\begin{verbatim}
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score, adjusted_rand_score
+
+X, hidden_y = make_blobs(
+    n_samples=450,
+    centers=[[-5,-1], [0,3], [5,-.7]],
+    cluster_std=[.82, 1.17, .9], random_state=4880)
+model = KMeans(n_clusters=3, n_init=10, random_state=4880)
+cluster_id = model.fit_predict(X)
+print(round(model.inertia_, 1))
+print(round(silhouette_score(X, cluster_id), 3))
+print(round(adjusted_rand_score(hidden_y, cluster_id), 3))
+\end{verbatim}}
+\begin{keyidea}K-means sees only $X$; adjusted Rand index (ARI) is a post-hoc teaching diagnostic.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Demo 1 Results: Three Groups in 450 Points}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.58\textwidth}
+\lecturevisual[2.55in]{kmeans_on_blobs.png}
+\end{column}
+\begin{column}{.39\textwidth}
+\begin{block}{Measured run}
+\textbf{Inertia:} 897.3\\[5pt]
+\textbf{Silhouette:} 0.705\\[5pt]
+\textbf{Post-hoc ARI:} 0.987\\[5pt]
+\textbf{Cluster sizes:} 151, 151, 148
+\end{block}
+\small \textbf{Interpretation:} the compact, well-separated synthetic groups match K-means' geometric assumptions.
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{How Many Clusters? Why Inertia Alone Is Not Enough}
+\small
+\conceptlead{The algorithm requires $k$, but the dataset does not provide a uniquely correct choice.}
+\begin{itemize}
+\item More clusters almost always reduce inertia: eventually each point could be its own center.
+\item The \textbf{elbow} heuristic looks for diminishing improvements in inertia.
+\item \textbf{Silhouette} compares a point's average distance within its cluster with distance to the nearest other cluster.
+\item Subject-matter constraints and stability may matter more than maximizing a score.
+\end{itemize}
+\begin{calculation}[Silhouette of an individual observation]
+\[s(i)=\frac{b(i)-a(i)}{\max\{a(i),b(i)\}}\quad\in[-1,1].\]
+$a(i)$ is average within-cluster distance; $b(i)$ is the smallest average distance to another cluster. A larger value indicates stronger separation under this distance.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 2: Try Several Values of $k$}
+\small
+\conceptlead{Run the same clustering method with different numbers of groups.}
+{\footnotesize\begin{verbatim}
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+for k in range(2, 8):
+    m = KMeans(n_clusters=k, n_init=10,
+               random_state=4880).fit(X)
+    score = silhouette_score(X, m.labels_)
+    print(k, round(m.inertia_, 1), round(score, 3))
+\end{verbatim}}
+\begin{calculation}[Printed output: k, inertia, mean silhouette]
+\texttt{2: 3740.7, 0.562}\quad \texttt{3: 897.3, 0.705}\quad \texttt{4: 742.6, 0.592}\\[2pt]
+\texttt{5: 640.0, 0.578}\quad \texttt{6: 544.6, 0.475}\quad \texttt{7: 483.9, 0.331}
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Demo 2 Results: Inertia Versus Silhouette}
+\small
+\lecturevisual[2.7in]{k_selection.png}
+\begin{keyidea}For this dataset, the mean silhouette peaks at $k=3$. No universal scoring rule recovers the ``true'' number of real-world groups.\end{keyidea}
+\end{frame}
+
+\begin{frame}{The Geometry of the Data Can Defeat K-Means}
+\small
+\conceptlead{Not all meaningful clusters look like compact blobs around a center.}
+\lecturevisual[2.55in]{moons_algorithms.png}
+\begin{itemize}
+\item These interlocking crescents have two connected structures, not two spherical clouds.
+\item A centroid-based partition cuts across the curves; density connections can follow them.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{DBSCAN: Define a Group by Density, Not a Center}
+\small
+\conceptlead{Density-Based Spatial Clustering of Applications with Noise identifies dense, connected regions.}
+\begin{itemize}
+\item \textbf{$\varepsilon$ (eps):} the neighborhood radius around a point.
+\item \textbf{\texttt{min\_samples}:} the minimum nearby sample count, including the point itself, for a core point.
+\item Core points connect through chains of dense neighborhoods; border points may join nearby groups.
+\item Points not assigned to a group are labeled \texttt{-1} (noise).
+\item It does not require choosing $k$ in advance, but assumes a useful density scale.
+\end{itemize}
+\begin{keyidea}DBSCAN can discover nonconvex groups; it can struggle with differing densities or poorly selected radius.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 3: K-Means Versus DBSCAN on Two Moons}
+\small
+{\footnotesize\begin{verbatim}
+from sklearn.datasets import make_moons
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.metrics import adjusted_rand_score, silhouette_score
+
+X_moon, hidden_y = make_moons(n_samples=440, noise=.07,
+                              random_state=4880)
+X_moon = StandardScaler().fit_transform(X_moon)
+k = KMeans(n_clusters=2, n_init=10, random_state=4880)
+d = DBSCAN(eps=.22, min_samples=6)
+a, b = k.fit_predict(X_moon), d.fit_predict(X_moon)
+print(adjusted_rand_score(hidden_y, a))
+print(adjusted_rand_score(hidden_y, b))
+print(silhouette_score(X_moon, a))
+print(silhouette_score(X_moon, b))
+\end{verbatim}}
+\begin{calculation}[Rounded output: K-means, then DBSCAN]
+\textbf{Post-hoc ARI:} 0.457 vs. 0.986.\qquad
+\textbf{Silhouette:} 0.491 vs. 0.289 (noise label included).
+\end{calculation}
+\end{frame}
+
+\begin{frame}{A Critical Result: The Better Silhouette Is Misleading}
+\small
+\conceptlead{The internal score prefers K-means, while external knowledge strongly favors DBSCAN.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.57\textwidth}
+\lecturevisual[2.5in]{moons_algorithms.png}
+\end{column}
+\begin{column}{.40\textwidth}
+\begin{itemize}
+\item \textbf{ARI} compares clusters with synthetic truth only after fitting.
+\item \textbf{Silhouette} rewards compact, separated partitions in the selected metric.
+\item Neither number tells us what the groups mean or whether they cause an outcome.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{DBSCAN Is Sensitive to Its Neighborhood Scale}
+\small
+\conceptlead{Different density thresholds can split, recover, or merge structure.}
+\lecturevisual[2.7in]{dbscan_eps_sensitivity.png}
+\begin{itemize}
+\item On these standardized two-moon features, \texttt{min\_samples=6} throughout.
+\item \texttt{eps=0.12}: 19 groups, 72 noise; \texttt{eps=0.22}: 2 groups, 3 noise; \texttt{eps=0.38}: 2 groups, 0 noise.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Agglomerative Clustering: Preserve a Hierarchy}
+\small
+\conceptlead{Instead of choosing a single partition immediately, repeatedly merge groups.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.62\textwidth}
+\lecturevisual[2.6in]{hierarchical_dendrogram.png}
+\end{column}
+\begin{column}{.35\textwidth}
+\begin{itemize}
+\item Begin with individual points.
+\item Merge the best pair until one hierarchy remains.
+\item Different \emph{linkage} rules define which merge is best.
+\item This figure uses Ward linkage on 22 sampled points.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{A Probabilistic Alternative: Gaussian Mixture Models}
+\small
+\conceptlead{A mixture model gives each point a degree of membership in every component.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.49\textwidth}
+{\scriptsize\begin{verbatim}
+from sklearn.mixture import GaussianMixture
+from sklearn.datasets import make_blobs
+X_overlap, _ = make_blobs(
+    n_samples=450,
+    centers=[[-1.55,-.75],[1.5,-.65],[0,1.6]],
+    cluster_std=[1.,1.,1.05],
+    random_state=4880)
+g = GaussianMixture(n_components=3,
+    n_init=5, random_state=4880).fit(X_overlap)
+prob = g.predict_proba(X_overlap)
+\end{verbatim}}
+\end{column}
+\begin{column}{.48\textwidth}
+\lecturevisual[2.15in]{gmm_soft_membership.png}
+\end{column}
+\end{columns}
+\begin{calculation}[Mixture density]
+\[p(x)=\sum_{j=1}^{k}\pi_j\,\mathcal N(x\mid\mu_j,\Sigma_j),\qquad \sum_j\pi_j=1.\]
+$\pi_j$ are mixing weights; $\mu_j$ and $\Sigma_j$ describe each Gaussian's center and spread. Memberships are conditional on this fitted model, not guaranteed real-world classes.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{When Should We Trust an Unsupervised Cluster?}
+\small
+\begin{itemize}
+\item \textbf{State the intended similarity:} Euclidean distance, cosine similarity, connectivity, or a probabilistic model?
+\item \textbf{Inspect scale and preprocessing:} one large-unit feature can dominate distance.
+\item \textbf{Check alternative models:} K-means, density-based, hierarchical, and mixture assumptions differ.
+\item \textbf{Inspect stability:} resampling and changing seeds or parameters can reveal brittle conclusions.
+\item \textbf{Validate meaning:} a group of deliveries is not automatically a class called ``dangerous.''
+\end{itemize}
+\begin{keyidea}Cluster assignments are hypotheses about structure, not labels supplied by nature.\end{keyidea}
+\end{frame}
+
+\section{Dimensionality Reduction and Principal Components}
+
+\begin{frame}{High Dimensional Does Not Always Mean High Information}
+\small
+\conceptlead{Many measured features may be redundant or correlated.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\lecturevisual[2.35in]{digits_samples.png}
+\end{column}
+\begin{column}{.49\textwidth}
+\begin{itemize}
+\item Each scikit-learn digit is an $8\times8$ image, represented by 64 pixel features.
+\item We may seek a smaller vector $z\in\mathbb R^r$, $r<d$, retaining useful variation.
+\item A compressed representation can make visualization, storage, or later learning easier.
+\item Compression always introduces a tradeoff: what is retained, and what is lost?
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{PCA: Find Directions Along Which the Data Vary Most}
+\small
+\conceptlead{Principal Component Analysis chooses new orthogonal axes, ordered by captured variance.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.57\textwidth}
+\lecturevisual[2.2in]{pca_geometry.png}
+\end{column}
+\begin{column}{.40\textwidth}
+\begin{itemize}
+\item PC1 is the direction with the largest variance after centering.
+\item PC2 is perpendicular to PC1 and explains the largest remaining variance.
+\item Retaining fewer axes projects data into fewer dimensions.
+\item The axes are computed without outcome labels.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{PCA: Center, Project, and Reconstruct}
+\small
+\conceptlead{Subtract the feature means, keep the strongest directions of variation, and map back to approximate the input.}
+\begin{calculation}[First principal direction]
+\[v_1=\underset{\|v\|_2=1}{\arg\max}\;\operatorname{Var}(X_c v),\qquad X_c=X-\mathbf{1}\mu^\top.\]
+$X\in\mathbb R^{n\times d}$ holds $n$ examples and $d$ features; $\mu$ is the vector of column means; $v_1$ is a unit vector. Subsequent directions are orthogonal to earlier ones.
+\end{calculation}
+\begin{calculation}[Project and approximately reconstruct]
+\[Z=X_cV_r,\qquad \widehat X=ZV_r^\top+\mathbf{1}\mu^\top.\]
+$V_r\in\mathbb R^{d\times r}$ contains the first $r$ principal directions; $Z\in\mathbb R^{n\times r}$ is the lower-dimensional representation.
+\end{calculation}
+\begin{itemize}
+\item scikit-learn computes the directions numerically (SVD or a covariance-based solver); it \emph{centers} but does not automatically standardize input features.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 4: PCA on Four Measurements of Iris Flowers}
+\small
+\conceptlead{We fit PCA without species labels; colors in the final plot are added after fitting.}
+{\footnotesize\begin{verbatim}
+from sklearn.datasets import load_iris
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
+iris = load_iris()
+X = StandardScaler().fit_transform(iris.data)
+pca = PCA(n_components=4).fit(X)
+Z = pca.transform(X)
+print(pca.explained_variance_ratio_.round(4))
+print(round(100 * sum(pca.explained_variance_ratio_[:2]), 1))
+# Plot Z[:, 0], Z[:, 1]; colors use iris.target only AFTER fit.
+\end{verbatim}}
+\begin{calculation}[Rounded output]
+\texttt{[0.7296, 0.2285, 0.0367, 0.0052]}\qquad First 2 PCs: \textbf{95.8\%} of standardized-feature variance.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Demo 4 Results: A Two-Dimensional Iris Representation}
+\small
+\lecturevisual[2.8in]{iris_pca_projection_variance.png}
+\begin{keyidea}Two coordinates preserve 95.8\% of total variance \emph{in the standardized four-feature dataset}. Variance retained is not the same as label accuracy or physical meaning.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Explained Variance Helps Choose the Dimension}
+\small
+\conceptlead{A lower-dimensional representation retains a fraction of the original variability.}
+\begin{itemize}
+\item \textbf{Explained variance ratio} $\lambda_j / \sum_\ell\lambda_\ell$ measures each component's fraction of total variance.
+\item \textbf{Cumulative explained variance} adds those fractions for the retained components.
+\item Choosing $r$ based on 90\%, 95\%, or another threshold is a design decision, not a guarantee of task performance.
+\item PCA can miss nonlinear geometry or a low-variance feature that is important for a prediction task.
+\end{itemize}
+\begin{calculation}[Iris, standardized first two components]
+\[0.7296+0.2285\approx0.9581.\]
+The approximation agrees with the plotted \textbf{95.8\%}. The remaining two components account for about 4.2\%.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{PCA Also Defines a Reconstruction Experiment}
+\small
+\conceptlead{To ask what information the representation preserves, reconstruct the original signal.}
+\lecturevisual[1.9in]{digits_pca_reconstruction.png}
+\begin{itemize}
+\item More components improve reconstruction, but do not guarantee human recognizability or classifier accuracy.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 5: Compress and Reconstruct Handwritten Digits}
+\small
+{\footnotesize\begin{verbatim}
+from sklearn.datasets import load_digits
+from sklearn.decomposition import PCA
+from sklearn.metrics import mean_squared_error
+
+digits = load_digits()
+X = digits.data                  # 1797 x 64, no labels needed
+for r in [2, 8, 16, 32]:
+    pca = PCA(n_components=r, svd_solver='full').fit(X)
+    compressed = pca.transform(X)
+    reconstruction = pca.inverse_transform(compressed)
+    print(r, round(mean_squared_error(X, reconstruction), 2))
+\end{verbatim}}
+\begin{calculation}[Measured reconstruction mean squared error, in pixel-value units squared]
+\texttt{2 PCs: 13.42}\quad\texttt{8 PCs: 6.12}\quad\texttt{16 PCs: 2.83}\quad\texttt{32 PCs: 0.63}
+\end{calculation}
+\begin{keyidea}This is \emph{in-sample} reconstruction, not held-out classification or evidence of semantic understanding.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Representations Can Be Learned in Other Ways}
+\small
+\conceptlead{PCA is only one way to define a useful lower-dimensional code.}
+\begin{itemize}
+\item \textbf{PCA:} signed, orthogonal linear components maximize retained variance.
+\item \textbf{Nonnegative Matrix Factorization (NMF):} when input values are nonnegative, learn nonnegative additive basis patterns.
+\item \textbf{Autoencoders:} neural networks learn an encoder (input to code) and decoder (code to reconstruction); the reconstruction loss trains both. Lecture 30 introduced nonlinear architectures.
+\item \textbf{Task-specific representation:} features may be useful because they help downstream prediction, not simply because they reconstruct well.
+\end{itemize}
+\begin{calculation}[NMF factorization]
+\[X\approx WH,\qquad W\ge0,\ H\ge0.\]
+$W\in\mathbb R^{n\times r}$ gives example coefficients; $H\in\mathbb R^{r\times d}$ contains learned additive basis vectors.
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 6: Learn Additive Digit Patterns with NMF}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.40\textwidth}
+{\scriptsize\begin{verbatim}
+from sklearn.decomposition import NMF
+from sklearn.datasets import load_digits
+import numpy as np
+X = load_digits().data   # all >= 0
+m = NMF(n_components=10,
+        init='nndsvda',
+        random_state=4880,
+        max_iter=1200)
+W = m.fit_transform(X)
+H = m.components_
+relative_error = (
+    np.linalg.norm(X - W @ H)
+    / np.linalg.norm(X))
+print(round(relative_error, 3))
+\end{verbatim}}
+\end{column}
+\begin{column}{.57\textwidth}
+\lecturevisual[2.35in]{nmf_digits_components.png}
+\end{column}
+\end{columns}
+\begin{keyidea}Measured relative Frobenius error: \textbf{0.326}. Components are learned image patterns, not necessarily digit classes or human-interpretable parts.\end{keyidea}
+\end{frame}
+
+\begin{frame}{t-SNE: A Nonlinear Visualization of Neighborhoods}
+\small
+\conceptlead{t-distributed Stochastic Neighbor Embedding seeks a low-dimensional map that preserves local similarities.}
+\begin{itemize}
+\item PCA maximizes global variance along linear directions.
+\item t-SNE instead tries to place near-neighbors in the original space close together in the map.
+\item It uses an optimization objective based on probability distributions of pairwise similarities.
+\item \textbf{Perplexity} changes the effective neighborhood scale; initialization and random seed can change the picture.
+\item It is primarily a visualization method; distances \emph{between} separated map groups can be misleading.
+\end{itemize}
+\begin{keyidea}Seeing discrete islands in a t-SNE figure does not prove that the data contain those many natural clusters.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 7: Visualize the Same Digits with PCA and t-SNE}
+\small
+{\footnotesize\begin{verbatim}
+import numpy as np
+from sklearn.datasets import load_digits
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+D = load_digits()
+idx = np.random.default_rng(4880).choice(
+    len(D.data), size=1150, replace=False)
+X = D.data[idx]
+X40 = PCA(n_components=40, random_state=4880).fit_transform(X)
+Z_pca = X40[:, :2]
+Z_tsne = TSNE(n_components=2, perplexity=30,
+              learning_rate='auto', init='pca',
+              max_iter=650, random_state=4880).fit_transform(X40)
+# Plot both; use D.target[idx] ONLY to color points afterward.
+\end{verbatim}}
+\begin{keyidea}Both embeddings learn from image features alone, not the digit identities.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Demo 7 Results: Same Inputs, Different Geometry}
+\small
+\lecturevisual[2.9in]{digits_pca_vs_tsne.png}
+\begin{itemize}
+\item Digit labels were used solely to color the points \emph{after} embedding.
+\item Global distances and cluster areas in the t-SNE map should not be read as original-space distances or densities.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{A Good Representation Must Generalize Beyond Its Plot}
+\small
+\conceptlead{Evaluate a transformation on data it did not help fit.}
+\lecturevisual[2.0in]{train_test_pipeline.png}
+\begin{itemize}
+\item Fit scalers, PCA, and any learned transformation on the \textbf{training split}.
+\item Apply the frozen transformation to validation or test observations.
+\item Choose representation size using validation data, then retrain on development data.
+\item Test once after the choices are fixed; otherwise the test set silently becomes tuning data.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 8: PCA as an Unsupervised Step in a Supervised Pipeline}
+\scriptsize
+\conceptlead{Fit PCA without labels; evaluate its features using a supervised classifier.}
+\begin{verbatim}
+from sklearn.datasets import load_digits
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.svm import SVC
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+X, y = load_digits(return_X_y=True)
+Xdev, Xtest, ydev, ytest = train_test_split(
+    X, y, test_size=.20, stratify=y, random_state=4880)
+Xtr, Xval, ytr, yval = train_test_split(
+    Xdev, ydev, test_size=.25, stratify=ydev, random_state=4880)
+def candidate(components):
+    stages = [StandardScaler()]
+    if components is not None:
+        stages += [PCA(n_components=components, random_state=4880)]
+    stages += [SVC(C=5, gamma='scale', kernel='rbf')]
+    return make_pipeline(*stages)
+\end{verbatim}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 8: Select on Validation, Then Test Once}
+\small
+{\footnotesize\begin{verbatim}
+choices = [None, 8, 16, 32, 48]   # None => original 64 pixels
+validation = {}
+for r in choices:
+    model = candidate(r).fit(Xtr, ytr)
+    validation[r] = accuracy_score(yval, model.predict(Xval))
+best_r = max(choices, key=lambda r: validation[r])
+final = candidate(best_r).fit(Xdev, ydev)
+print(best_r, round(accuracy_score(ytest,
+                                    final.predict(Xtest)), 4))
+\end{verbatim}}
+\begin{calculation}[Measured split: 1077 train, 360 validation, 360 test]
+Best validation score is tied by \textbf{raw 64 pixels} and \textbf{48 PCs}, each at \textbf{97.5\%}.
+The tie breaks toward the first candidate: \textbf{raw pixels}. After retraining, \textbf{final test accuracy = 97.78\%}.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Demo 8 Results: PCA Does Not Always Help Prediction}
+\small
+\lecturevisual[1.9in]{pca_downstream_svc_accuracy.png}
+\begin{itemize}
+\item PCA reduces features but can discard information a classifier uses.
+\item Validation selects an architecture; the test score is only reported after selection and refitting.
+\item We should measure runtime, storage, and stability if compression is the objective.
+\end{itemize}
+\end{frame}
+
+\section{Novelty Detection and the SVM Distinction}
+
+\begin{frame}{Where Does SVM Fit? Standard SVM Is Supervised}
+\small
+\conceptlead{An ordinary support vector classifier requires class labels. One-Class SVM learns an inlier region.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{\texttt{sklearn.svm.SVC}}
+\textbf{Supervised classification.} Fit pairs $(X,y)$; seek a wide separating margin, with a kernel allowing nonlinear boundaries. Used for digits in Demo 8.
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{\texttt{sklearn.svm.OneClassSVM}}
+\textbf{Novelty detection.} Fit examples assumed to represent normal operation; estimate a boundary around their support.
+\end{block}
+\end{column}
+\end{columns}
+\begin{itemize}
+\item This distinction matters: a One-Class SVM does \emph{not} magically label multiple unknown classes.
+\item It tests resemblance under a kernel and scale. Predictions are $+1$ (inlier) or $-1$ (outlier); $\nu$ controls the training-error/support-vector tradeoff, not a guaranteed future anomaly rate.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Demo 9: Fit a One-Class SVM to Normal Data}
+\small
+{\footnotesize\begin{verbatim}
+import numpy as np
+from sklearn.svm import OneClassSVM
+rng = np.random.default_rng(4880)
+normal_train = rng.normal(0, .6, size=(240, 2))
+normal_test = rng.normal(0, .6, size=(80, 2))
+anomaly_test = rng.uniform(2, 3.6, size=(50, 2)) * \
+               rng.choice([-1, 1], size=(50, 2))
+m = OneClassSVM(kernel='rbf', gamma=.4, nu=.05)
+m.fit(normal_train)
+print((m.predict(normal_test) == 1).mean())
+print((m.predict(anomaly_test) == -1).sum())
+\end{verbatim}}
+\begin{calculation}[Measured output]
+\textbf{Normal acceptance:} 0.925 (74 of 80).\qquad
+\textbf{Synthetic anomalies flagged:} 50 of 50.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Demo 9 Results: Novelty Is Not a Diagnosis}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.57\textwidth}
+\lecturevisual[2.75in]{one_class_svm_boundary.png}
+\end{column}
+\begin{column}{.40\textwidth}
+\begin{itemize}
+\item The green contour is the learned \emph{decision boundary} around training inliers.
+\item Outliers were deliberately placed far away; this is an \emph{easy synthetic test}.
+\item ``Outside normal'' is not proof of an equipment fault, fraud, or danger.
+\item Real systems must measure false alarms under deployment shift.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\section{Synthesis and Research Practice}
+
+\begin{frame}{Match the Question to the Unsupervised Method}
+\footnotesize
+\begin{tabular}{@{}p{.22\linewidth}p{.31\linewidth}p{.39\linewidth}@{}}
+\textbf{Method} & \textbf{What it looks for} & \textbf{Main assumption / caveat}\\[2pt]\hline
+K-means & $k$ centroid-based partitions & Compact groups; choose $k$; sensitive to scaling\\[2pt]
+DBSCAN & Connected dense regions & Choose density scale; differing densities are hard\\[2pt]
+Agglomerative & Nested merges / hierarchy & Linkage changes the hierarchy\\[2pt]
+Gaussian mixture & Soft component memberships & Model family and number of components matter\\[2pt]
+PCA & Low-rank linear projection & Maximizes variance, not predictive value\\[2pt]
+NMF & Additive nonnegative factors & Requires $X\ge0$; factors need not be semantic\\[2pt]
+t-SNE & Low-dimensional neighbor visualization & Plot geometry is not a reliable global metric\\[2pt]
+One-Class SVM & Boundary of familiar observations & Sensitive to kernel/scale and training purity
+\end{tabular}
+\vspace{1pt}
+\begin{keyidea}Choose the method for the scientific or operational question, not for the most visually striking figure.\end{keyidea}
+\end{frame}
+
+\begin{frame}{A Practical Checklist Before Claiming Discovery}
+\small
+\begin{enumerate}
+\item Define which variables exist and which labels, if any, are missing.
+\item Document units, scaling, distance metric, randomness, and model assumptions.
+\item Separate fitting from evaluation; do not let future or test data alter preprocessing.
+\item Compare plausible alternatives and assess parameter sensitivity.
+\item Distinguish geometric scores, post-hoc external labels, and actual task utility.
+\item Have a domain expert inspect whether the representation is operationally meaningful.
+\end{enumerate}
+\begin{keyidea}Unsupervised learning finds structure in observations. Humans must still test what that structure means.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Connecting Lecture 31 Back to Learning Agents}
+\small
+\conceptlead{A delivery robot can collect far more sensor history than people can manually label.}
+\begin{itemize}
+\item \textbf{Clustering:} organize similar traversal segments for human review.
+\item \textbf{Dimensionality reduction:} compress correlated sensor features into a smaller learned state description.
+\item \textbf{Anomaly detection:} flag an unusual motor or navigation signature for inspection.
+\item \textbf{Supervised follow-up:} once humans label some examples, evaluate whether the discovered features predict real outcomes.
+\end{itemize}
+\begin{keyidea}Do not treat a cluster ID as a safety label or a novelty flag as a confirmed mechanical failure.\end{keyidea}
+\end{frame}
+
+\begin{frame}{References, Implementation, and Reproducibility}
+\scriptsize
+\begin{itemize}
+\item scikit-learn User Guide: \href{https://scikit-learn.org/stable/modules/clustering.html}{Clustering}; \href{https://scikit-learn.org/stable/modules/decomposition.html}{Matrix decomposition and PCA}; \href{https://scikit-learn.org/stable/modules/manifold.html}{Manifold learning}; \href{https://scikit-learn.org/stable/modules/outlier_detection.html}{Novelty and outlier detection}.
+\item scikit-learn \href{https://scikit-learn.org/stable/modules/generated/sklearn.svm.OneClassSVM.html}{OneClassSVM} and \href{https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html}{Pipeline} API documentation.
+\item MacQueen (1967), \emph{Some Methods for Classification and Analysis of Multivariate Observations}; Ester et al. (1996), \emph{A Density-Based Algorithm for Discovering Clusters in Large Spatial Databases with Noise}.
+\item Pearson (1901), \emph{On Lines and Planes of Closest Fit to Systems of Points in Space}; van der Maaten and Hinton (2008), \emph{Visualizing Data using t-SNE}; Sch\"olkopf et al. (2001), \emph{Estimating the Support of a High-Dimensional Distribution}.
+\item Reproducibility: the companion \texttt{generate-figures.py} regenerates all 18 included figures and numerical outputs from built-in scikit-learn datasets and synthetic data; no web access required. Verified using scikit-learn 1.8.0, NumPy 2.3.5, Matplotlib 3.10.8, and SciPy 1.18.1; dependencies are pinned beside the script.
+\item All numeric outcomes are \emph{measured on the supplied run}; different library versions or environments can produce slightly different fits or embeddings. Figures with ground-truth coloring never used that coloring to fit an unsupervised model.
+\end{itemize}
+\end{frame}
 \end{document}

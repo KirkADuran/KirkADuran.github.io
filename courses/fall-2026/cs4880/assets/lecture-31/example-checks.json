@@ -1,0 +1,63 @@
+{
+  "source": "lecture-31-unsupervised-learning-clustering-dimensionality-reduction-learne.tex",
+  "executed_examples": 11,
+  "unique_figures": 18,
+  "all_checks_passed": true,
+  "examples": [
+    {
+      "example": 1,
+      "printed_output": "897.3\n0.705\n0.987",
+      "passed": true
+    },
+    {
+      "example": 2,
+      "printed_output": "2 3740.7 0.562\n3 897.3 0.705\n4 742.6 0.592\n5 640.0 0.578\n6 544.6 0.475\n7 483.9 0.331",
+      "passed": true
+    },
+    {
+      "example": 3,
+      "printed_output": "0.4574627289159704\n0.9863942089993244\n0.4913621126433989\n0.28879541154176974",
+      "passed": true
+    },
+    {
+      "example": 4,
+      "printed_output": "",
+      "passed": true
+    },
+    {
+      "example": 5,
+      "printed_output": "[0.7296 0.2285 0.0367 0.0052]\n95.8",
+      "passed": true
+    },
+    {
+      "example": 6,
+      "printed_output": "2 13.42\n8 6.12\n16 2.83\n32 0.63",
+      "passed": true
+    },
+    {
+      "example": 7,
+      "printed_output": "0.326",
+      "passed": true
+    },
+    {
+      "example": 8,
+      "printed_output": "",
+      "passed": true
+    },
+    {
+      "example": 9,
+      "printed_output": "",
+      "passed": true
+    },
+    {
+      "example": 10,
+      "printed_output": "None 0.9778",
+      "passed": true
+    },
+    {
+      "example": 11,
+      "printed_output": "0.925\n50",
+      "passed": true
+    }
+  ]
+}

@@ -1,6 +1,17 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+\graphicspath{{../assets/lecture-31/}}
+\setbeamersize{text margin left=.42in,text margin right=.42in}
 
+% Adapted from the instructor's CS1001_Lecture_31_Sorting_Algorithms.pdf.
+% All 14 supplied array images are preserved; trim removes only their white margins.
+% Green: sorted prefix. Gray: unprocessed. Gold: active value or insertion gap.
+\newcommand{\arraydiagram}[2][1.65in]{%
+  \raisebox{-.43\height}{\includegraphics[trim=6.3bp 6.3bp 6.3bp 6.3bp,clip,width=#1]{array-#2.png}}%
+}
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{31}
@@ -9,46 +20,642 @@
 \courseunit{12. Algorithms}
 
 \begin{document}
-
 \makedecktitle
 
 \begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Sorting Algorithms
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\small
+\begin{itemize}
+ \item Connect binary search from last lecture to the need for ordered data.
+ \item Understand sorting as the growth of a sorted region.
+ \item Perform selection sort by hand, implement it, and trace the Python code.
+ \item Perform insertion sort by hand, implement it, and trace the Python code.
+ \item Use Python's \texttt{.sort()} and \texttt{sorted()} for ordinary programs.
+ \item Explain \texttt{lambda} and use \texttt{key=} to sort lists of objects.
+\end{itemize}
+\begin{keyidea}First learn how sorting works; then use Python's built-in tools for ordinary programs.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}{From Last Time: Binary Search Needs Sorted Data}
+\small
+\begin{itemize}
+ \item Of the list-search algorithms we studied, binary search uses fewer checks on large lists when the list is already ordered.
+ \item Binary search can decide which half to discard only because values are in order.
+ \item What happens when the collection we receive is not sorted?
+\end{itemize}
+\begin{center}\arraydiagram{01}\quad$\longrightarrow$\quad\arraydiagram{02}\end{center}
+\begin{keyidea}Before we can use binary search on an unordered list, we need to put the list in order. Sorting itself also takes work.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\sectionframe{Part 1: The Idea of Sorting}
+
+\begin{frame}{What Is Sorting?}
+\small
+\begin{cpdefinition}Sorting arranges elements according to an ordering rule, such as increasing numeric value or alphabetical name.\end{cpdefinition}
+\begin{itemize}
+ \item Numbers can be arranged from smallest to largest.
+ \item Names can be arranged in alphabetical order.
+ \item Objects can be arranged by a selected attribute, such as \texttt{student.gpa}.
+\end{itemize}
+\begin{block}{Our convention today}Both algorithms arrange a list of integers in ascending order and modify that list directly.\end{block}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\begin{frame}{Visualizing a Growing Sorted Region}
+\small
+\begin{center}
+\begin{tabular}{ll}
+Initial list & \arraydiagram{01}\\[7pt]
+Some work completed & \arraydiagram{03}\\[7pt]
+More work completed & \arraydiagram{04}\\[7pt]
+Finished & \arraydiagram{02}
+\end{tabular}
+\end{center}
+\begin{itemize}
+ \item Green marks the sorted prefix; gray marks the unprocessed region.
+ \item Gold will mark the active value or gap in a trace.
+\end{itemize}
+\begin{keyidea}Selection sort and insertion sort both grow a sorted prefix, but grow it differently.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}{Two Ways to Grow the Sorted Region}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{Selection sort}Find the smallest remaining value and move it to the next position in the sorted region.\end{block}
+\begin{center}\arraydiagram{05}\end{center}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{Insertion sort}Take the next unsorted value and insert it into the correct position within the sorted region.\end{block}
+\begin{center}\arraydiagram{06}\end{center}
+\end{column}
+\end{columns}
+\begin{keyidea}Selection sort's prefix contains the smallest finished values. Insertion sort's prefix is ordered, but later values may be smaller.\end{keyidea}
 \end{frame}
 
+\sectionframe{Part 2: Selection Sort}
+
+\begin{frame}{Selection Sort: Example Before Code}
+\small
+Start with \texttt{[5, 2, 4, 1, 3]}. Find the smallest value in the whole unsorted region.
+\begin{center}\arraydiagram[1.9in]{07}\end{center}
+\begin{itemize}
+ \item The smallest value is \texttt{1} at index \texttt{3}.
+ \item Swap that value with the first unsorted position (index \texttt{0}).
+\end{itemize}
+\begin{center}\arraydiagram[1.9in]{05}\end{center}
+\begin{keyidea}One complete pass puts one more value in its final sorted position.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Selection Sort: Continue the Example}
+\small
+\begin{center}
+\begin{tabular}{lll}
+Beginning & \arraydiagram[1.5in]{01} & unsorted\\[6pt]
+Pass 1: choose 1 & \arraydiagram[1.5in]{05} & first position fixed\\[6pt]
+Pass 2: choose 2 & \arraydiagram[1.5in]{03} & same-position exchange\\[6pt]
+Pass 3: choose 3 & \arraydiagram[1.5in]{04} & swap 4 and 3\\[6pt]
+Pass 4: choose 4 & \arraydiagram[1.5in]{02} & finished
+\end{tabular}
+\end{center}
+\begin{block}{Observation}We never need to examine the finished green positions when searching for the next minimum.\end{block}
+\end{frame}
+
+\begin{frame}{Selection Sort: Describe the Procedure}
+\small
+\begin{enumerate}
+ \item Mark the first unsorted position as \texttt{start}.
+ \item Assume the smallest remaining value is at \texttt{start}.
+ \item Scan the remaining unsorted positions to find the actual minimum.
+ \item Swap that minimum into position \texttt{start}.
+ \item Move \texttt{start} one position to the right and repeat.
+\end{enumerate}
+\begin{keyidea}\textbf{Selection:} repeatedly select the minimum from the remaining values.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Selection Sort: Python Implementation}
+\small
+\begin{block}{Sort the existing list in ascending order}
+\footnotesize
+\begin{verbatim}
+def selection_sort(values: list[int]) -> None:
+    for start in range(len(values) - 1):
+        min_index = start
+        for scan in range(start + 1, len(values)):
+            if values[scan] < values[min_index]:
+                min_index = scan
+        values[start], values[min_index] = values[min_index], values[start]
+\end{verbatim}
+\end{block}
+\begin{itemize}
+ \item \texttt{start}: the position we are about to finish.
+ \item \texttt{min\_index}: the smallest value's index seen during this pass.
+ \item \texttt{scan}: checks the remaining candidates.
+ \item The assignment exchanges the two values after the scan ends.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Trace the Code: Selection Sort, First Pass}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.49\textwidth}
+\begin{block}{Relevant code}
+\footnotesize
+\begin{verbatim}
+start = 0
+min_index = start
+for scan in range(1, 5):
+    if values[scan] < values[min_index]:
+        min_index = scan
+\end{verbatim}
+\end{block}
+\begin{center}\arraydiagram{07}\end{center}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{Variable trace}
+\begin{tabular}{ccl}
+\texttt{scan} & \texttt{min\_index} & Why?\\\hline
+1 & 1 & $2<5$\\
+2 & 1 & $4<2$ false\\
+3 & 3 & $1<2$\\
+4 & 3 & $3<1$ false
+\end{tabular}
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}The scan remembers the index of the minimum; it does not swap on every comparison.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Trace the Code: Selection Sort, The Swap}
+\small
+\begin{block}{The line that runs after the inner loop}
+\footnotesize
+\begin{verbatim}
+values[start], values[min_index] = values[min_index], values[start]
+\end{verbatim}
+\end{block}
+\begin{center}\arraydiagram{07}\quad$\longrightarrow$\quad\arraydiagram{05}\end{center}
+\begin{itemize}
+ \item At this moment, \texttt{start = 0} and \texttt{min\_index = 3}.
+ \item The values at positions \texttt{0} and \texttt{3} exchange places.
+ \item Python evaluates both right-hand values before assigning the left-hand positions.
+ \item The next iteration begins with \texttt{start = 1}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Trace the Code: Selection Sort, Outer Loop}
+\small
+\begin{center}
+\begin{tabular}{ccll}
+\texttt{start} & \texttt{min\_index} & Action & List after pass\\\hline
+0 & 3 & swap 5,1 & \texttt{[1,2,4,5,3]}\\
+1 & 1 & same position & \texttt{[1,2,4,5,3]}\\
+2 & 4 & swap 4,3 & \texttt{[1,2,3,5,4]}\\
+3 & 4 & swap 5,4 & \texttt{[1,2,3,4,5]}
+\end{tabular}
+\end{center}
+\begin{keyidea}\texttt{start} also counts the positions already finished. When only one value remains, it must already be in place.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Selection Sort: Check Understanding}
+\small
+\begin{center}\arraydiagram[2in]{03}\end{center}
+\begin{enumerate}
+ \item Which positions are already finished?
+ \item What value should be selected next from the remaining region?
+ \item Which two indices should be swapped?
+ \item What will the list look like after the next pass?
+\end{enumerate}
+\begin{alertblock}{Remember}Choose the minimum from the unsorted suffix, not from the whole list again.\end{alertblock}
+\end{frame}
+
+\sectionframe{Part 3: Insertion Sort}
+
+\begin{frame}{Insertion Sort: The Playing-Card Idea}
+\small
+\begin{itemize}
+ \item Imagine holding cards in a hand that is already sorted.
+ \item Pick up one more card and slide larger cards to the right to make room.
+ \item Place the new card into the open spot.
+\end{itemize}
+\begin{center}\arraydiagram{08}\quad$\longrightarrow$\quad\arraydiagram{06}\end{center}
+\begin{keyidea}\textbf{Insertion:} take the next value and insert it into the correct position within the sorted prefix.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Insertion Sort: Example Before Code}
+\small
+Start with \texttt{[5, 2, 4, 1, 3]}. A one-element prefix is already sorted.
+\begin{center}
+\begin{tabular}{ll}
+One sorted value & \arraydiagram[1.5in]{08}\\[5pt]
+Insert 2 before 5 & \arraydiagram[1.5in]{06}\\[5pt]
+Insert 4 between 2, 5 & \arraydiagram[1.5in]{09}\\[5pt]
+Insert 1 at the beginning & \arraydiagram[1.5in]{10}\\[5pt]
+Insert 3 in the middle & \arraydiagram[1.5in]{02}
+\end{tabular}
+\end{center}
+\begin{block}{Notice}The prefix is ordered after every insertion, but need not contain the smallest values in the entire list yet.\end{block}
+\end{frame}
+
+\begin{frame}{Insertion Sort: What Does ``Insert'' Mean?}
+\small
+Suppose the list is \texttt{[2, 4, 5, 1, 3]} and the saved key is \texttt{1}.
+\begin{center}
+\begin{tabular}{ll}
+Save \texttt{key = 1} & \arraydiagram[1.5in]{11}\\[6pt]
+Shift 5 to the right & \arraydiagram[1.5in]{12}\\[6pt]
+Shift 4 to the right & \arraydiagram[1.5in]{13}\\[6pt]
+Shift 2 to the right & \arraydiagram[1.5in]{14}\\[6pt]
+Write 1 into the gap & \arraydiagram[1.5in]{10}
+\end{tabular}
+\end{center}
+Repeated numbers during shifting are temporary: the key is safely stored in a variable. Gold tracks the active slot or gap.
+\end{frame}
+
+\begin{frame}{Insertion Sort: Describe the Procedure}
+\small
+\begin{enumerate}
+ \item Start with the first element as a one-value sorted region.
+ \item Save the next value in a variable called \texttt{key}.
+ \item Walk left through the prefix while values are larger than \texttt{key}.
+ \item Shift each larger value one position to the right.
+ \item Write \texttt{key} into the gap and grow the sorted region.
+\end{enumerate}
+\begin{keyidea}Insertion sort makes room by shifting, rather than finding the overall minimum.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Insertion Sort: Python Implementation}
+\small
+\begin{block}{Sort the existing list in ascending order}
+\footnotesize
+\begin{verbatim}
+def insertion_sort(values: list[int]) -> None:
+    for position in range(1, len(values)):
+        key = values[position]
+        scan = position - 1
+        while scan >= 0 and values[scan] > key:
+            values[scan + 1] = values[scan]
+            scan -= 1
+        values[scan + 1] = key
+\end{verbatim}
+\end{block}
+\begin{itemize}
+ \item \texttt{position} identifies the next item to insert; \texttt{key} holds it safely.
+ \item \texttt{scan} moves left through the sorted prefix.
+ \item \texttt{and} tests \texttt{scan >= 0} first; when false, it skips \texttt{values[scan]}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Trace the Code: Insertion Sort, First Key}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.53\textwidth}
+\begin{block}{Relevant code}
+\scriptsize
+\begin{verbatim}
+position = 1
+key = values[position]
+scan = position - 1
+while scan >= 0 and values[scan] > key:
+    values[scan + 1] = values[scan]
+    scan -= 1
+values[scan + 1] = key
+\end{verbatim}
+\end{block}
+\end{column}
+\begin{column}{.44\textwidth}
+\begin{block}{Values and assignments}
+\footnotesize
+\begin{tabular}{ll}
+Initial & \texttt{[5,2,4,1,3]}\\
+\texttt{key} & 2\\
+\texttt{scan} & 0\\
+Shift 5 & \texttt{[5,5,4,1,3]}\\
+\texttt{scan -= 1} & $-1$\\
+Insert 2 & \texttt{[2,5,4,1,3]}
+\end{tabular}
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}The extra copy of 5 is temporary. When the loop ends, the saved key fills the gap.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace the Code: Insertion Sort, A Larger Shift}
+\small
+Take \texttt{key = 1} at \texttt{position = 3} in \texttt{[2, 4, 5, 1, 3]}.
+\begin{center}
+\begin{tabular}{clll}
+\texttt{scan} & Compare & Assignment & List afterward\\\hline
+2 & $5>1$ & \texttt{values[3] = 5} & \texttt{[2,4,5,5,3]}\\
+1 & $4>1$ & \texttt{values[2] = 4} & \texttt{[2,4,4,5,3]}\\
+0 & $2>1$ & \texttt{values[1] = 2} & \texttt{[2,2,4,5,3]}\\
+$-1$ & stop & \texttt{values[0] = 1} & \texttt{[1,2,4,5,3]}
+\end{tabular}
+\end{center}
+\begin{keyidea}When \texttt{scan} reaches $-1$, the saved key belongs at index \texttt{0}.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace the Code: Insertion Sort, Outer Loop}
+\small
+\begin{center}
+\begin{tabular}{ccll}
+\texttt{position} & \texttt{key} & Shifts & List after insertion\\\hline
+1 & 2 & 5 & \texttt{[2,5,4,1,3]}\\
+2 & 4 & 5 & \texttt{[2,4,5,1,3]}\\
+3 & 1 & 5,4,2 & \texttt{[1,2,4,5,3]}\\
+4 & 3 & 5,4 & \texttt{[1,2,3,4,5]}
+\end{tabular}
+\end{center}
+\begin{keyidea}Each iteration inserts one new key into a prefix that was already ordered.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Insertion Sort: Check Understanding}
+\small
+\begin{center}\arraydiagram[2in]{09}\end{center}
+\begin{enumerate}
+ \item Which three values are in the sorted prefix?
+ \item What value is saved in \texttt{key}?
+ \item Which existing values must shift right?
+ \item At what index is \texttt{key} finally inserted?
+\end{enumerate}
+\begin{alertblock}{Remember}\texttt{key} is saved before any overwriting begins.\end{alertblock}
+\end{frame}
+
+\begin{frame}{Selection Sort vs. Insertion Sort}
+\small
+\begin{center}
+\begin{tabular}{@{}p{.18\linewidth}p{.37\linewidth}p{.37\linewidth}@{}}
+& \textbf{Selection sort} & \textbf{Insertion sort}\\[4pt]\hline
+Next step & Find smallest value in unsorted suffix & Take next value and move it left into order\\[5pt]
+Movement & One exchange after scanning & Shift larger values, then place key\\[5pt]
+Sorted region & Contains smallest finished values & Contains values seen so far, in order\\[5pt]
+Changes input? & Yes & Yes
+\end{tabular}
+\end{center}
+\begin{keyidea}Both methods help us understand sorting. In everyday Python code, use built-in sorting.\end{keyidea}
+\end{frame}
+
+\sectionframe{Part 4: Python Sorts for You}
+
+\begin{frame}[fragile]{The List Method: \texttt{.sort()}}
+\small
+\begin{block}{Modify the original list}
+\footnotesize
+\begin{verbatim}
+values = [5, 2, 4, 1, 3]
+values.sort()
+print(values)  # [1, 2, 3, 4, 5]
+\end{verbatim}
+\end{block}
+\begin{itemize}
+ \item \texttt{.sort()} belongs to a list object.
+ \item It rearranges the existing list in place.
+ \item It returns \texttt{None}, not the sorted list.
+\end{itemize}
+\begin{alertblock}{Common mistake}\texttt{result = values.sort()} makes \texttt{result} equal to \texttt{None}.\end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{The Function: \texttt{sorted()}}
+\small
+\begin{block}{Create a new sorted list}
+\footnotesize
+\begin{verbatim}
+values = [5, 2, 4, 1, 3]
+ordered = sorted(values)
+print(ordered)  # [1, 2, 3, 4, 5]
+print(values)   # [5, 2, 4, 1, 3]
+\end{verbatim}
+\end{block}
+\begin{itemize}
+ \item \texttt{sorted(values)} returns a new list; the input list remains unchanged.
+ \item \texttt{sorted()} also accepts other iterables, such as a tuple or string.
+ \item With objects, the new list still holds references to the original objects.
+\end{itemize}
+\begin{keyidea}Use \texttt{.sort()} to change the original; use \texttt{sorted()} for a separate list.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Descending Order: \texttt{reverse=True}}
+\small
+\begin{block}{Both sorting interfaces accept the option}
+\footnotesize
+\begin{verbatim}
+values = [5, 2, 4, 1, 3]
+values.sort(reverse=True)
+print(values)  # [5, 4, 3, 2, 1]
+
+ordered = sorted([5, 2, 4, 1, 3], reverse=True)
+print(ordered)  # [5, 4, 3, 2, 1]
+\end{verbatim}
+\end{block}
+\begin{itemize}
+ \item \texttt{reverse=True} requests descending order.
+ \item \texttt{values.reverse()} just flips the existing sequence; it does not sort it.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Which Should I Use?}
+\small
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Goal} & \textbf{Python expression}\\\hline
+Reorder the existing list & \texttt{values.sort()}\\[6pt]
+Make a new ordered list & \texttt{sorted(values)}\\[6pt]
+Reorder existing list, descending & \texttt{values.sort(reverse=True)}\\[6pt]
+Make a descending copy & \texttt{sorted(values, reverse=True)}
+\end{tabular}
+\end{center}
+\begin{keyidea}You usually do not need to implement selection or insertion sort to sort real Python data.\end{keyidea}
+\end{frame}
+
+\sectionframe{Part 5: Sorting Objects with \texttt{lambda}}
+
+\begin{frame}[fragile]{A List of Objects Needs an Ordering Rule}
+\small
+\begin{block}{The Student class from last lecture}
+\footnotesize
+\begin{verbatim}
+class Student:
+    def __init__(self, student_id, name, gpa):
+        self.student_id = student_id
+        self.name = name
+        self.gpa = gpa
+\end{verbatim}
+\end{block}
+\begin{itemize}
+ \item A student has several attributes: ID, name, and GPA.
+ \item Should students be ordered by ID? Alphabetically? By GPA?
+ \item Python cannot infer which attribute we mean from this simple class.
+\end{itemize}
+\begin{keyidea}For object sorting, the programmer supplies the key used for comparisons.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{The \texttt{key=} Argument}
+\small
+\begin{block}{Sort names by their length}
+\footnotesize
+\begin{verbatim}
+names = ["Ada", "Christopher", "Bo"]
+ordered = sorted(names, key=len)
+print(ordered)  # ['Bo', 'Ada', 'Christopher']
+\end{verbatim}
+\end{block}
+\begin{itemize}
+ \item \texttt{key=} receives a function, not a precomputed result.
+ \item Python calls that function once per item to obtain its sorting key.
+ \item The return value determines the ordering: \texttt{len("Bo")} is 2.
+\end{itemize}
+\begin{keyidea}\texttt{key=} specifies what property to compare, not how to write a sorting loop.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{What Is a \texttt{lambda}?}
+\small
+\begin{cpdefinition}A \texttt{lambda} expression creates a small function without giving it a name using \texttt{def}.\end{cpdefinition}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.47\textwidth}
+\begin{block}{Named function}
+\footnotesize
+\begin{verbatim}
+def get_gpa(student):
+    return student.gpa
+\end{verbatim}
+\end{block}
+\end{column}
+\begin{column}{.49\textwidth}
+\begin{block}{Equivalent lambda}
+\footnotesize
+\begin{verbatim}
+lambda student: student.gpa
+\end{verbatim}
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}A lambda receives input and evaluates one expression, whose result is returned automatically.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Read \texttt{lambda student: student.gpa} Piece by Piece}
+\small
+\begin{center}
+\texttt{lambda student: student.gpa}\medskip
+
+\begin{tabular}{ll}
+\textbf{Piece} & \textbf{Meaning}\\\hline
+\texttt{lambda} & create a function value\\[6pt]
+\texttt{student} & parameter: one input object\\[6pt]
+\texttt{:} & separates input from the expression\\[6pt]
+\texttt{student.gpa} & value returned for that object
+\end{tabular}
+\end{center}
+\begin{block}{Example evaluation}Called with \texttt{Student(1042, "Luis", 3.8)}, this function returns \texttt{3.8}.\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Sort Student Objects by GPA}
+\small
+\begin{block}{The input list}
+\footnotesize
+\begin{verbatim}
+students = [
+    Student(1008, "Maya", 3.4),
+    Student(1042, "Luis", 3.8),
+    Student(1091, "Nora", 3.6),
+]
+\end{verbatim}
+\end{block}
+\begin{block}{Sort by the GPA attribute}
+\footnotesize
+\begin{verbatim}
+by_gpa = sorted(students, key=lambda s: s.gpa)
+\end{verbatim}
+\end{block}
+\begin{center}Resulting order: Maya (3.4) $\rightarrow$ Nora (3.6) $\rightarrow$ Luis (3.8)\end{center}
+\end{frame}
+
+\begin{frame}{How Does \texttt{key=lambda s: s.gpa} Work?}
+\small
+\begin{center}
+\begin{tabular}{lcl}
+\textbf{Object} & \textbf{Key returned} & \textbf{Sorted position}\\\hline
+\texttt{Student(1008, "Maya", 3.4)} & 3.4 & first\\[6pt]
+\texttt{Student(1042, "Luis", 3.8)} & 3.8 & third\\[6pt]
+\texttt{Student(1091, "Nora", 3.6)} & 3.6 & second
+\end{tabular}
+\end{center}
+\begin{itemize}
+ \item The function receives each \texttt{Student} object as \texttt{s}.
+ \item It returns that student's GPA as the comparison key.
+ \item The result contains the original objects, not just GPAs.
+\end{itemize}
+\begin{keyidea}Changing the key changes the ordering rule without changing the objects.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Different Keys, Different Orders}
+\small
+\begin{block}{Same list of Student objects}
+\footnotesize
+\begin{verbatim}
+# Alphabetical by name, new list
+by_name = sorted(students, key=lambda s: s.name)
+
+# Highest GPA first, original list changes
+students.sort(key=lambda s: s.gpa, reverse=True)
+
+# Increasing student ID, new list
+by_id = sorted(students, key=lambda s: s.student_id)
+\end{verbatim}
+\end{block}
+\begin{itemize}
+ \item \texttt{key=} chooses the attribute; \texttt{reverse=True} reverses the order.
+ \item \texttt{.sort()} versus \texttt{sorted()} determines whether the input changes.
+ \item Equal keys keep their original relative order: Python sorting is \textbf{stable}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Connect \texttt{lambda} to Last Lecture}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{Last lecture: search predicate}\texttt{lambda s: s.gpa >= 3.8}\end{block}
+Returns \texttt{True} or \texttt{False}: does this object match?
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{Today: sorting key}\texttt{lambda s: s.gpa}\end{block}
+Returns a GPA number: what value determines this object's order?
+\end{column}
+\end{columns}
+\begin{keyidea}The lambda syntax is identical; the function's purpose and returned value differ.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Common Mistakes with Object Sorting}
+\small
+\begin{enumerate}
+ \item \texttt{key=lambda s: s.gpa()} is wrong if \texttt{gpa} is an attribute, not a method.
+ \item \texttt{key=lambda s: s.gpa > 3.5} groups by a Boolean key; it does not order by GPA within those groups.
+ \item \texttt{key=lambda s: s} asks Python to compare whole objects, which our basic \texttt{Student} class does not support.
+ \item \texttt{students = students.sort(...)} replaces the variable with \texttt{None}.
+\end{enumerate}
+\begin{keyidea}A good key returns exactly the property you want the elements sorted by.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Integrated Practice: Predict the Order}
+\small
+Suppose \texttt{students} contains Maya (3.4), Luis (3.8), and Nora (3.6).
+\begin{enumerate}
+ \item Who comes first after \texttt{sorted(students, key=lambda s: s.name)}?
+ \item Who comes first after \texttt{sorted(students, key=lambda s: s.gpa)}?
+ \item Who comes first with \texttt{key=lambda s: s.gpa, reverse=True}?
+ \item Which changes the original list: \texttt{.sort()} or \texttt{sorted()}?
+ \item Does the result contain \texttt{Student} objects or just numbers and names?
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{Takeaways}
+\small
+\begin{enumerate}
+ \item Binary search relies on ordered data; sorting can provide that order.
+ \item Both algorithms grow a sorted region from left to right.
+ \item Selection sort finds the minimum remaining value and swaps it into place.
+ \item Insertion sort saves the next key, shifts larger values, and inserts the key.
+ \item \texttt{.sort()} changes the original list; \texttt{sorted()} returns a new list.
+ \item \texttt{reverse=True} requests descending order.
+ \item \texttt{lambda} creates a short function; \texttt{key=lambda s: s.gpa} orders by GPA.
+\end{enumerate}
+\begin{keyidea}Understand the algorithms; use built-in sorting in practice.\end{keyidea}
+\end{frame}
 \end{document}

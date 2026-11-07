@@ -1,0 +1,112 @@
+{
+  "source": "lecture-31-sorting-algorithms.tex",
+  "code_blocks_compiled": 15,
+  "all_checks_passed": true,
+  "checks": [
+    "selection_sort: correct in-place result and None return for 7 edge/example inputs",
+    "insertion_sort: correct in-place result and None return for 7 edge/example inputs",
+    "Both outer-loop tables, first selection scan, and insertion-shift diagrams match execution",
+    "Built-in sorting, named/lambda keys, object identity, ascending/descending orders, and stability pass"
+  ],
+  "selection_trace": [
+    {
+      "start": 0,
+      "key": null,
+      "min_index": 3,
+      "values": [
+        1,
+        2,
+        4,
+        5,
+        3
+      ]
+    },
+    {
+      "start": 1,
+      "key": null,
+      "min_index": 1,
+      "values": [
+        1,
+        2,
+        4,
+        5,
+        3
+      ]
+    },
+    {
+      "start": 2,
+      "key": null,
+      "min_index": 4,
+      "values": [
+        1,
+        2,
+        3,
+        5,
+        4
+      ]
+    },
+    {
+      "start": 3,
+      "key": null,
+      "min_index": 4,
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    }
+  ],
+  "insertion_trace": [
+    {
+      "position": 1,
+      "key": 2,
+      "min_index": null,
+      "values": [
+        2,
+        5,
+        4,
+        1,
+        3
+      ]
+    },
+    {
+      "position": 2,
+      "key": 4,
+      "min_index": null,
+      "values": [
+        2,
+        4,
+        5,
+        1,
+        3
+      ]
+    },
+    {
+      "position": 3,
+      "key": 1,
+      "min_index": null,
+      "values": [
+        1,
+        2,
+        4,
+        5,
+        3
+      ]
+    },
+    {
+      "position": 4,
+      "key": 3,
+      "min_index": null,
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    }
+  ],
+  "supplied_array_diagrams": 14
+}

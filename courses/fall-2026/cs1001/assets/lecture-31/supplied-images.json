@@ -1,0 +1,205 @@
+{
+  "source_archive": "CS1001_Lecture_31_Images.zip",
+  "source_pdf": "CS1001_Lecture_31_Sorting_Algorithms.pdf",
+  "images": [
+    {
+      "path": "array-01.png",
+      "original_path": "lecture-31-images/diagram-01_sorted-0_highlight--1_values-5-2-4-1-3.png",
+      "sha256": "ccf3e4abe7640228397981aca0dd3fa5f281c6600826f121999ac66892d64920",
+      "sorted_prefix": 0,
+      "highlight_index": -1,
+      "values": [
+        5,
+        2,
+        4,
+        1,
+        3
+      ]
+    },
+    {
+      "path": "array-02.png",
+      "original_path": "lecture-31-images/diagram-02_sorted-5_highlight--1_values-1-2-3-4-5.png",
+      "sha256": "919cb9c367a8c01cd6c4dc70a60f2cf63205e95bfd5315396d9fc1471e401e9a",
+      "sorted_prefix": 5,
+      "highlight_index": -1,
+      "values": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "path": "array-03.png",
+      "original_path": "lecture-31-images/diagram-03_sorted-2_highlight--1_values-1-2-4-5-3.png",
+      "sha256": "6dc3ee39884199a9a2b9b9fefd027ac368e6cef32db4d531af9fb194e8019076",
+      "sorted_prefix": 2,
+      "highlight_index": -1,
+      "values": [
+        1,
+        2,
+        4,
+        5,
+        3
+      ]
+    },
+    {
+      "path": "array-04.png",
+      "original_path": "lecture-31-images/diagram-04_sorted-3_highlight--1_values-1-2-3-5-4.png",
+      "sha256": "e9d4bdb5ed92c2607e11ea5e63ca5bb68b93b7b83f50cb732c074cbc30a65c57",
+      "sorted_prefix": 3,
+      "highlight_index": -1,
+      "values": [
+        1,
+        2,
+        3,
+        5,
+        4
+      ]
+    },
+    {
+      "path": "array-05.png",
+      "original_path": "lecture-31-images/diagram-05_sorted-1_highlight--1_values-1-2-4-5-3.png",
+      "sha256": "838db0bec6eca8bef249c312db7e8967fb1b93b9f5525386b0446fdb52efa443",
+      "sorted_prefix": 1,
+      "highlight_index": -1,
+      "values": [
+        1,
+        2,
+        4,
+        5,
+        3
+      ]
+    },
+    {
+      "path": "array-06.png",
+      "original_path": "lecture-31-images/diagram-06_sorted-2_highlight--1_values-2-5-4-1-3.png",
+      "sha256": "c4264de2bc361c2ecb5406e8d5f91286bc8c7df9ca4559a29143b319e4388428",
+      "sorted_prefix": 2,
+      "highlight_index": -1,
+      "values": [
+        2,
+        5,
+        4,
+        1,
+        3
+      ]
+    },
+    {
+      "path": "array-07.png",
+      "original_path": "lecture-31-images/diagram-07_sorted-0_highlight-3_values-5-2-4-1-3.png",
+      "sha256": "90b051c008ed2748e1342b1e8b73303733321584c94a4195e3645deb20ef06fe",
+      "sorted_prefix": 0,
+      "highlight_index": 3,
+      "values": [
+        5,
+        2,
+        4,
+        1,
+        3
+      ]
+    },
+    {
+      "path": "array-08.png",
+      "original_path": "lecture-31-images/diagram-08_sorted-1_highlight-1_values-5-2-4-1-3.png",
+      "sha256": "c671ad7027539bbe1d55d876ca458b13d9111188e06f3f823e3ce5e16ce3b273",
+      "sorted_prefix": 1,
+      "highlight_index": 1,
+      "values": [
+        5,
+        2,
+        4,
+        1,
+        3
+      ]
+    },
+    {
+      "path": "array-09.png",
+      "original_path": "lecture-31-images/diagram-09_sorted-3_highlight--1_values-2-4-5-1-3.png",
+      "sha256": "1bb70dc31e8b782084021efa5e2f021094c6269443e5ffcbe720a737d7be5d66",
+      "sorted_prefix": 3,
+      "highlight_index": -1,
+      "values": [
+        2,
+        4,
+        5,
+        1,
+        3
+      ]
+    },
+    {
+      "path": "array-10.png",
+      "original_path": "lecture-31-images/diagram-10_sorted-4_highlight--1_values-1-2-4-5-3.png",
+      "sha256": "5badbe354df9b1d9c16d14e357d7363eedb9da40c097c6bbd95c1c1941f19b5c",
+      "sorted_prefix": 4,
+      "highlight_index": -1,
+      "values": [
+        1,
+        2,
+        4,
+        5,
+        3
+      ]
+    },
+    {
+      "path": "array-11.png",
+      "original_path": "lecture-31-images/diagram-11_sorted-3_highlight-3_values-2-4-5-1-3.png",
+      "sha256": "78c9c0b29ccd81c5f09c75b417df44d3a09c541cf2736d99720f240fbc87ee2a",
+      "sorted_prefix": 3,
+      "highlight_index": 3,
+      "values": [
+        2,
+        4,
+        5,
+        1,
+        3
+      ]
+    },
+    {
+      "path": "array-12.png",
+      "original_path": "lecture-31-images/diagram-12_sorted-3_highlight-3_values-2-4-5-5-3.png",
+      "sha256": "87925a4210140d5f8d55dd3fcadef6cd706fd9b382affc803a36911c2e7b81c1",
+      "sorted_prefix": 3,
+      "highlight_index": 3,
+      "values": [
+        2,
+        4,
+        5,
+        5,
+        3
+      ]
+    },
+    {
+      "path": "array-13.png",
+      "original_path": "lecture-31-images/diagram-13_sorted-3_highlight-2_values-2-4-4-5-3.png",
+      "sha256": "eed8c9c3930b630c309f52271fad60220664060549e6779d8dda46607e021ed1",
+      "sorted_prefix": 3,
+      "highlight_index": 2,
+      "values": [
+        2,
+        4,
+        4,
+        5,
+        3
+      ]
+    },
+    {
+      "path": "array-14.png",
+      "original_path": "lecture-31-images/diagram-14_sorted-3_highlight-1_values-2-2-4-5-3.png",
+      "sha256": "dc969796da552aa9067fb26850afa6c35c5fb78606bfc5453a0828383c82e16e",
+      "sorted_prefix": 3,
+      "highlight_index": 1,
+      "values": [
+        2,
+        2,
+        4,
+        5,
+        3
+      ]
+    }
+  ],
+  "source_pdf_sha256": "35a2a8e370b291aedb8b1f03fc5336b365e329053fdc902a1e45f6aae2a1c9ef",
+  "source_archive_sha256": "e8b500eb605cdb291e86d1d2131000e005ee4b623562f158a0f48cd3e3c69147",
+  "display": "Images are unmodified; the TeX macro trims 6.3 bp of white margin on each edge."
+}

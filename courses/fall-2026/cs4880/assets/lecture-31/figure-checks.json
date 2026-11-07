@@ -1,0 +1,100 @@
+{
+  "source_files": [
+    {
+      "name": "Lecture31_Unsupervised_Learning.tex",
+      "sha256": "f6459b6562ef2c2212b90fa8b9361f29c5696d604b044a77fb524a1942933314"
+    },
+    {
+      "name": "Lecture31_Reproduce_Images.py",
+      "sha256": "9d0fa4d335286fce3555ec1d117dd509dca48fdd4dd850650b814d7b3db2addb"
+    }
+  ],
+  "generator": "generate-figures.py",
+  "dependencies": "requirements.txt",
+  "measured_results": "results.json",
+  "displayed_code_checks": "example-checks.json",
+  "adaptations": [
+    "Use shared course preamble and course-local asset paths.",
+    "Keep all 43 supplied frames; integrate references without an appendix.",
+    "Show principal directions with equal axis scales so perpendicularity is preserved.",
+    "Iterate illustrated K-means until centroid convergence rather than stopping at a fixed iteration count.",
+    "Use the full theoretical 0 to 2/3 range for three-component GMM ambiguity.",
+    "Connect the frozen pipeline to prediction with a downward arrow.",
+    "Clarify ARI, DBSCAN silhouette noise handling, PCA solvers, and preprocessing fit boundaries.",
+    "Reflow crowded slides while preserving the supplied narrative and examples."
+  ],
+  "figures": [
+    {
+      "path": "dbscan_eps_sensitivity.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "digits_pca_reconstruction.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "digits_pca_vs_tsne.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "digits_samples.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "gmm_soft_membership.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "hierarchical_dendrogram.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "iris_pca_projection_variance.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "k_selection.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "kmeans_iteration.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "kmeans_on_blobs.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "moons_algorithms.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "nmf_digits_components.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "one_class_svm_boundary.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "pca_downstream_svc_accuracy.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "pca_geometry.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "train_test_pipeline.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "unlabeled_vs_labels.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    },
+    {
+      "path": "why_scaling_matters.png",
+      "method": "Computed by the supplied scientific Python script, adapted for the repository; no AI image generation."
+    }
+  ]
+}
