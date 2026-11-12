@@ -1,54 +1,558 @@
-\documentclass[aspectratio=169]{beamer}
-\input{../../common/preamble.tex}
+\documentclass[aspectratio=169,10pt]{beamer}
 
+\input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+\graphicspath{{../assets/lecture-32/}}
+
+% Cal Poly CS 4880, Lecture 32, November 13, 2026.
+% Rebuilt after reading all 17 slides of Lecture 22, Learning - Reinforcement Learning.
+% About 50 minutes. Original vacuum example, +100 completion/-10 action;
+% separate simplified 5x5 GridWorld example, +100 goal/-1 move.
+% Illustrations and reported measurements are imported from the supplied image archive.
+% The original figure generator was not supplied; reported run uses seed 4880.
+
+\newcommand{\lecturevisual}[2][2.15in]{%
+  \par\vspace{2pt}{\centering\includegraphics[width=.98\linewidth,height=#1,keepaspectratio]{#2}\par}\vspace{2pt}%
+}
+\newcommand{\architecturestage}[1]{%
+  {\centering\setlength{\fboxsep}{5pt}%
+  \fcolorbox{CalPolyGreen}{DeckSoft}{\parbox{.86\linewidth}{\centering\small #1}}\par}%
+}
+\newcommand{\conceptlead}[1]{{\small\bfseries\color{CalPolyGreen}#1\par}}
+\newenvironment{calculation}[1][Mathematical description]{%
+  \par\begingroup\setbeamercolor{calculation body}{bg=DeckSoft,fg=DeckInk}%
+  \begin{beamercolorbox}[sep=4pt,wd=\linewidth]{calculation body}%
+  \footnotesize{\bfseries\color{DeckMuted}#1\par}%
+  \setlength{\jot}{0pt}\setlength{\abovedisplayskip}{3pt}\setlength{\belowdisplayskip}{3pt}%
+}{\end{beamercolorbox}\endgroup}
+
+\setbeamersize{text margin left=.42in,text margin right=.42in}
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{32}
-\lecturetitle{Reinforcement Learning I -- agents, rewards, return, value functions, MDP connection}
+\lecturetitle{Reinforcement Learning: Rewards, Policies, and Q-Learning}
+\newcommand{\LectureDisplayTitle}{Reinforcement Learning:\\[3pt]Rewards, Policies,\\[3pt]and Q-Learning}
 \lecturedate{November 13, 2026}
-\courseunit{Course sequence}
+\courseunit{Learning Agents and Machine Learning}
 
 \begin{document}
-
+\begingroup
+\renewcommand{\LectureTitle}{\LectureDisplayTitle}
 \makedecktitle
+\endgroup
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Reinforcement Learning I -- agents, rewards, return, value functions, MDP connection
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{Learning Through Interaction}
+
+\begin{frame}{Learning Agents Improve Decisions from Outcomes}
+\small
+\conceptlead{Unlike labeled examples, reinforcement learning supplies feedback after an action changes the world.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.54\textwidth}
+\lecturevisual[2.32in]{agent_loop.png}
+\end{column}
+\begin{column}{.43\textwidth}
+\begin{itemize}
+\item An intelligent agent observes its environment, chooses actions, and receives feedback.
+\item The core cycle is \textbf{observe $\to$ decide $\to$ act $\to$ learn}.
+\item Neural networks can approximate perception, decisions, or action values when explicit tables become impractical.
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{keyidea}We want a policy that performs well over repeated interactions, not just one correct prediction.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}{Our Running Example: A Vacuum Robot}
+\small
+\conceptlead{Imagine a robot cleaning a room with obstacles and dirty tiles.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.54\textwidth}
+\lecturevisual[2.13in]{vacuum_grid.png}
+\end{column}
+\begin{column}{.43\textwidth}
+\begin{itemize}
+\item Dark cells are obstacles; brown cells are dirty; the teal circle is the robot.
+\item The robot knows its location, and movement is deterministic in this toy problem.
+\item It can move up, down, left, right, or clean.
+\item Search could plan every time; learning instead reuses experience.
+\end{itemize}
+\end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{What Exactly Is a State?}
+\footnotesize
+\conceptlead{A state must distinguish situations that require different decisions.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.54\textwidth}
+\begin{itemize}
+\item The vacuum state has the robot's \textbf{position} and the \textbf{clean/dirty status} of tiles.
+\item Two visits to the same square may be different states if the remaining dirt differs.
+\item A useful state representation captures information needed to predict the next state and reward.
+\end{itemize}
+\begin{calculation}[Illustrative vacuum state]
+\[s=(\text{row},\text{column},\text{dirt configuration}).\]
+\end{calculation}
+\end{column}
+\begin{column}{.43\textwidth}
+\lecturevisual[1.73in]{vacuum_grid.png}
+\end{column}
+\end{columns}
+\begin{keyidea}The robot's position alone is not a complete state for the full cleaning task.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\begin{frame}{Actions Cause Transitions}
+\small
+\conceptlead{The environment maps a current state and action into a next state and reward.}
+\lecturevisual[1.52in]{state_transition.png}
+\begin{itemize}
+\item For the vacuum, actions are movement or cleaning; a move may be blocked by a wall.
+\item A \textbf{deterministic} transition always produces the same outcome from the same state-action pair.
+\item Real robots often have \textbf{stochastic} motion or incomplete information; we start with the easier case.
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}{Reward Turns a Task Into an Optimization Problem}
+\small
+\conceptlead{Not every successful behavior is equally efficient.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.52\textwidth}
+\begin{itemize}
+\item \textbf{Original vacuum example:} $+100$ for cleaning the entire room and $-10$ for each action.
+\item Completing the task matters, but taking a long detour is costly.
+\item These are \emph{designer-chosen} numbers, not quantities learned automatically.
+\item If reward is poorly designed, an agent may optimize the wrong behavior.
+\end{itemize}
+\end{column}
+\begin{column}{.45\textwidth}
+\lecturevisual[2.31in]{reward_tradeoff.png}
+\end{column}
+\end{columns}
+\begin{keyidea}Reward describes what the agent is encouraged to do; it is not a guarantee of sensible behavior.\end{keyidea}
 \end{frame}
 
+\begin{frame}{Immediate Reward Is Not the Whole Objective}
+\small
+\conceptlead{An action can be temporarily costly but lead to a better future.}
+\begin{calculation}[Discounted return after time $t$]
+\[G_t=r_{t+1}+\gamma r_{t+2}+\gamma^2r_{t+3}+\cdots
+=\sum_{k=0}^{\infty}\gamma^k r_{t+k+1}.\]
+The discount factor $0\leq\gamma<1$ reduces the weight of distant rewards in a continuing task.
+\end{calculation}
+\begin{itemize}
+\item A direct route may cost fewer actions than a wandering route, even if both eventually finish.
+\item A policy seeks high \textbf{expected return}, not necessarily the largest immediate reward.
+\item For finite episodes, the sum stops at termination; $\gamma=1$ can also be appropriate.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{A Policy Is the Agent's Strategy}
+\small
+\conceptlead{A policy says what the robot will do when it encounters a state.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.49\textwidth}
+\begin{calculation}[Deterministic policy]
+\[\pi(s)=a.\]
+A mapping from each state $s$ to one selected action $a$.
+\end{calculation}
+\begin{itemize}
+\item A suboptimal policy wastes moves.
+\item A random policy ignores what the robot has learned.
+\item An optimal policy maximizes expected discounted return under the task model.
+\end{itemize}
+\end{column}
+\begin{column}{.48\textwidth}
+\lecturevisual[2.3in]{policy_vs_q.png}
+\end{column}
+\end{columns}
+\begin{keyidea}Rather than plan from scratch every time, the agent can learn which action is best in each state.\end{keyidea}
+\end{frame}
+
+\section{Q-Learning: Assign Values to Actions}
+
+\begin{frame}{Q-Learning Asks: How Good Is Each Action Here?}
+\small
+\conceptlead{Q-learning estimates the value of choosing action $a$ in state $s$ and acting well afterward.}
+\begin{calculation}[Optimal action-value function]
+\[Q^*(s,a)=\mathbb{E}\!\left[r_{t+1}+\gamma r_{t+2}+\cdots\mid s_t=s,\,a_t=a,\,\text{optimal continuation}\right].\]
+\end{calculation}
+\begin{itemize}
+\item A \textbf{Q-value} summarizes an immediate choice plus its possible consequences.
+\item The algorithm can learn from observed transitions without knowing the transition function in advance.
+\item After learning, the greedy policy selects the highest-valued action:
+\end{itemize}
+\begin{calculation}[Greedy action choice]
+\[\pi(s)=\underset{a\in A(s)}{\arg\max}\;Q(s,a).\]
+\end{calculation}
+\end{frame}
+
+\begin{frame}{The Q-Table Is a State-by-Action Lookup Table}
+\small
+\conceptlead{Rows represent states; columns represent actions; cells hold estimates of long-term value.}
+\lecturevisual[1.85in]{qtable_before_after.png}
+\begin{itemize}
+\item At initialization, entries are often all zero; experience updates the visited pairs.
+\item A row's largest entry determines a greedy action; illegal actions are excluded.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{How One Experience Updates the Table}
+\small
+\conceptlead{We move the current estimate toward a target built from reward plus the best next-state value.}
+\begin{calculation}[Q-learning temporal-difference update]
+\[Q(s,a)\leftarrow Q(s,a)+\alpha\underbrace{\left[r+\gamma\max_{a'}Q(s',a')-Q(s,a)\right]}_{\text{temporal-difference error}}.\]
+\end{calculation}
+\begin{enumerate}
+\item Observe the current state $s$ and choose action $a$.
+\item Receive immediate reward $r$ and new state $s'$.
+\item Compute the \textbf{target} $r+\gamma\max_{a'}Q(s',a')$.
+\item Move the old Q-value toward the target by fraction $\alpha$.
+\end{enumerate}
+\begin{keyidea}The update bootstraps: current estimates of future value improve earlier decisions.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Worked Example: Update $Q((2,2),\mathrm{right})$}
+\small
+\conceptlead{This reproduces the actual calculation from the old lecture.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.49\textwidth}
+\begin{itemize}
+\item Current state $(2,2)$; action \texttt{right}.
+\item Next state $(2,3)$; reward $r=-10$.
+\item Old estimate $Q((2,2),\mathrm{right})=5$.
+\item Best Q-value in the next state is $20$.
+\item Learning rate $\alpha=0.5$ and discount $\gamma=0.9$.
+\end{itemize}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{calculation}[Step 1: target]
+\[y=-10+0.9(20)=8.\]
+\end{calculation}
+\begin{calculation}[Step 2: update]
+\[Q_{\rm new}=5+0.5(8-5)=\boxed{6.5}.\]
+\end{calculation}
+\end{column}
+\end{columns}
+\lecturevisual[1.02in]{q_update_steps.png}
+\end{frame}
+
+\begin{frame}{The Learning Rate $\alpha$ and Discount Factor $\gamma$ Do Different Jobs}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{Learning rate $\alpha$}
+How far should a Q-estimate move toward newly observed evidence?\\[5pt]
+Small $\alpha$: gradual adjustment.\\[3pt]
+Large $\alpha$: larger, potentially noisy adjustment.
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{Discount factor $\gamma$}
+How much should future rewards influence decisions today?\\[5pt]
+$\gamma=0$: immediate reward only.\\[3pt]
+$\gamma$ near 1: future rewards matter more.
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}$\alpha$ controls the \emph{update speed}; $\gamma$ controls the \emph{planning horizon}. Neither is the exploration probability.\end{keyidea}
+\end{frame}
+
+\begin{frame}{A Controlled Illustration: What $\alpha$ Changes}
+\small
+\conceptlead{Hold the update target fixed at $8$ and start the estimated value at $5$.}
+\lecturevisual[1.86in]{alpha_effect.png}
+\begin{itemize}
+\item With a \emph{fixed} target, larger $\alpha$ moves more quickly toward it.
+\item In a real environment, the target also changes with experience; high $\alpha$ can amplify noise.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Exploration Versus Exploitation}
+\small
+\conceptlead{Early Q-values are uncertain; always following the current best can prevent discovery.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.47\textwidth}
+\begin{block}{Explore}
+Try an action to collect new experience. Some actions may initially look bad only because they have not been tested.
+\end{block}
+\end{column}
+\begin{column}{.49\textwidth}
+\begin{block}{Exploit}
+Choose the highest-valued available action according to the current Q-table.
+\end{block}
+\end{column}
+\end{columns}
+\begin{calculation}[$\varepsilon$-greedy strategy]
+\[a=\begin{cases}
+\text{random legal action},&\text{with probability }\varepsilon,\\
+\arg\max_{a'}Q(s,a'),&\text{with probability }1-\varepsilon.
+\end{cases}\]
+\end{calculation}
+\end{frame}
+
+\begin{frame}[fragile]{An $\varepsilon$-Greedy Action Rule in Python}
+\small
+\conceptlead{Exploration is for training; demonstration or evaluation usually uses a greedy policy.}
+{\footnotesize\begin{verbatim}
+if rng.random() < epsilon:
+    action = rng.choice(legal_actions)       # explore
+else:
+    values = Q[row, col, legal_actions]
+    action = legal_actions[np.argmax(values)]  # exploit
+\end{verbatim}}
+\lecturevisual[1.09in]{epsilon_decay.png}
+\begin{itemize}
+\item Example schedule: $\varepsilon_t=\max(0.05,0.996^t)$ for episode $t$.
+\item Random choices must be limited to \emph{legal} actions in our GridWorld implementation.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{What Is an Episode?}
+\small
+\conceptlead{One episode is one complete attempt between an initial state and a stopping condition.}
+\begin{enumerate}
+\item Reset the environment to an initial state.
+\item Observe $s$, select $a$, and take a step.
+\item Receive the reward and next state; update $Q(s,a)$.
+\item Repeat until reaching a goal, failure condition, or step limit.
+\end{enumerate}
+\begin{keyidea}Learning generally takes many episodes. Episode return and task success help us tell whether behavior is improving.\end{keyidea}
+\end{frame}
+
+\section{Demo: Q-Learning on a 5 by 5 GridWorld}
+
+\begin{frame}{Separate the Full Vacuum Task from the Teaching Demo}
+\small
+\conceptlead{The original lecture moves from a rich cleaning task to a simpler position-only grid.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{Vacuum robot (conceptual)}
+State: position \emph{and} remaining dirt.\\[4pt]
+Actions: move or clean.\\[4pt]
+Reward: $+100$ when all cleaned; $-10$ per action.\\[4pt]
+Obstacles and dirt are part of the task.
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{GridWorld (coded demo)}
+State: one of 25 positions.\\[4pt]
+Actions: up, down, left, right.\\[4pt]
+Reward: $+100$ on reaching goal; $-1$ otherwise.\\[4pt]
+No obstacles or dirt; transitions deterministic.
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}Position-only Q-learning solves the smaller goal-reaching problem, not the entire vacuum-cleaning problem.\end{keyidea}
+\end{frame}
+
+\begin{frame}{GridWorld Specification for a Reproducible Run}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.52\textwidth}
+\begin{itemize}
+\item A $5\times5$ grid; goal is bottom-right $(4,4)$.
+\item Start each training episode at a random \emph{non-goal} position.
+\item Every legal move is deterministic.
+\item Entering the goal gives $+100$ and ends the episode; all other moves give $-1$.
+\item Up to 100 moves per episode; a time limit is a truncation, not a goal.
+\item Parameters: $\alpha=0.3$, $\gamma=0.95$; 2400 episodes; seed 4880.
+\end{itemize}
+\end{column}
+\begin{column}{.45\textwidth}
+\lecturevisual[2.58in]{gridworld_setup.png}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo Setup: Q-Values and GridWorld Dynamics}
+\small
+\conceptlead{The Q-table has shape $5\times5\times4$ because each position has four candidate actions.}
+{\footnotesize\begin{verbatim}
+import numpy as np
+rng = np.random.default_rng(4880)
+Q = np.zeros((5, 5, 4))
+ACTIONS = [(-1,0), (1,0), (0,-1), (0,1)]
+GOAL = (4,4)
+
+def step(state, action):
+    row, col = state
+    dr, dc = ACTIONS[action]
+    nxt = (max(0, min(4, row+dr)),
+           max(0, min(4, col+dc)))
+    done = (nxt == GOAL)
+    return nxt, (100 if done else -1), done
+\end{verbatim}}
+\begin{keyidea}The action-selection code filters illegal moves at boundaries.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Demo Core: Choose, Act, Update}
+\small
+\conceptlead{One transition is enough for one Q-learning update.}
+{\footnotesize\begin{verbatim}
+legal = allowed_actions(state)
+if rng.random() < epsilon:
+    action = int(rng.choice(legal))
+else:
+    action = legal[np.argmax(Q[row, col, legal])]
+
+next_state, reward, done = step(state, action)
+future = 0 if done else max(
+    Q[next_state[0], next_state[1],
+      allowed_actions(next_state)])
+
+Q[row, col, action] += alpha * (
+    reward + gamma * future - Q[row, col, action])
+\end{verbatim}}
+\begin{keyidea}For a terminal next state, the future-value contribution is zero.\end{keyidea}
+\end{frame}
+
+\begin{frame}{The Complete Training Logic at a High Level}
+\small
+\conceptlead{Repeat state transitions, but do not confuse training exploration with the final greedy policy.}
+\lecturevisual[1.82in]{q_learning_flow.png}
+\begin{itemize}
+\item Each episode resets to a new starting position and uses the current $\varepsilon$.
+\item After training, select the largest legal Q-value in each cell to draw the policy.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Demo Results: Learning Over 2400 Episodes}
+\small
+\conceptlead{These supplied curves report a run using the stated seed and settings.}
+\lecturevisual[2.43in]{training_curves.png}
+\begin{itemize}
+\item Last 100 training episodes: \textbf{100\%} goal success; mean reward \textbf{96.88}.
+\item These training outcomes include $\varepsilon$-greedy exploration.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{The Learned Policy: Select the Largest Legal Q-Value}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.55\textwidth}
+\lecturevisual[2.33in]{learned_policy.png}
+\end{column}
+\begin{column}{.42\textwidth}
+\begin{itemize}
+\item Arrows represent $\pi(s)=\arg\max_a Q(s,a)$ after training.
+\item The gold star is the terminal goal.
+\item Several shortest routes can be equally good, so an alternative seed may yield different arrows.
+\item This is the \textbf{simplified position-only GridWorld}.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Follow the Policy From the Top-Left Corner}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.55\textwidth}
+\lecturevisual[2.33in]{episode_trajectory.png}
+\end{column}
+\begin{column}{.42\textwidth}
+\begin{itemize}
+\item Beginning at $(0,0)$, this learned greedy rollout reaches $(4,4)$ in \textbf{8 moves}.
+\item Seven moves earn $-1$ each; the final goal-reaching move earns $+100$.
+\item Undiscounted episode return is \textbf{$7(-1)+100=93$}.
+\item The training policy still sometimes explores; this rollout does not.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Why Not Merely Memorize the Path?}
+\small
+\conceptlead{Q-learning stores a decision for \emph{every} visited state, not only the one displayed route.}
+\begin{itemize}
+\item Random training starts create experiences from many positions.
+\item The same learned table can guide the robot from alternative starting cells.
+\item Bootstrapped future values propagate information about the goal back to earlier positions.
+\item A grid has multiple shortest routes; the policy chooses among ties.
+\item This still does \emph{not} mean the agent learned to recognize dirty tiles, plan around unseen obstacles, or clean the room.
+\end{itemize}
+\end{frame}
+
+\section{Limitations and Next Steps}
+
+\begin{frame}{Why Tabular Q-Learning Does Not Scale Well}
+\small
+\conceptlead{The original lecture's final slide is not a minor footnote: state-space growth is the central limitation.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.51\textwidth}
+\begin{itemize}
+\item One value is needed per \textbf{state-action pair}.
+\item A richer vacuum state must record position \emph{and} remaining dirt.
+\item Learning can be slow: unvisited states receive no direct updates.
+\item Continuous sensor readings and images cannot be enumerated usefully.
+\item Random exploration may be costly or unsafe on real hardware.
+\end{itemize}
+\end{column}
+\begin{column}{.46\textwidth}
+\lecturevisual[2.42in]{state_space_growth.png}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{From a Q-Table to a Learned Function}
+\small
+\conceptlead{One natural continuation is to approximate Q-values from features instead of indexing a table.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.49\textwidth}
+\begin{block}{Tabular Q-learning}
+\[Q[s,a]\]
+One independent entry for each state-action pair. Works well in small, discrete problems.
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{Function approximation}
+\[Q_{\theta}(s,a)\]
+A shared model (possibly a neural network) estimates values and can generalize across similar inputs.
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}Function approximation helps with scale, but adds optimization and stability challenges; it is not a free fix.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Common Implementation and Evaluation Mistakes}
+\small
+\begin{enumerate}
+\item \textbf{Mixing tasks:} vacuum-with-dirt and position-only GridWorld have different state spaces and rewards.
+\item \textbf{Wrong terminal update:} do not add a next-state bootstrap at a true terminal state.
+\item \textbf{Unclear boundaries:} decide whether invalid moves are blocked, penalized, or excluded.
+\item \textbf{Only reporting one run:} a successful seed does not prove stability across seeds.
+\item \textbf{Confusing train and test behavior:} exploratory training returns can differ from greedy evaluation.
+\item \textbf{Treating a learning curve as a safety claim:} toy-grid success says little about a real robot.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}{Connecting Reinforcement Learning Back to Intelligent Agents}
+\small
+\conceptlead{Reinforcement learning turns the agent loop into a method for improving behavior over time.}
+\begin{itemize}
+\item \textbf{Environment:} supplies a new observation and reward after each action.
+\item \textbf{State:} summarizes the situation needed to choose an action.
+\item \textbf{Policy:} selects a behavior in each situation.
+\item \textbf{Q-values:} estimate the long-term consequences of choices.
+\item \textbf{Exploration:} gathers experiences needed to improve estimates.
+\item \textbf{Evaluation:} checks actual goal achievement, costs, and robustness.
+\end{itemize}
+\begin{keyidea}The central RL question is not ``What is the correct label?'' It is ``Which behavior leads to the best outcomes over time?''\end{keyidea}
+\end{frame}
+
+\begin{frame}{References, Provenance, and Reproducibility}
+\footnotesize
+\begin{itemize}
+\item Source: \emph{Artificial Intelligence, Lecture 22: Learning -- Reinforcement Learning}, supplied 17-page slide deck, especially pages 2--17 (agent, vacuum grid, states, rewards, policies, Q-tables, update, worked example, $\varepsilon$-greedy, episodes, code, and limitations).
+\item Reproduced old-lecture worked result: $5+0.5[-10+0.9(20)-5]=6.5$.
+\item Demo extension: the supplied position-only $5\times5$ Q-learning experiment uses explicit legal actions, terminal handling, a fixed seed, and separate exploration/evaluation.
+\item Diagrams and reported GridWorld outcomes are included in the supplied image archive. The original figure-generation script was not included, so the reported training statistics have not been independently reproduced.
+\item Further reading: Sutton and Barto, \emph{Reinforcement Learning: An Introduction} (2nd ed., 2018), Chapters 3 and 6; Watkins and Dayan (1992), \emph{Q-learning}.
+\item Measured results may vary with changes to code, RNG, or numerical dependencies; the supplied run uses NumPy's \texttt{default\_rng(4880)}.
+\end{itemize}
+\end{frame}
 \end{document}
