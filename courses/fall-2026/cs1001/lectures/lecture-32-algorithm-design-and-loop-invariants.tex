@@ -1,6 +1,15 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+\setbeamersize{text margin left=.42in,text margin right=.42in}
 
+% Instructor draft: follows Lecture 31's theme, example/code/trace rhythm,
+% fragile verbatim code frames, and shared block environments.
+% Suggested 50-minute pacing: invariants 10; Two Sum 12; nondecreasing 7;
+% nested-object grouping 8; positive streaks 10; Lab 6 bridge 3.
+% Prediction/reveal frames are discussion pauses, not additional topics.
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{32}
@@ -9,46 +18,684 @@
 \courseunit{12. Algorithms}
 
 \begin{document}
-
 \makedecktitle
 
 \begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Algorithm Design and Loop Invariants
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\small
+\begin{itemize}
+ \item Explain why a loop works by describing the meaning of its state.
+ \item Design Two Sum using pairs, then remembered information.
+ \item Check nondecreasing order using neighboring elements.
+ \item Traverse nested objects and group students by major.
+ \item Track a current positive streak and the best streak seen so far.
+ \item Carry the same reasoning into Lab 6: strings and mixed data.
+\end{itemize}
+\begin{keyidea}What must the program remember, and what should that state mean after each iteration?\end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}{From Last Time: A Sorted Region Means Something}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{Selection sort}
+The finished prefix contains the smallest values in their final sorted positions.
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{Insertion sort}
+The processed prefix contains its original values, now in sorted order.
+\end{block}
+\end{column}
+\end{columns}
+\begin{itemize}
+ \item We used these statements to explain each algorithm's progress.
+ \item The statement stays true as the relevant region grows.
+ \item Today we will name this reasoning and use it to design new loops.
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{Our Design Routine}
+\small
+\begin{center}
+\textbf{Prompt} $\longrightarrow$ \textbf{Contract} $\longrightarrow$ \textbf{Examples}\\[8pt]
+$\longrightarrow$ \textbf{State and invariant} $\longrightarrow$ \textbf{Code} $\longrightarrow$ \textbf{Tests}
+\end{center}
+\begin{itemize}
+ \item Decide what the function receives, returns, and may change.
+ \item Work out ordinary and boundary examples before coding.
+ \item Give each state variable a precise job.
+ \item Explain why one iteration preserves those meanings.
+\end{itemize}
+\begin{keyidea}Choose the state from the problem, rather than choosing variable names first and hoping they work.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\sectionframe{Part 1: What Makes a Loop Correct?}
+
+\begin{frame}{Definition: Loop Invariant}
+\small
+\begin{cpdefinition}
+A \textbf{loop invariant} is a statement about program state that holds every time execution reaches a specified point in a loop.
+\end{cpdefinition}
+\begin{block}{Our usual checkpoint}
+Immediately before the next iteration: what is already true about the portion processed so far?
+\end{block}
+\begin{itemize}
+ \item State the checkpoint; a claim need not hold halfway through an update.
+ \item The variables may change while the relationship remains true.
+ \item A useful invariant connects the changing state to the required result.
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}[fragile]{A Familiar Invariant: Counting Matches}
+\small
+\begin{block}{Count values equal to a target}
+\footnotesize
+\begin{verbatim}
+def count_matches(values: list[int], target: int) -> int:
+    count = 0
+    for value in values:
+        if value == target:
+            count += 1
+    return count
+\end{verbatim}
+\end{block}
+\begin{keyidea}Before each iteration, \texttt{count} equals the number of target matches in the values already processed.\end{keyidea}
+\begin{activity}What does the claim say before the first iteration? After the last?\end{activity}
+\end{frame}
+
+\begin{frame}{Three Questions About the Invariant}
+\small
+\begin{enumerate}
+ \item \textbf{Initialization:} Why is it true before any iterations?\\
+ No values have been processed, so the matching count is \texttt{0}.
+ \item \textbf{Maintenance:} Why does one iteration preserve it?\\
+ A match adds one; a nonmatch adds nothing. The count now includes the new value.
+ \item \textbf{Conclusion at exit:} What follows when processing finishes?\\
+ Every value has been processed, so the count describes the entire input.
+\end{enumerate}
+\begin{keyidea}An invariant explains a whole family of intermediate states, rather than only one example run.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Correct State and Eventual Termination}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{Does the state stay meaningful?}
+Use initialization and maintenance. Combine the invariant with the exit condition to explain the answer.
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{Will execution reach the exit?}
+A \texttt{for} loop over our finite, unchanged input eventually exhausts it. A \texttt{while} loop needs progress toward a false condition.
+\end{block}
+\end{column}
+\end{columns}
+\begin{itemize}
+ \item For binary search, the remaining interval strictly shrinks.
+ \item For an early return, explain why the answer is justified at that point.
+ \item Passing tests gives evidence; invariant reasoning explains why the updates work generally.
+\end{itemize}
+\end{frame}
+
+\sectionframe{Part 2: Two Sum}
+
+\begin{frame}{Prompt 1: Find Two Values with a Target Sum}
+\small
+\begin{activity}
+Given a list of integers and a target, return two distinct indexes whose values add to the target. Return \texttt{None} if no such pair exists.
+\end{activity}
+\begin{center}
+\begin{tabular}{lll}
+\textbf{Values} & \textbf{Target} & \textbf{One valid result}\\\hline
+\texttt{[2, 7, 11, 15]} & \texttt{9} & \texttt{(0, 1)}\\
+\texttt{[3, 3]} & \texttt{6} & \texttt{(0, 1)}\\
+\texttt{[3]} & \texttt{6} & \texttt{None}
+\end{tabular}
+\end{center}
+\begin{block}{Contract}
+Return indexes, not values. Any valid pair is acceptable. Do not modify the input.
+\end{block}
+\end{frame}
+
+\begin{frame}{Two Sum: Design Before Code}
+\small
+\begin{activity}
+How can we examine every pair without pairing an element with itself?
+\end{activity}
+\begin{enumerate}
+ \item Choose a first index \texttt{i}.
+ \item Choose a second index \texttt{j} strictly after \texttt{i}.
+ \item Check whether their values add to the target.
+ \item Return on a match; report failure only after all pairs are ruled out.
+\end{enumerate}
+\begin{keyidea}Using \texttt{j > i} guarantees distinct positions and avoids examining the same pair in both orders.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Two Sum: Examine Pairs Directly}
+\small
+\begin{block}{First correct solution}
+\footnotesize
+\begin{verbatim}
+def two_sum_pairs(values: list[int], target: int):
+    for i in range(len(values)):
+        for j in range(i + 1, len(values)):
+            if values[i] + values[j] == target:
+                return (i, j)
+    return None
+\end{verbatim}
+\end{block}
+\begin{itemize}
+ \item Before each outer iteration, every pair with a first index less than \texttt{i} has been checked without a match.
+ \item The inner loop examines every possible later partner for \texttt{i}.
+ \item In the worst case there are $n(n-1)/2$ pairs: quadratic growth.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Two Sum: What Information Would Save Work?}
+\small
+\begin{block}{Suppose the target is 9 and the current value is 7}
+The missing value is \texttt{9 - 7}, which is \texttt{2}.
+\end{block}
+\begin{activity}Can we remember whether \texttt{2} occurred earlier, along with where it occurred?\end{activity}
+\begin{itemize}
+ \item A dictionary can map a previously seen \textbf{value} to an earlier \textbf{index}.
+ \item For each current value, look for \texttt{target - value}.
+ \item If it exists, the earlier index and current index form a pair.
+ \item Otherwise, remember the current value for later iterations.
+\end{itemize}
+\begin{keyidea}The dictionary stores exactly the information a future iteration needs.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Two Sum: Remember Earlier Values}
+\small
+\begin{block}{Dictionary-based solution}
+\footnotesize
+\begin{verbatim}
+def two_sum(values: list[int], target: int):
+    seen = {}
+    for i, value in enumerate(values):
+        needed = target - value
+        if needed in seen:
+            return (seen[needed], i)
+        seen[value] = i
+    return None
+\end{verbatim}
+\end{block}
+\begin{keyidea}Before index \texttt{i} is processed, \texttt{seen} records an earlier index for every distinct value in \texttt{values[:i]}.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Trace Two Sum: A Match Can Use Equal Values}
+\small
+For \texttt{values = [3, 3]} and \texttt{target = 6}:
+\begin{center}
+\begin{tabular}{cclll}
+\textbf{i} & \textbf{value} & \textbf{needed} & \textbf{seen before check} & \textbf{Action}\\\hline
+0 & 3 & 3 & \texttt{\{\}} & store \texttt{3: 0}\\
+1 & 3 & 3 & \texttt{\{3: 0\}} & return \texttt{(0, 1)}
+\end{tabular}
+\end{center}
+\begin{activity}What happens for \texttt{[3]} with the same target? What if we store the current value before checking?\end{activity}
+\begin{keyidea}Check first, then store. Earlier indexes are distinct from the current index; equal values are still allowed.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Why the Dictionary Solution Works}
+\small
+\begin{enumerate}
+ \item \textbf{Initialize:} the processed prefix is empty and \texttt{seen} is empty.
+ \item \textbf{Maintain:} after an unsuccessful check, record the current value's index. Every distinct processed value still has a representative.
+ \item \textbf{Successful exit:} the saved index is earlier, and its value plus the current value equals the target.
+ \item \textbf{Exhaustion:} if a valid pair existed, its later member would have found the earlier member's value. No pair was missed.
+\end{enumerate}
+\begin{block}{Work and storage}
+One traversal; under the usual average constant-time dictionary-operation model, expected $O(n)$ time and up to $O(n)$ extra storage. The pair solution uses $O(1)$ extra storage.
+\end{block}
+\end{frame}
+
+\begin{frame}{Two Sum: Predict and Test}
+\small
+\begin{activity}Predict the dictionary solution's return value for each case.\end{activity}
+\begin{center}
+\begin{tabular}{lll}
+\textbf{Values} & \textbf{Target} & \textbf{What this checks}\\\hline
+\texttt{[]} & 4 & no iterations\\
+\texttt{[4]} & 8 & cannot reuse one position\\
+\texttt{[4, 4]} & 8 & repeated values, distinct positions\\
+\texttt{[-3, 8, 2]} & 5 & negative values\\
+\texttt{[1, 2, 4]} & 8 & no pair\\
+\texttt{[1, 4, 2, 3]} & 5 & multiple possible answers
+\end{tabular}
+\end{center}
+\begin{keyidea}A general correctness test checks the returned indexes and their sum; different correct algorithms may choose different pairs.\end{keyidea}
+% Reveal in row order: None; None; (0, 1); (0, 1); None; (0, 1).
+\end{frame}
+
+\sectionframe{Part 3: Neighboring Values}
+
+\begin{frame}{Prompt 2: Is the List Nondecreasing?}
+\small
+\begin{activity}
+Return \texttt{True} exactly when each value is at least as large as its predecessor. Leave the list unchanged.
+\end{activity}
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Input} & \textbf{Result}\\\hline
+\texttt{[2, 2, 5, 9]} & \texttt{True}\\
+\texttt{[2, 5, 3, 9]} & \texttt{False}\\
+\texttt{[]} & \texttt{True}\\
+\texttt{[7]} & \texttt{True}
+\end{tabular}
+\end{center}
+\begin{block}{Contract detail}Equal neighbors are allowed. Empty and singleton lists have no violating adjacent pair.\end{block}
+\end{frame}
+
+\begin{frame}{Nondecreasing: Choose the Comparisons}
+\small
+\begin{center}
+\texttt{[2, 2, 5, 9]}\\[8pt]
+\texttt{2 <= 2}\qquad\texttt{2 <= 5}\qquad\texttt{5 <= 9}
+\end{center}
+\begin{activity}
+Which indexes identify these pairs? Why should the current index start at \texttt{1}?
+\end{activity}
+\begin{itemize}
+ \item Compare \texttt{values[i - 1]} with \texttt{values[i]}.
+ \item One decrease is enough to disprove the whole claim.
+ \item One correctly ordered pair is not enough to prove the whole claim.
+\end{itemize}
+\begin{keyidea}Before checking index \texttt{i}, every adjacent pair ending before \texttt{i} has passed.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Nondecreasing: Implementation}
+\small
+\begin{block}{Look for a counterexample}
+\footnotesize
+\begin{verbatim}
+def is_nondecreasing(values: list[int]) -> bool:
+    for i in range(1, len(values)):
+        if values[i] < values[i - 1]:
+            return False
+    return True
+\end{verbatim}
+\end{block}
+\begin{itemize}
+ \item Before the first check, no adjacent pairs need to have passed yet.
+ \item A successful comparison extends the checked prefix by one value.
+ \item Reaching the final return means every adjacent pair passed.
+ \item For fewer than two values, the loop is empty and returns \texttt{True}.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Nondecreasing: Trace and Repair}
+\small
+\begin{center}
+\begin{tabular}{clll}
+\textbf{i} & \textbf{Previous} & \textbf{Current} & \textbf{Action for [2, 5, 3, 9]}\\\hline
+1 & 2 & 5 & no decrease; continue\\
+2 & 5 & 3 & decrease; return \texttt{False}\\
+3 & --- & --- & never reached
+\end{tabular}
+\end{center}
+\begin{activity}
+What goes wrong if \texttt{return True} is inside the loop, immediately after the \texttt{if} statement?
+\end{activity}
+\begin{keyidea}A successful first comparison does not establish the property for the unchecked suffix.\end{keyidea}
+\begin{block}{Work}At most $n-1$ comparisons for $n\geq1$: $O(n)$ worst-case time and $O(1)$ extra storage. We do not need to sort the input to check it.\end{block}
+\end{frame}
+
+\sectionframe{Part 4: Algorithms over Nested Objects}
+
+\begin{frame}{Our Shared Object Model}
+\small
+\begin{center}
+\begin{tabular}{cl}
+\textbf{Object} & \textbf{Attributes}\\\hline
+\texttt{Course} & \texttt{code}, \texttt{students: list[Student]}\\[6pt]
+$\downarrow$ & the roster contains references to student objects\\[6pt]
+\texttt{Student} & \texttt{name}, \texttt{major}, \texttt{scores: list[int]}\\[6pt]
+$\downarrow$ & scores are in chronological order
+\end{tabular}
+\end{center}
+\begin{block}{Contracts for today's examples}
+Each student appears once in the roster, names are unique within a course, and every score list is finite. Algorithms read the course and students without changing them.
+\end{block}
+\begin{keyidea}Follow the data one level at a time: course, student, then score.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Define the Objects We Will Use}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{Student state}
+\footnotesize
+\begin{verbatim}
+class Student:
+    def __init__(self, name: str,
+                 major: str,
+                 scores: list[int]):
+        self.name = name
+        self.major = major
+        self.scores = scores
+\end{verbatim}
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{A course contains students}
+\footnotesize
+\begin{verbatim}
+class Course:
+    def __init__(self, code: str,
+                 students: list[Student]):
+        self.code = code
+        self.students = students
+\end{verbatim}
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}These assignments store references. The constructors do not automatically copy the roster or score lists.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Construct One Course and Three Students}
+\small
+\begin{block}{Shared data for both object exercises}
+\footnotesize
+\begin{verbatim}
+ada = Student("Ada", "CS", [2, 3, 0, 4, 5, 6, 0])
+grace = Student("Grace", "Math", [0, 5, 6])
+linus = Student("Linus", "CS", [])
+course = Course("CS 1001", [ada, grace, linus])
+\end{verbatim}
+\end{block}
+\begin{activity}Predict each expression before running it.\end{activity}
+\begin{center}
+\begin{tabular}{ll}
+\texttt{course.students[0] is ada} & \texttt{?}\\
+\texttt{course.students[1].major} & \texttt{?}\\
+\texttt{course.students[0].scores[3]} & \texttt{?}
+\end{tabular}
+\end{center}
+% Reveal: True; "Math"; 4. Access the roster, then the student, then its scores.
+\end{frame}
+
+\begin{frame}{Prompt 3: Group a Course's Students by Major}
+\small
+\begin{activity}
+Given a \texttt{Course}, return a new dictionary mapping each major to a new list of that major's students. Preserve roster order within each group.
+\end{activity}
+\begin{block}{For our example course}
+\texttt{\{"CS": [ada, linus], "Math": [grace]\}}
+\end{block}
+\begin{itemize}
+ \item The values in each group are the original student objects.
+ \item The dictionary and its group lists are new containers.
+ \item An empty roster produces an empty dictionary.
+\end{itemize}
+\begin{activity}What does a group store that a frequency counter does not?\end{activity}
+\end{frame}
+
+\begin{frame}[fragile]{Grouping: Plan and Implementation}
+\small
+\begin{block}{One group for each observed major}
+\footnotesize
+\begin{verbatim}
+def group_by_major(course: Course) -> dict[str, list[Student]]:
+    groups = {}
+    for student in course.students:
+        major = student.major
+        if major not in groups:
+            groups[major] = []
+        groups[major].append(student)
+    return groups
+\end{verbatim}
+\end{block}
+\begin{keyidea}After each iteration, every processed student appears exactly once in the correct group, in roster order.\end{keyidea}
+Start empty; create each bucket once; append each student once.
+\end{frame}
+
+\begin{frame}{Grouping: Trace the Changing Containers}
+\small
+\begin{center}
+\begin{tabular}{lll}
+\textbf{Student} & \textbf{Major} & \textbf{groups after processing}\\\hline
+--- & --- & \texttt{\{\}}\\
+Ada & CS & \texttt{\{"CS": [ada]\}}\\
+Grace & Math & \texttt{\{"CS": [ada], "Math": [grace]\}}\\
+Linus & CS & \texttt{\{"CS": [ada, linus], "Math": [grace]\}}
+\end{tabular}
+\end{center}
+\begin{activity}
+Where is each new list created? Why must \texttt{groups[major] = []} run only when the major is first encountered?
+\end{activity}
+\begin{keyidea}Reinitializing an existing group's list would discard earlier students from that group.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{New Containers Can Still Share Their Elements}
+\small
+\begin{block}{Predict each effect}
+\footnotesize
+\begin{verbatim}
+groups = group_by_major(course)
+print(groups["CS"][0] is course.students[0])
+groups["CS"].pop()
+print(len(course.students))
+groups["CS"][0].name = "Ada Lovelace"
+print(course.students[0].name)
+\end{verbatim}
+\end{block}
+\begin{activity}Which statements change a container? Which change a shared student?\end{activity}
+% Reveal: True; 3; Ada Lovelace. The grouping algorithm itself does not mutate inputs.
+% This caller experiment mutates the group list and then a shared student.
+% Restore ada.name = "Ada" before continuing with the shared course example.
+\end{frame}
+
+\begin{frame}{Reference Exercise: Reveal}
+\small
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Output} & \textbf{Reason}\\\hline
+\texttt{True} & both containers refer to the original Ada object\\[6pt]
+\texttt{3} & removing from a group does not remove from the roster\\[6pt]
+\texttt{Ada Lovelace} & attribute assignment changes the shared student
+\end{tabular}
+\end{center}
+\begin{keyidea}A fresh outer container does not imply fresh copies of the objects inside it.\end{keyidea}
+\begin{block}{Reset for the remaining examples}Restore \texttt{ada.name = "Ada"}. The grouping function itself left the original objects unchanged; the caller performed these later mutations.\end{block}
+\end{frame}
+
+\sectionframe{Part 5: Current Streak and Best Streak}
+
+\begin{frame}{Prompt 4: A Student's Longest Positive Streak}
+\small
+\begin{activity}
+Add a method that returns the longest consecutive run of scores greater than zero. Leave the student's scores unchanged.
+\end{activity}
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Scores} & \textbf{Longest positive streak}\\\hline
+\texttt{[2, 3, 0, 4, 5, 6, 0]} & \texttt{3}\\
+\texttt{[0, 5, 6]} & \texttt{2}\\
+\texttt{[]} & \texttt{0}\\
+\texttt{[-2, 0, -1]} & \texttt{0}
+\end{tabular}
+\end{center}
+\begin{activity}Why does counting all positive scores answer a different question?\end{activity}
+\end{frame}
+
+\begin{frame}{Streaks: Give Two Variables Different Jobs}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{\texttt{current}}
+The number of consecutive positive scores at the \textbf{end} of the processed prefix.
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{\texttt{best}}
+The longest positive streak \textbf{anywhere} in the processed prefix.
+\end{block}
+\end{column}
+\end{columns}
+\begin{itemize}
+ \item A positive score extends \texttt{current}; any other score resets it.
+ \item Update \texttt{best} if the current streak exceeds it.
+ \item A reset of \texttt{current} must not erase \texttt{best}.
+\end{itemize}
+\begin{keyidea}At the iteration boundary, both meanings must hold. Neither variable alone represents both facts.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Streaks: Add a Method to Student}
+\small
+\begin{block}{Place this method inside the existing Student class}
+\footnotesize
+\begin{verbatim}
+    def longest_positive_streak(self) -> int:
+        current = 0
+        best = 0
+        for score in self.scores:
+            if score > 0:
+                current += 1
+            else:
+                current = 0
+            if current > best:
+                best = current
+        return best
+\end{verbatim}
+\end{block}
+\begin{keyidea}Reads \texttt{self.scores}; returns a number without mutating the student.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Streaks: Trace Ada's Scores}
+\small
+\begin{center}
+\begin{tabular}{clcc}
+\textbf{Score} & \textbf{Action} & \textbf{current after update} & \textbf{best after update}\\\hline
+--- & initialize & 0 & 0\\
+2 & extend & 1 & 1\\
+3 & extend & 2 & 2\\
+0 & reset & 0 & 2\\
+4 & extend & 1 & 2\\
+5 & extend & 2 & 2\\
+6 & extend & 3 & 3\\
+0 & reset & 0 & 3
+\end{tabular}
+\end{center}
+\begin{activity}What would change if the scores ended at \texttt{6}? Why does returning \texttt{current} fail for the full example?\end{activity}
+\end{frame}
+
+\begin{frame}{Streaks: Explain Correctness}
+\small
+\begin{enumerate}
+ \item \textbf{Initialize:} an empty prefix has an ending streak of length zero and a best streak of length zero.
+ \item \textbf{Maintain current:} a positive score extends the ending streak; a nonpositive score makes its length zero.
+ \item \textbf{Maintain best:} the only new candidate for a longer streak ends at the new score. Compare its length with the previous best.
+ \item \textbf{At exit:} the processed prefix is the full score list, so \texttt{best} is the required result.
+\end{enumerate}
+\begin{block}{Termination and work}
+The method traverses one finite score list: $O(m)$ time for $m$ scores and $O(1)$ extra storage.
+\end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Now Report the Streak for Every Student}
+\small
+\begin{activity}Return a dictionary mapping each student's unique name to their longest positive streak.\end{activity}
+\begin{block}{The outer traversal follows the object structure}
+\footnotesize
+\begin{verbatim}
+def streak_report(course: Course) -> dict[str, int]:
+    report = {}
+    for student in course.students:
+        report[student.name] = student.longest_positive_streak()
+    return report
+\end{verbatim}
+\end{block}
+For our example: \texttt{\{"Ada": 3, "Grace": 2, "Linus": 0\}}.
+\begin{keyidea}The outer loop visits students; each method call traverses that student's scores and starts with fresh local accumulators.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Nested Traversal: State, Work, and Boundary Cases}
+\small
+\begin{itemize}
+ \item \textbf{Outer invariant:} the report contains the correct result for every student already processed.
+ \item \textbf{Inner invariant:} \texttt{current} and \texttt{best} describe the processed scores of one student.
+ \item Each method call initializes its own \texttt{current} and \texttt{best}; one student's streak does not carry into another's.
+ \item An empty course gives \texttt{\{\}}; a student with no scores gets \texttt{0}.
+ \item With $s$ students and $q$ total scores, the work is $O(s+q)$; students can have different numbers of scores.
+\end{itemize}
+\begin{activity}Why would a report keyed by name lose information if two students had the same name?\end{activity}
+% A later assignment could use student IDs; today unique names are a precondition.
+\end{frame}
+
+\begin{frame}{Streaks: Predict Before Running}
+\small
+\begin{center}
+\begin{tabular}{ll}
+\textbf{Scores} & \textbf{What this checks}\\\hline
+\texttt{[]} & no iterations\\
+\texttt{[5]} & one positive score\\
+\texttt{[0, -2]} & no positive score\\
+\texttt{[1, 2, 3]} & all positive; best streak at the end\\
+\texttt{[1, 2, 0, 3]} & best streak before the end\\
+\texttt{[1, 0, 2, 0, 3]} & separated positives\\
+\texttt{[1, 2, 0, 3, 4]} & tied longest streaks
+\end{tabular}
+\end{center}
+\begin{activity}Give each expected result. Then choose two students whose scores would expose a failure to reset state between students.\end{activity}
+% Reveal: 0; 1; 0; 3; 2; 1; 2. Try one student with [1, 2, 3]
+% followed by a student with [1], whose result must be 1, not 4 or 3.
+\end{frame}
+
+\sectionframe{Part 6: Carry the Reasoning into Lab 6}
+
+\begin{frame}{Lab 6: Different Data, Familiar State Meanings}
+\small
+\begin{center}
+\begin{tabular}{@{}lp{.65\linewidth}@{}}
+\textbf{Task} & \textbf{What should be true of the processed prefix?}\\\hline
+\texttt{count\_character} & The count equals the matching characters seen so far.\\[5pt]
+\shortstack[l]{\texttt{swap\_case},\\\texttt{str\_translate}} & The new string is the required transformation of the processed characters.\\[5pt]
+\shortstack[l]{\texttt{remove\_character},\\\texttt{words\_of\_length}} & The result contains exactly the selected characters or words, in encounter order.\\[5pt]
+\texttt{groups\_of\_3} & The groups built so far, plus any unfinished group, account for every processed value exactly once, in order.
+\end{tabular}
+\end{center}
+\begin{keyidea}Strings are immutable: construct a new result. For nested lists, give each output group its own container.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Lab 6: Turn the Contract into Tests}
+\small
+\begin{itemize}
+ \item Use \texttt{unittest.TestCase} and \texttt{self.assertEqual(...)} for your added cases.
+ \item Test empty inputs, one element, first/last matches, no matches, and repeated matches.
+ \item Check that transformations and filters preserve the required order.
+ \item For \texttt{groups\_of\_3}, test lengths divisible by three and final groups of one or two.
+ \item Check that the input list remains unchanged and distinct output groups do not share one mutable list.
+ \item Follow the lab's restrictions on shortcut string methods.
+\end{itemize}
+\begin{activity}For an eight-element input to \texttt{groups\_of\_3}, what must still be handled after the last full group?\end{activity}
+% Expected: the last two elements must appear once in a final two-element group.
+\end{frame}
+
+\begin{frame}{Exit Ticket: Explain the State}
+\small
+\begin{enumerate}
+ \item Why must Two Sum check the dictionary before storing the current value?
+ \item Why can nondecreasing return \texttt{False} early but not \texttt{True} after just one successful comparison?
+ \item Why do \texttt{current} and \texttt{best} need different meanings?
+ \item If two output groups share one list object, what happens when one group is appended to?
+\end{enumerate}
+\begin{keyidea}An explanation should connect the update to the meaning of the state, rather than only repeat the Python statement.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Takeaways}
+\small
+\begin{enumerate}
+ \item A loop invariant states what is true at a specified iteration boundary.
+ \item Explain initialization, maintenance, the conclusion at exit, and termination.
+ \item A dictionary can remember information that avoids repeated searching.
+ \item Adjacent comparisons answer questions about neighboring values.
+ \item Nested objects require following references and restarting local state at the right level.
+ \item Fresh containers can hold shared objects; distinguish container changes from element changes.
+ \item Give each accumulator a precise job, then test the boundaries of that meaning.
+\end{enumerate}
+\begin{block}{Next}Input, output, and string processing. In Lab 6, apply today's reasoning to strings and nested lists.\end{block}
 \end{frame}
 
 \end{document}
