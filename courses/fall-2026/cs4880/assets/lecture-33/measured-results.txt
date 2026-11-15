@@ -1,0 +1,7 @@
+Toy example only (not Atari); PyTorch, seed=4880
+Episodes: 420
+Environment interaction steps: 4425
+Evaluation success over 21 allowed starting cells: 1.0
+Fixed start (4, 0) reached goal: True in 8 greedy steps
+Route: [(4, 0), (4, 1), (4, 2), (3, 2), (2, 2), (1, 2), (1, 3), (1, 4), (0, 4)]
+Training uses epsilon-greedy; evaluation uses epsilon=0.

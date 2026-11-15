@@ -1,54 +1,713 @@
-\documentclass[aspectratio=169]{beamer}
-\input{../../common/preamble.tex}
+\documentclass[aspectratio=169,10pt]{beamer}
 
+\input{../../common/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+\graphicspath{{../assets/lecture-33/}}
+
+% Cal Poly CS 4880, Lecture 33, November 16, 2026.
+% Expanded after reading all EIGHT pages of the supplied Deep Q Learning lecture.
+% Follow-up to Lecture 32 on tabular Q-learning. Approx. 50 minutes:
+%  (1) motivation + DQN architecture 8 min; (2) stable DQN + real demo 15 min;
+%  (3) Double DQN 8 min; (4) dueling + combinations 8 min;
+%  (5) demonstrations, imitation, DAgger 9 min; (6) takeaways 2 min.
+% All original illustrations generated locally; existing lecture-32 agent/policy
+% recap figures explicitly reused. Reproducible toy model seeded at 4880.
+% QWOP and Pokemon are retained as source-lecture motivating cases;
+% do NOT infer their exact implementation from a video screenshot.
+% Sources at end include original DQN, Double DQN, Dueling DQN, PER,
+% DAgger and DQfD papers. No claims of Atari performance from the toy demo.
+
+\newcommand{\lecturevisual}[2][2.15in]{%
+  \par{\centering\includegraphics[width=.98\linewidth,height=#1,keepaspectratio]{#2}\par}%
+}
+\newcommand{\architecturestage}[1]{%
+ {\centering\setlength{\fboxsep}{5pt}%
+ \fcolorbox{CalPolyGreen}{DeckSoft}{\parbox{.86\linewidth}{\centering\small #1}}\par}%
+}
+\newcommand{\conceptlead}[1]{{\small\bfseries\color{CalPolyGreen}#1\par}}
+\newenvironment{calculation}[1][Mathematical description]{%
+  \par\begingroup\setbeamercolor{calculation body}{bg=DeckSoft,fg=DeckInk}%
+  \begin{beamercolorbox}[sep=4pt,wd=\linewidth]{calculation body}%
+  \footnotesize{\bfseries\color{DeckMuted}#1\par}%
+  \setlength{\jot}{0pt}\setlength{\abovedisplayskip}{3pt}\setlength{\belowdisplayskip}{3pt}%
+}{\end{beamercolorbox}\endgroup}
+
+% Keep this dense source deck readable within the shared course theme.
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamertemplate{frametitle}{%
+  \vspace{.08in}\hspace{.02in}\insertframetitle\par\vspace{.04in}%
+  \noindent\makebox[\linewidth][l]{%
+    {\color{CalPolyGold}\rule{.55in}{2pt}}%
+    {\color{CalPolyGreen}\rule{\dimexpr\linewidth-.55in\relax}{2pt}}}%
+}
+\renewenvironment{keyidea}{%
+  \par\vspace{3pt}\begin{beamercolorbox}[sep=5pt,wd=\linewidth]{block body}%
+  {\bfseries\color{CalPolyGreen}Key idea.}\ %
+}{\end{beamercolorbox}}
+\setbeamersize{text margin left=.42in,text margin right=.42in}
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{33}
-\lecturetitle{Reinforcement Learning II -- Q-learning, exploration, approximate/deep RL}
+\lecturetitle{Deep Q-Learning: Double, Dueling, and Imitation Learning}
+\newcommand{\LectureDisplayTitle}{Deep Q-Learning:\\[3pt]Double, Dueling,\\[3pt]and Imitation Learning}
 \lecturedate{November 16, 2026}
-\courseunit{Course sequence}
+\courseunit{Learning Agents and Machine Learning}
 
 \begin{document}
-
+\begingroup
+\renewcommand{\LectureTitle}{\LectureDisplayTitle}
 \makedecktitle
+\endgroup
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Reinforcement Learning II -- Q-learning, exploration, approximate/deep RL
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{From Q-Tables to Neural Networks}
+
+\begin{frame}{Last Lecture: Q-Learning Makes Decisions From Experience}
+\small
+\conceptlead{We learned to estimate an action's long-term value, then take the action with the greatest estimate.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.50\textwidth}
+\lecturevisual[2.10in]{previous_policy.png}
+\end{column}
+\begin{column}{.47\textwidth}
+\begin{calculation}[Tabular Q-learning]
+\[\begin{aligned}y&=r+\gamma\max_{a'}Q(s',a'),\\
+Q(s,a)&\leftarrow Q(s,a)+\alpha[y-Q(s,a)].\end{aligned}\]
+\end{calculation}
+\begin{itemize}
+\item Q-values are stored in a separate row for every state.
+\item $\varepsilon$-greedy balances trying actions and choosing the current best action.
+\item We trained by interacting with a finite 5$\times$5 grid.
+\end{itemize}
+\end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}{Why a Q-Table Does Not Scale to Images}
+\small
+\conceptlead{A screenshot is not a convenient index into a finite lookup table.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.55\textwidth}
+\lecturevisual[2.32in]{state_explosion.png}
+\end{column}
+\begin{column}{.42\textwidth}
+\begin{itemize}
+\item A 5$\times$5 grid has 25 positions.
+\item Tracking 12 binary dirt bits yields up to $25\cdot 2^{12}$ distinct position/dirt states.
+\item A single 84$\times$84 8-bit image has $256^{7056}$ possible raw images.
+\item Similar screenshots should share what an agent has learned.
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{keyidea}Replace explicit values for every state with a parameterized function that \emph{generalizes}.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{The Core Idea: Approximate $Q(s,a)$ With a Neural Network}
+\small
+\lecturevisual[2.13in]{table_to_network.png}
+\begin{itemize}
+\item A network $Q(s,a;\theta)$ predicts action values from a state representation.
+\item Related states can share learned features, unlike independent lookup-table rows.
+\item The \emph{objective is still Q-learning}; the representation and optimization method change.
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\begin{frame}{Why DeepMind Used Atari Games}
+\small
+\conceptlead{The original DQN program challenged agents to learn game control from screen pixels and reward.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.56\textwidth}
+\lecturevisual[2.65in]{breakout_schematic.png}
+\end{column}
+\begin{column}{.41\textwidth}
+\begin{itemize}
+\item Early work showed an agent could learn across many Atari games using a common deep Q-network architecture.
+\item The task combines visual perception, delayed rewards, and discrete joystick actions.
+\item The agent is not handed a rule such as ``move below the ball.''
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{keyidea}DeepMind's DQN (Mnih et al., 2015) made high-dimensional sensory inputs usable for Q-learning.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}{What Goes Into and Comes Out of a DQN?}
+\small
+\conceptlead{For a fixed discrete action set, one network evaluation yields a value for each available action.}
+\lecturevisual[1.99in]{dqn_cnn_architecture.png}
+\begin{keyidea}The \textbf{chosen action} is $\arg\max_a Q(s,a;\theta)$; the network outputs values, not a guaranteed correct move.\end{keyidea}
+\end{frame}
+
+\begin{frame}{A Screenshot May Not Tell Us Which Way the Ball Moves}
+\small
+\conceptlead{A useful observation must encode motion, not just appearance at one instant.}
+\lecturevisual[1.96in]{frame_stack.png}
+\begin{itemize}
+\item Typical Atari DQN preprocesses frames and stacks four successive observations.
+\item Convolutions learn spatial patterns; temporal stacking distinguishes moving objects.
+\item This is an approximation to the underlying game state, not an assurance of perfect observability.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Breakout: Why Long-Term Value Matters}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.55\textwidth}
+\lecturevisual[2.55in]{breakout_schematic.png}
+\end{column}
+\begin{column}{.42\textwidth}
+\begin{itemize}
+\item The paddle must anticipate where the ball will be, not just where it is now.
+\item Breaking a brick can give a reward; preserving the rally makes future rewards possible.
+\item Deliberately opening a channel through bricks may be better than maximizing the next hit.
+\item The game score provides the training signal, not action-by-action human labels.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\section{Stabilizing Deep Q-Learning}
+
+\begin{frame}{DQN Still Uses a Bellman Backup}
+\small
+\conceptlead{The network tries to predict a reward plus the best future value.}
+\begin{calculation}[One-step DQN target; $d=1$ at termination]
+\[y=r+\gamma(1-d)\max_{a'}Q(s',a';\theta^-).\]
+\end{calculation}
+\begin{calculation}[Predict one selected action; update online weights $\theta$]
+\[\mathcal L(\theta)=\mathbb E_{(s,a,r,s',d)\sim\mathcal D}\left[\left(y-Q(s,a;\theta)\right)^2\right].\]
+\end{calculation}
+\begin{itemize}
+\item $\theta$ is the network currently being optimized; $\theta^-$ is a separate target copy.
+\item A terminal transition has \textbf{no future Q-value term}.
+\item The target is treated as a constant when differentiating the online-network loss.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Why Naive Neural Q-Learning Can Be Unstable}
+\small
+\conceptlead{Three problems meet when a network learns by interacting with its own evolving policy.}
+\begin{enumerate}
+\item \textbf{Correlated data:} consecutive frames and actions look similar; ordinary SGD assumptions are strained.
+\item \textbf{Moving targets:} the model predicts a target partly computed by its own changing estimates.
+\item \textbf{Bootstrapping under approximation:} erroneous predictions can feed later predictions.
+\end{enumerate}
+\begin{keyidea}DQN's key engineering choices are \textbf{experience replay} and a \textbf{target network}. They reduce instability; they do not guarantee convergence.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Innovation 1: Experience Replay}
+\small
+\conceptlead{Instead of training on only the newest transition, remember and revisit earlier experience.}
+\lecturevisual[2.15in]{replay_buffer.png}
+\begin{itemize}
+\item Store $(s,a,r,s',d)$ in a fixed-capacity replay memory $\mathcal D$.
+\item Train on randomly sampled minibatches, weakening correlations and reusing data.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{A Replay Minibatch Is Not a New Episode}
+\small
+\lecturevisual[1.80in]{random_batch.png}
+\begin{itemize}
+\item Replay sampling selects previously stored transitions in an order unrelated to their original time index.
+\item The Bellman target still uses each \emph{stored transition's} own next state $s'$.
+\item Reusing experience improves sample efficiency but makes the training data distribution depend on collection history.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Innovation 2: A Separate Target Network}
+\small
+\conceptlead{Keep one Q-network for gradient steps and another as a temporarily frozen reference.}
+\lecturevisual[1.53in]{two_networks.png}
+\begin{calculation}[Hard synchronization after every $C$ environment steps]
+\[\theta^-\leftarrow\theta.\]
+\end{calculation}
+\begin{keyidea}The target network is a \emph{delayed copy}, not an independently trained expert.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Why Delayed Targets Make Optimization Easier}
+\small
+\lecturevisual[2.10in]{target_hold.png}
+\begin{itemize}
+\item Between synchronizations, target predictions remain fixed for a given next state.
+\item The online model can reduce prediction error against a temporarily stationary target.
+\item Copy too frequently and the target moves too fast; copy too rarely and it becomes stale.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{A Complete DQN Gradient Update}
+\small
+\lecturevisual[2.13in]{dqn_training_step.png}
+\begin{itemize}
+\item Replay supplies the current and successor observations.
+\item The online network predicts $Q(s,a)$; the target network computes the bootstrap target.
+\item Backpropagation updates \textbf{only} the online weights; synchronize target weights on schedule.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Algorithm: Put Acting, Replay, and Learning Together}
+\footnotesize
+\conceptlead{The agent repeatedly alternates between generating experience and optimizing its Q estimates.}
+\begin{verbatim}
+online = QNetwork(); target = deepcopy(online)
+replay = ReplayBuffer(capacity); total_steps = 0
+for episode in range(num_episodes):
+    state = env.reset(); terminated = False
+    while not terminated:
+        action = epsilon_greedy(online(state), epsilon)
+        next_state, reward, terminated = env.step(action)
+        replay.add(state, action, reward, next_state, terminated)
+        total_steps += 1
+        if len(replay) >= batch_size:
+            s, a, r, ns, done = replay.sample(batch_size)
+            y = r + gamma * (1 - done) * target(ns).max(1).values
+            pred = online(s).gather(1, a[:, None]).squeeze(1)
+            optimizer_step(loss(pred, y.detach()))
+        if total_steps % target_interval == 0:
+            target.load_state_dict(online.state_dict())
+        state = next_state
+\end{verbatim}
+{\scriptsize\color{DeckMuted}Pseudocode: practical systems also need replay warmup, tensor validation, and episode-truncation handling.}
+\end{frame}
+
+\begin{frame}{Demo: Train a Small DQN on a New GridWorld}
+\small
+\conceptlead{To see the machinery without an expensive Atari training run, train a real PyTorch network on a fixed maze.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.45\textwidth}
+\begin{itemize}
+\item 5$\times$5 grid, three fixed wall squares, and a goal in the top-right corner.
+\item State: 25-dimensional one-hot position vector; four discrete actions.
+\item Reward: $+10$ on reaching the goal; $-0.15$ per legal nonterminal step; $-0.35$ for a blocked move.
+\item Train from random nonterminal start squares.
+\end{itemize}
+\end{column}
+\begin{column}{.52\textwidth}
+\lecturevisual[1.73in]{toy_dqn_policy.png}
+\end{column}
+\end{columns}
+\begin{keyidea}This demo is a different reward design from Lecture 32's $+100/-1$ example. It demonstrates the algorithm, not Atari-scale performance.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Demo Code: Build an Action-Value Network}
+\small
+\conceptlead{A small multilayer perceptron suffices for a position vector; pixels would call for convolutional features.}
+{\footnotesize\begin{verbatim}
+import torch
+from torch import nn
+
+class QNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(25, 48), nn.ReLU(),
+            nn.Linear(48, 48), nn.ReLU(),
+            nn.Linear(48, 4))
+
+    def forward(self, state_batch):
+        return self.net(state_batch)  # [batch, 4]
+\end{verbatim}}
+\begin{keyidea}A different input encoder changes the network architecture, but not the Q-learning interpretation of its outputs.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Measured Demo Results: Learning Across Episodes}
+\small
+\lecturevisual[2.90in]{toy_dqn_results.png}
+\begin{keyidea}In one seeded run: \textbf{420 training episodes}, \textbf{4,425 environment steps}, and a final \textbf{21/21 greedy evaluation success} over legal nonterminal starting squares.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Measured Demo: Inspect the Learned Policy}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.52\textwidth}
+\lecturevisual[2.88in]{toy_dqn_policy.png}
+\end{column}
+\begin{column}{.45\textwidth}
+\begin{itemize}
+\item The figure uses the network's learned \textbf{greedy} action for each reachable position.
+\item The gold rollout starts at the bottom-left and reaches the top-right goal in \textbf{8 actions}.
+\item This is a \emph{single random seed on a small fixed map}, not evidence that DQN always learns efficiently.
+\item In real tasks, evaluate over many runs and diverse initial conditions.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\section{Double Deep Q-Learning}
+
+\begin{frame}{Problem: Taking a Maximum Can Overestimate Values}
+\small
+\conceptlead{Suppose every action is equally good, but our estimates contain random noise.}
+\begin{calculation}[Even zero-mean errors can create positive maximization bias]
+\[\mathbb E\!\left[\max_a\widehat Q(s',a)\right]\;\geq\;\max_a\mathbb E[\widehat Q(s',a)].\]
+\end{calculation}
+\begin{itemize}
+\item The maximum tends to select an \emph{action whose estimation error happened to be positive}.
+\item Standard DQN uses the same target-network values to \textbf{choose} the best next action and \textbf{value} it.
+\item This can inflate bootstrap targets and sometimes damage action choice (van Hasselt et al., 2016).
+\end{itemize}
+\begin{keyidea}The problem is not ordinary training speed; it is an estimation bias introduced by the max operator.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Worked Example: Selection and Evaluation Disagree}
+\small
+\lecturevisual[1.40in]{double_numeric_example.png}
+\begin{calculation}[With $r=1$ and $\gamma=0.9$]
+\[\underbrace{y_{\rm DQN}}_{\rm target\ max}=1+0.9(9.5)=9.55,\qquad
+\underbrace{y_{\rm Double}}_{\rm online\ select}=1+0.9(6.0)=6.40.\]
+\end{calculation}
+\begin{keyidea}The \textbf{online network picks stay} (10.0); the \textbf{target network evaluates stay} (6.0), even though its own largest value is 9.5 for right.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Double DQN: Decouple Choosing From Evaluating}
+\small
+\conceptlead{Use the online network for $\arg\max$, then the target network to evaluate that selected action.}
+\begin{calculation}[Ordinary DQN target]
+\[y_{\rm DQN}=r+\gamma(1-d)\max_{a'}Q(s',a';\theta^-).\]
+\end{calculation}
+\begin{calculation}[Double DQN target]
+\[a^*=\arg\max_{a'}Q(s',a';\theta),\qquad
+ y_{\rm DDQN}=r+\gamma(1-d)Q(s',a^*;\theta^-).\]
+\end{calculation}
+\begin{itemize}
+\item \textbf{No additional independently trained network} is required beyond online and target.
+\item The action for the backup comes from online estimates; its value comes from the delayed copy.
+\item Double DQN \emph{reduces} overestimation; it does not make every value estimate unbiased.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Measured Simulation: Why Independent Evaluation Helps}
+\small
+\lecturevisual[1.98in]{max_bias_montecarlo.png}
+\begin{keyidea}This is a seeded Monte Carlo thought experiment with \textbf{20,000 trials}: all six actions truly have value zero and the noise is independent. It isolates maximization bias, \emph{not} learned DQN performance.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Code: Change Only How the Target Is Computed}
+\small
+\conceptlead{DQN and Double DQN can share replay memory, optimizer, state encoder, and training loop.}
+{\footnotesize\begin{verbatim}
+# batch tensors: states, actions, rewards, next_states, done
+prediction = online(states).gather(1, actions[:, None]).squeeze(1)
+
+with torch.no_grad():
+    # Standard DQN:
+    standard_next = target(next_states).max(dim=1).values
+
+    # Double DQN: online selects; target evaluates
+    best_next_actions = online(next_states).argmax(dim=1)
+    double_next = target(next_states).gather(
+        1, best_next_actions[:, None]).squeeze(1)
+
+    y_double = rewards + gamma * (1.0 - done) * double_next
+loss = torch.nn.functional.smooth_l1_loss(prediction, y_double)
+\end{verbatim}}
+\begin{keyidea}The \texttt{no\_grad} boundary prevents the target computation from becoming a gradient path.\end{keyidea}
+\end{frame}
+
+\section{Dueling Networks: Value and Advantage}
+
+\begin{frame}{A Different Question: Is the State Good, or the Action Good?}
+\small
+\conceptlead{Imagine a racing car on a straight road: it may be in a good state even if most steering choices are nearly equivalent.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.55\textwidth}
+\begin{itemize}
+\item \textbf{State value} $V(s)$ summarizes how promising the situation is.
+\item \textbf{Action advantage} $A(s,a)$ measures how one action compares with the state's baseline.
+\item Standard DQN predicts a Q-value for each action directly, without explicitly separating these concepts.
+\item A dueling network gives the model separate representation streams for them.
+\end{itemize}
+\end{column}
+\begin{column}{.42\textwidth}
+\lecturevisual[2.19in]{dueling_architecture.png}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Dueling DQN: Shared Features, Two Heads}
+\small
+\lecturevisual[2.58in]{dueling_architecture.png}
+\begin{keyidea}\textbf{Dueling describes the architecture}, not a new exploration rule or a replacement for Q-learning. The two streams recombine into ordinary Q-values.\end{keyidea}
+\end{frame}
+
+\begin{frame}{How Do Value and Advantage Combine?}
+\small
+\conceptlead{Naively $Q=V+A$ is not identifiable: a constant can move between the two terms.}
+\begin{calculation}[Common mean-centered dueling aggregation]
+\[Q(s,a)=V(s)+A(s,a)-\frac{1}{|\mathcal A|}\sum_{b\in\mathcal A}A(s,b).\]
+\end{calculation}
+\begin{itemize}
+\item $V(s)$ is a scalar; $A(s,\cdot)$ has one output for each action.
+\item Centering makes $V(s)$ equal to the mean predicted Q-value across actions.
+\item Dueling is particularly helpful where many actions have similar consequences.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Worked Example: One Good State, Different Actions}
+\small
+\lecturevisual[1.47in]{dueling_numeric.png}
+\begin{calculation}[Illustration: V=5 and the mean advantage is 1/3]
+\[Q=5+A-\overline A=\left[\tfrac{11}{3},\tfrac{14}{3},\tfrac{20}{3}\right]\approx[3.67,4.67,6.67].\]
+\end{calculation}
+\begin{keyidea}The right action is best, but the value head separately represents that this is an overall promising state.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Code: A Minimal Dueling Network in PyTorch}
+\footnotesize
+\conceptlead{Implement two output heads and center the action advantages along the action dimension.}
+\begin{verbatim}
+class DuelingQNet(nn.Module):
+    def __init__(self, obs_dim=25, n_actions=4):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Linear(obs_dim, 64), nn.ReLU())
+        self.value = nn.Linear(64, 1)
+        self.advantage = nn.Linear(64, n_actions)
+
+    def forward(self, s):
+        h = self.features(s)
+        v = self.value(h)                   # [batch, 1]
+        a = self.advantage(h)               # [batch, actions]
+        return v + a - a.mean(dim=1, keepdim=True)
+\end{verbatim}
+\begin{keyidea}The returned tensor still has one Q-value per action, so existing $\varepsilon$-greedy and replay code can be reused.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Double + Dueling = Dueling Double DQN}
+\small
+\lecturevisual[2.10in]{variant_matrix.png}
+\begin{itemize}
+\item \textbf{Double DQN} changes the \emph{target calculation}: choose with online, value with target.
+\item \textbf{Dueling DQN} changes the \emph{network architecture}: share features, split into value and advantage.
+\item \textbf{Dueling Double DQN} uses both: two dueling network copies and the Double backup.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Bonus: Prioritized Experience Replay}
+\small
+\conceptlead{Some experiences are more surprising than others; can training focus on them?}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.57\textwidth}
+\lecturevisual[2.31in]{prioritized_replay.png}
+\end{column}
+\begin{column}{.40\textwidth}
+\begin{itemize}
+\item A common priority signal is absolute TD error $|y-Q(s,a)|$.
+\item More surprising transitions are sampled more often, \emph{not exclusively}.
+\item Importance-sampling weights can reduce sampling bias.
+\item Replay priority is a separate design choice from Double and dueling.
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{keyidea}``Prioritized Dueling Double DQN'' is a combination of independently motivated enhancements (Schaul et al., 2016).\end{keyidea}
+\end{frame}
+
+\section{Case Studies From the Original Slides}
+
+\begin{frame}{Case Study 1: Breakout and the Pixel-to-Action Story}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.53\textwidth}
+\lecturevisual[2.42in]{breakout_schematic.png}
+\end{column}
+\begin{column}{.44\textwidth}
+\begin{itemize}
+\item The training signal is game score or other environment rewards.
+\item Pixels encode paddle, ball, and bricks; four-frame input conveys velocity.
+\item Delayed reward makes it rational to maneuver toward future brick-breaking opportunities.
+\item This is the classic \emph{DQN} case study in the supplied deck.
+\end{itemize}
+\end{column}
+\end{columns}
+{\scriptsize\color{DeckMuted}Research: Mnih et al. (Nature, 2015). Illustration recreated for this lecture; not a gameplay capture.}
+\end{frame}
+
+\begin{frame}{Case Study 2: QWOP and the Difficulty of Control}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.53\textwidth}
+\lecturevisual[2.60in]{qwop_coordination.png}
+\end{column}
+\begin{column}{.44\textwidth}
+\begin{itemize}
+\item Each key controls part of a runner's legs; actions interact through physics.
+\item A simple forward-progress reward may still require learning a delicate movement sequence.
+\item The original slides use QWOP to motivate \textbf{Double DQN} and \textbf{prioritized replay}.
+\item Exact algorithm details for the linked video are \emph{not independently established} here.
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{keyidea}A neat demo is not enough to identify an implementation or to evaluate learning reliability.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Case Study 3: Exploring a Long Game World}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.53\textwidth}
+\lecturevisual[2.55in]{pokemon_reward_map.png}
+\end{column}
+\begin{column}{.44\textwidth}
+\begin{itemize}
+\item The supplied lecture describes a Pokemon-playing agent receiving pixels and Game Boy-style actions.
+\item Rewards may incentivize experience points, exploration, and battle progress.
+\item Long-horizon games create sparse feedback and opportunities for reward hacking.
+\item The cited creator's video is a \emph{case study}; we should not assume it used a standard DQN.
+\end{itemize}
+\end{column}
+\end{columns}
+{\scriptsize\color{DeckMuted}Case link from original slides: \href{https://www.youtube.com/watch?v=DcYLT37ImBY}{Peter Whidden, Training AI to Play Pokemon with Reinforcement Learning (2023)}.}
+\end{frame}
+
+\section{Imitation Learning: Learn From an Expert}
+
+\begin{frame}{Why Not Learn Every Action From Scratch?}
+\small
+\conceptlead{Pure RL may spend enormous time on poor, unsafe, or uninformative exploration.}
+\begin{itemize}
+\item Many tasks have recordings of a human or an existing controller performing useful behavior.
+\item \textbf{Imitation learning} exploits expert examples instead of initially discovering all good behavior from scalar reward.
+\item A good demonstration can reduce early exploration, but it may not cover all states the agent will visit.
+\item Human demonstrations are costly, may be inconsistent, and may not be optimal.
+\end{itemize}
+\begin{keyidea}The central additional information is a \textbf{demonstrated action} $a^*$ for an observation $s$.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Behavior Cloning Is Supervised Learning of a Policy}
+\small
+\conceptlead{Train a network to predict the demonstrator's action from the observation.}
+\lecturevisual[1.12in]{behavior_cloning_flow.png}
+\begin{calculation}[Cross-entropy for a discrete expert action]
+\[\mathcal L_{\rm BC}(\theta)=-\frac1N\sum_{i=1}^{N}\log\pi_\theta(a_i^*\mid s_i).\]
+\end{calculation}
+\begin{keyidea}Behavior cloning uses \emph{state--action labels}. It does not need rewards, a Q-network, or temporal-difference targets.\end{keyidea}
+\end{frame}
+
+\begin{frame}[fragile]{Code: Imitate Demonstrated Actions}
+\small
+\conceptlead{Imitation is a familiar classification problem; control becomes the test at deployment time.}
+{\footnotesize\begin{verbatim}
+# expert_states: [N, obs_dim]
+# expert_actions: integer labels [N]
+policy = nn.Sequential(
+    nn.Linear(obs_dim, 64), nn.ReLU(),
+    nn.Linear(64, n_actions))
+optimizer = torch.optim.Adam(policy.parameters(), lr=1e-3)
+
+for states, actions in expert_loader:
+    action_logits = policy(states)
+    loss = nn.functional.cross_entropy(action_logits, actions)
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+# At deployment, choose argmax of logits for a deterministic policy.
+\end{verbatim}}
+\begin{keyidea}This code learns to \emph{match labels}; only interaction testing reveals whether it recovers gracefully from mistakes.\end{keyidea}
+\end{frame}
+
+\begin{frame}{The Big Problem: Small Errors Change Future Observations}
+\small
+\lecturevisual[1.53in]{covariate_shift.png}
+\begin{itemize}
+\item The expert usually demonstrates near-successful trajectories.
+\item One mistaken action can put the learner in a state absent from its training dataset.
+\item New mistakes compound as the learner visits further unfamiliar states.
+\end{itemize}
+\begin{keyidea}High held-out action-prediction accuracy does not guarantee high closed-loop task success.\end{keyidea}
+\end{frame}
+
+\begin{frame}{DAgger: Have the Expert Label the Learner's States}
+\small
+\conceptlead{Dataset Aggregation addresses the distribution shift by collecting labels where the learner actually goes.}
+\lecturevisual[1.75in]{dagger_loop.png}
+\begin{itemize}
+\item Roll out the current learner; ask the expert what it should have done at visited states.
+\item Add these examples to the dataset, retrain, and repeat (Ross et al., 2011).
+\item This can recover from unfamiliar situations, but requires an accessible expert or oracle.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Combine Demonstrations With Reinforcement Learning}
+\small
+\lecturevisual[1.28in]{imitation_to_rl.png}
+\begin{itemize}
+\item \textbf{Option A:} pretrain a policy with behavior cloning, then fine-tune it through environment interaction.
+\item \textbf{Option B:} seed or retain demonstrations in an off-policy replay buffer while learning Q-values.
+\item \textbf{DQfD:} a documented DQN-with-demonstrations method combines supervised demonstration loss with TD learning, replay prioritization, and additional training choices.
+\end{itemize}
+\begin{keyidea}A classifier policy is not automatically a DQN: the architecture and loss must be connected deliberately when fine-tuning.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Distinguish Imitation, Replay Seeding, and Reward Shaping}
+\footnotesize
+\begin{tabular}{@{}p{.23\linewidth}p{.33\linewidth}>{\raggedright\arraybackslash}p{.36\linewidth}@{}}
+\textbf{Technique} & \textbf{Information provided} & \textbf{What actually changes}\\[3pt]\hline
+Behavior cloning & Expert's action $a^*$ at state $s$ & Supervised policy objective\\[4pt]
+DAgger & Expert labels on learner states & Dataset matches learner's visits better\\[4pt]
+Demo replay / DQfD & Past expert transitions & Off-policy samples; sometimes extra losses\\[4pt]
+Reward shaping & Intermediate numeric rewards & The reward function and learning signal\\[4pt]
+\end{tabular}
+\vspace{7pt}
+\begin{keyidea}Reward shaping is \textbf{not itself imitation learning}; it supplies designed rewards rather than demonstrated expert actions.\end{keyidea}
+\end{frame}
+
+\section{Synthesis and Evaluation}
+
+\begin{frame}{A Map of the Methods: What Does Each Improvement Fix?}
+\footnotesize
+\begin{tabular}{@{}p{.22\linewidth}p{.35\linewidth}p{.33\linewidth}@{}}
+\textbf{Method} & \textbf{Key change} & \textbf{Remaining limitation}\\[3pt]\hline
+Tabular Q-learning & State/action lookup table & Cannot scale to large inputs\\[4pt]
+DQN & Neural Q + replay + target copy & Noisy targets and sample cost\\[4pt]
+Double DQN & Online selects, target evaluates & Function approximation can still err\\[4pt]
+Dueling DQN & Value and advantage streams & Still needs off-policy stabilization\\[4pt]
+Dueling Double DQN & Both target and architecture changes & Hyperparameters and data matter\\[4pt]
+Prioritized replay & Sample high-TD-error transitions more & Can bias sampling\\[4pt]
+Behavior cloning & Supervised expert action labels & Compounding distribution shift\\[4pt]
+DAgger / demos + RL & Learner-state labels / mixed training & Expert cost and integration complexity\\[4pt]
+\end{tabular}
+\end{frame}
+
+\begin{frame}{Evaluate the Policy, Not Just the Training Loss}
+\small
+\lecturevisual[1.87in]{evaluation_protocol.png}
+\begin{itemize}
+\item Record episodic return, task completion, environment steps, and variability across random seeds.
+\item Evaluate the greedy policy without training-time exploration; keep test cases held out.
+\item For imitation, inspect both expert-action accuracy \emph{and closed-loop recovery}.
+\item A loss curve that decreases is not proof of better real-world decisions.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Check Your Understanding}
+\small
+\begin{enumerate}
+\item If a single screenshot cannot reveal ball velocity, what information should the DQN receive?
+\item Which network chooses the next action in \textbf{Double DQN}, and which network evaluates that action?
+\item In a \textbf{dueling} network, why do we subtract the mean advantage?
+\item A behavior-cloned robot makes one bad turn and enters an unfamiliar hallway. Which imitation-learning approach was designed to help with this?
+\end{enumerate}
+\vspace{9pt}
+\begin{keyidea}The central architecture story: \textbf{approximate $Q$}, \textbf{stabilize backups}, \textbf{separate selection from evaluation}, \textbf{separate value from advantage}, and \textbf{learn from examples when available}.\end{keyidea}
+\end{frame}
+
+\begin{frame}{References, Videos, and Reproducibility}
+\scriptsize
+\begin{itemize}
+\item Mnih et al. (2015). \emph{Human-level control through deep reinforcement learning}. \href{https://doi.org/10.1038/nature14236}{Nature 518:529--533}. Original DQN, replay, and frozen target network.
+\item van Hasselt, Guez, Silver (2016). \emph{Deep Reinforcement Learning with Double Q-Learning}. \href{https://doi.org/10.1609/aaai.v30i1.10295}{AAAI 2016}.
+\item Wang et al. (2016). \emph{Dueling Network Architectures for Deep Reinforcement Learning}. \href{https://proceedings.mlr.press/v48/wangf16.html}{ICML 2016}.
+\item Schaul et al. (2016). \emph{Prioritized Experience Replay}. \href{https://arxiv.org/abs/1511.05952}{ICLR 2016}.
+\item Ross, Gordon, Bagnell (2011). \emph{A Reduction of Imitation Learning and Structured Prediction to No-Regret Online Learning}. \href{https://proceedings.mlr.press/v15/ross11a.html}{AISTATS 2011}.
+\item Hester et al. (2018). \emph{Deep Q-learning from Demonstrations}. \href{https://doi.org/10.1609/aaai.v32i1.11757}{AAAI 2018}.
+\item Cases from the supplied source lecture: \href{https://www.youtube.com/watch?v=V1eYniJ0Rnk}{Breakout clip}; \href{https://www.youtube.com/watch?v=82sTpO_EpEc}{QWOP clip}; \href{https://www.youtube.com/watch?v=DcYLT37ImBY}{Pokemon clip}. Implementation claims for independently created videos are not verified by this deck.
+\item Diagrams are locally generated schematics, with recap figures reused from Lecture 32. \texttt{generate-figures.py} produces visuals; \texttt{train-toy-dqn.py} generates the two measured toy learning figures. Seed 4880; no external datasets. Figures tagged \emph{illustrative} are not learned benchmarks.
+\end{itemize}
 \end{frame}
 
 \end{document}
