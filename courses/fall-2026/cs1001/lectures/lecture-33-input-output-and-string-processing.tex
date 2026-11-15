@@ -1,54 +1,520 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
-
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+\usepackage{tabularx}
+\graphicspath{{../assets/lecture-33/}}
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
+\newcommand{\lectureimage}[2][2.50in]{\includegraphics[width=\linewidth,height=#1,keepaspectratio]{#2}}
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{33}
 \lecturetitle{Input, Output, and String Processing}
 \lecturedate{November 16, 2026}
 \courseunit{13. Input, Files, and Robust Programs}
-
 \begin{document}
-
 \makedecktitle
-
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Input, Output, and String Processing
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\begin{frame}[fragile]{Today}
+\begin{itemize}
+\item Explain how input and output cross a program boundary.
+\item Use print(), input(), and numeric conversion intentionally.
+\item Process text with strip(), split(), and simple string methods.
+\item Inspect command-line arguments using sys.argv.
+\item Organize runnable scripts around main() and the name guard.
+\end{itemize}
 \end{frame}
-
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}[fragile]{Connection to Earlier Material}
+\begin{itemize}
+\item Our functions already accept parameters and return results.
+\item Strings are sequences: indexing, loops, and selection patterns still apply.
+\item This lecture adds the program boundary: where values come from and where results go.
+\end{itemize}
 \end{frame}
-
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\sectionframe{Part 1: The Console as a Program Boundary}
+\begin{frame}[fragile]{Input, Processing, Output}
+\begin{columns}[T,onlytextwidth]\begin{column}{0.49\textwidth}
+\centering\lectureimage[2.45in]{console-io-path.png}
+\end{column}\begin{column}{0.47\textwidth}
+\begin{itemize}
+\item Input supplies values to a running program.
+\item Processing uses the Python logic we already know.
+\item Output makes information visible to the person running it.
+\end{itemize}
+\end{column}\end{columns}
 \end{frame}
+\begin{frame}[fragile]{Three Concepts Worth Separating}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+def double(n: int) -> int:
+    return n * 2
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+print(double(4))  # console displays 8
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item A return value moves data from a function back to its caller.
+\item Printing writes a human-readable message to the console.
+\item Reading input obtains text from a user or the command that launched the program.
+\end{itemize}
 \end{frame}
-
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}[fragile]{print() Produces Console Output}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+print("Hello")
+print("CS", 1001)
+print("red", "green", sep=" / ")
+print("loading", end="...")
+print("done")
+\end{Verbatim}
+\end{block}
+\begin{block}{Expected output}\begin{Verbatim}[fontsize=\footnotesize]
+Hello
+CS 1001
+red / green
+loading...done
+\end{Verbatim}
+\end{block}
 \end{frame}
+\begin{frame}[fragile]{Formatting Readable Output}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+name = "Ava"
+score = 87.456
+print(f"{name} scored {score:.1f}%")
+print(f"Score: {score:.2f}")
+\end{Verbatim}
+\end{block}
+\begin{block}{Expected output}\begin{Verbatim}[fontsize=\footnotesize]
+Ava scored 87.5%
+Score: 87.46
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item f-strings combine values and formatting into one string.
+\item Formatting changes how a value is displayed, not the value itself.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Predict: Return Versus Print}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+def announce(value: int) -> None:
+    print(value + 1)
 
+result = announce(4)
+print(result)
+\end{Verbatim}
+\end{block}
+\begin{activity}What two lines appear on the console? What is stored in result?\end{activity}
+\end{frame}
+\begin{frame}[fragile]{Reveal: Console Output Is Not a Return Value}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+5
+None
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item announce prints 5; it does not return a useful value.
+\item Without an explicit return, Python returns None.
+\item A testable helper often returns a result; the outer program decides when to print it.
+\end{itemize}
+\end{frame}
+\sectionframe{Part 2: Keyboard Input and String Parsing}
+\begin{frame}[fragile]{input() Waits for a Response}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+name = input("Name: ")
+print(f"Hello, {name}!")
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item The prompt is displayed first.
+\item Execution waits until the user enters a line and presses Enter.
+\item The returned value is a string.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Even Numeric-Looking Input Is Text}
+\begin{columns}[T,onlytextwidth]\begin{column}{0.49\textwidth}
+\centering\lectureimage[2.45in]{input-string-conversion.png}
+\end{column}\begin{column}{0.47\textwidth}
+\begin{itemize}
+\item input() always returns str.
+\item float(...) or int(...) performs explicit numeric conversion.
+\item The text "12.5" is not the number 12.5.
+\end{itemize}
+\end{column}\end{columns}
+\end{frame}
+\begin{frame}[fragile]{Converting Text to Numbers}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+raw = input("Enter a temperature: ")
+temp = float(raw)
+print(f"Twice that value is {temp * 2}")
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item float("3.5") produces 3.5.
+\item int("12") produces 12.
+\item For now, assume the user enters valid numeric text; error handling comes later.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Common String Operations for Input}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+raw = "  apple BANANA  "
+clean = raw.strip()
+words = clean.split()
+print(clean.lower())
+print(words)
+\end{Verbatim}
+\end{block}
+\begin{block}{Expected output}\begin{Verbatim}[fontsize=\footnotesize]
+apple banana
+['apple', 'BANANA']
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item strip() removes leading and trailing whitespace.
+\item split() separates whitespace-delimited words.
+\item lower() creates a normalized string.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Visual Trace: split()}
+\begin{columns}[T,onlytextwidth]\begin{column}{0.49\textwidth}
+\centering\lectureimage[2.45in]{split-tokens.png}
+\end{column}\begin{column}{0.47\textwidth}
+\begin{itemize}
+\item Splitting creates a list of strings.
+\item Repeated spaces become separators, not empty tokens, with split().
+\item Numeric conversion is still a separate step.
+\end{itemize}
+\end{column}\end{columns}
+\end{frame}
+\begin{frame}[fragile]{Decompose a Pair Parser}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+def sum_pair(line: str) -> float:
+    pieces = line.split()
+    left = float(pieces[0])
+    right = float(pieces[1])
+    return left + right
+
+print(sum_pair(" 3.5   -2.0 "))
+\end{Verbatim}
+\end{block}
+\begin{block}{Expected output}\begin{Verbatim}[fontsize=\footnotesize]
+1.5
+\end{Verbatim}
+\end{block}
+\end{frame}
+\begin{frame}[fragile]{Predict: Token Types}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+pieces = "12 8".split()
+print(pieces[0] + pieces[1])
+print(int(pieces[0]) + int(pieces[1]))
+\end{Verbatim}
+\end{block}
+\begin{activity}What gets printed on each line? Why are the outputs different?\end{activity}
+\end{frame}
+\begin{frame}[fragile]{Reveal: Concatenation Versus Arithmetic}
+\begin{block}{Expected output}\begin{Verbatim}[fontsize=\footnotesize]
+128
+20
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item Both split() elements are str values.
+\item The + operator concatenates strings.
+\item Conversion is necessary before numeric addition.
+\end{itemize}
+\end{frame}
+\sectionframe{Part 3: Interactive String Processing}
+\begin{frame}[fragile]{Build a Useful Message from Input}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+first = input("First name: ").strip()
+last = input("Last name: ").strip()
+full_name = f"{first} {last}"
+print(full_name.title())
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item Read text, normalize it, compute a result, then display.
+\item Strings are immutable; operations create new values.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{An Input Loop with a Sentinel}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+def keyboard_sum() -> float:
+    total = 0.0
+    while True:
+        text = input("Number (done to stop): ")
+        if text == "done":
+            return total
+        total += float(text)
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item The sentinel is a special value that ends the loop.
+\item Check for the sentinel before numeric conversion.
+\item The accumulator summarizes the numbers seen so far.
+\end{itemize}
+\end{frame}
+\begin{frame}{Visual Trace: Sentinel Input}
+\begin{center}
+\lectureimage[1.85in]{sentinel-input-loop.png}
+\end{center}
+\begin{keyidea}Check the sentinel before converting; accumulate only numeric input.\end{keyidea}
+\end{frame}
+\begin{frame}[fragile]{Activity: Follow the Keyboard Session}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+Number (done to stop): 2.5
+Number (done to stop): -1
+Number (done to stop): 4
+Number (done to stop): done
+\end{Verbatim}
+\end{block}
+\begin{activity}What does keyboard\_sum() return? When does the last input get converted?\end{activity}
+\end{frame}
+\begin{frame}[fragile]{Answer: Accumulation Ends at done}
+\begin{itemize}
+\item The running totals are 2.5, 1.5, and 5.5.
+\item The string "done" is checked, not converted.
+\item The function returns 5.5.
+\end{itemize}
+\end{frame}
+\sectionframe{Part 4: Command-Line Arguments}
+\begin{frame}[fragile]{Arguments Are Supplied at Program Launch}
+\begin{columns}[T,onlytextwidth]\begin{column}{0.49\textwidth}
+\centering\lectureimage[2.45in]{argv-index-map.png}
+\end{column}\begin{column}{0.47\textwidth}
+\begin{itemize}
+\item The command line can supply values before the program starts.
+\item The interpreter launches the script with the provided arguments.
+\item Unlike input(), these values do not require prompting during execution.
+\end{itemize}
+\end{column}\end{columns}
+\end{frame}
+\begin{frame}[fragile]{Inspect sys.argv}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+import sys
+
+print(sys.argv)
+
+# python total.py 3.5 2 -1
+# ["total.py", "3.5", "2", "-1"]
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item sys.argv is a list of strings.
+\item Index 0 identifies the script, possibly including its path.
+\item Indexes 1 onward hold the supplied arguments.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Numbers in Arguments Are Still Strings}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+import sys
+
+# python echo.py 6 7
+a = sys.argv[1]
+b = sys.argv[2]
+print(a + b)      # 67
+print(int(a) + int(b))  # 13
+\end{Verbatim}
+\end{block}
+\end{frame}
+\begin{frame}[fragile]{Avoid Missing-Argument Index Errors}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+import sys
+
+if len(sys.argv) < 2:
+    print("Please provide a name")
+else:
+    print(f"Hello, {sys.argv[1]}!")
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item Check length before indexing optional positions.
+\item len(sys.argv) includes the script name.
+\item Argument validation is a separate concern from processing.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Loop Over User Arguments}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+import sys
+
+# python total.py 3.5 2 -1
+total = 0.0
+for text in sys.argv[1:]:
+    total += float(text)
+print(total)   # 4.5
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item The slice [1:] skips the script name.
+\item Each argument is converted before arithmetic.
+\item Assume valid numeric arguments today.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Quotation Marks Group Arguments}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+$ python greet.py "Ada Lovelace"
+
+# sys.argv[1] -> "Ada Lovelace"
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item Without quotes, Ada and Lovelace are normally separate shell arguments.
+\item The shell groups quoted text before Python receives sys.argv.
+\item The shell syntax may look slightly different across operating systems.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Keyboard Input and CLI Arguments}
+\begin{itemize}
+\item input(): ask for a value after execution starts.
+\item sys.argv: values are supplied when execution starts.
+\item Both deliver strings and usually require parsing.
+\item Choose the interface based on whether the program is interactive.
+\end{itemize}
+\end{frame}
+\sectionframe{Part 5: main() and Organized Programs}
+\begin{frame}[fragile]{A main() Function Expresses the Entry Point}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+def main() -> None:
+    name = input("Name: ")
+    print(f"Hello, {name}!")
+
+main()
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item main is a normal function name, not a Python keyword.
+\item Organizing orchestration in main makes the flow easier to follow.
+\item Calling main explicitly starts that part of the program.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Why the Name Guard Exists}
+\begin{columns}[T,onlytextwidth]\begin{column}{0.49\textwidth}
+\centering\lectureimage[2.45in]{main-entry-gate.png}
+\end{column}\begin{column}{0.47\textwidth}
+\begin{itemize}
+\item When the script runs directly, \_\_name\_\_ has the value "\_\_main\_\_".
+\item When imported, \_\_name\_\_ identifies the module instead.
+\item The guard prevents the interactive program from automatically running on import.
+\end{itemize}
+\end{column}\end{columns}
+\end{frame}
+\begin{frame}[fragile]{The Standard Script Pattern}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+def main() -> None:
+    print("Program started")
+
+if __name__ == "__main__":
+    main()
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item Define functions first; call the entry point at the bottom.
+\item Tests and other modules can import helpers without triggering the script.
+\item The guard checks module execution context, not user input.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Predict: Running Versus Importing}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+# greetings.py
+def greet(name: str) -> str:
+    return f"Hi, {name}"
+
+def main() -> None:
+    print(greet("Ava"))
+
+if __name__ == "__main__":
+    main()
+\end{Verbatim}
+\end{block}
+\begin{activity}What appears for python greetings.py? What appears for import greetings?\end{activity}
+\end{frame}
+\begin{frame}[fragile]{Reveal: The Guard Controls Side Effects}
+\begin{itemize}
+\item Running python greetings.py prints Hi, Ava.
+\item Importing greetings defines greet and main without calling main.
+\item The importing program can call greetings.greet("Ava") whenever it chooses.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Separate Calculation from Console I/O}
+\begin{columns}[T,onlytextwidth]\begin{column}{0.49\textwidth}
+\centering\lectureimage[2.45in]{program-architecture.png}
+\end{column}\begin{column}{0.47\textwidth}
+\begin{itemize}
+\item A pure helper accepts values and returns a result.
+\item main obtains inputs, invokes helpers, and displays results.
+\item Separating responsibilities simplifies reasoning and unit tests.
+\end{itemize}
+\end{column}\end{columns}
+\end{frame}
+\begin{frame}[fragile]{Integrated Example: CLI Number Sum}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\scriptsize]
+import sys
+
+def sum_numbers(text_values: list[str]) -> float:
+    total = 0.0
+    for text in text_values:
+        total += float(text)
+    return total
+
+def main() -> None:
+    total = sum_numbers(sys.argv[1:])
+    print(f"Total: {total}")
+
+if __name__ == "__main__":
+    main()
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item Run: python total.py 3.5 2 -1
+\item Expected console output: Total: 4.5
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Think-Pair-Share: Find the Bug}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+import sys
+
+def main():
+    amount = float(sys.argv[0])
+    print(f"Amount: {amount}")
+
+if __name__ == "__main__":
+    main()
+\end{Verbatim}
+\end{block}
+\begin{activity}What is wrong? What two changes would make this safer for a single numeric argument?\end{activity}
+\end{frame}
+\begin{frame}[fragile]{Reveal: Select and Check the Correct Argument}
+\begin{block}{Python / console example}\begin{Verbatim}[fontsize=\footnotesize]
+import sys
+
+if len(sys.argv) < 2:
+    print("Missing numeric argument")
+else:
+    amount = float(sys.argv[1])
+    print(f"Amount: {amount}")
+\end{Verbatim}
+\end{block}
+\begin{itemize}
+\item sys.argv[0] is the script name, not the first user value.
+\item Check that sys.argv[1] exists before indexing.
+\item Full handling of malformed numeric text comes in a later lesson.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Common Wrong Models}
+\begin{itemize}
+\item “input() gives me a number” — it always returns a string.
+\item “print() is the same as return” — one displays, one sends a value to a caller.
+\item “sys.argv[0] is my first argument” — it identifies the script.
+\item “main runs automatically” — it runs only when called.
+\item “split() converts tokens” — it separates text; conversion is another step.
+\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Takeaways}
+\begin{itemize}
+\item Programs exchange text with users through console input and output.
+\item Parse strings explicitly before numeric computation.
+\item Use strip(), split(), and loops to process user-entered text.
+\item Use sys.argv[1:] for command-line values.
+\item Put program orchestration in main() and protect it with the name guard.
+\item Next lecture: input and output beyond a live console session.
+\end{itemize}
+\end{frame}
 \end{document}
