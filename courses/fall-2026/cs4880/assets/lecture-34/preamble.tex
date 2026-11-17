@@ -1,0 +1,61 @@
+% Self-contained replacement for the shared CS 4880 Beamer preamble.
+% Uses the same macros, naming pattern, concept-lead / keyidea style as Lecture 31.
+\usetheme{default}
+\usefonttheme{professionalfonts}
+\definecolor{CalPolyGreen}{HTML}{154734}
+\definecolor{DeckSoft}{HTML}{EAF2ED}
+\definecolor{DeckInk}{HTML}{263A32}
+\definecolor{DeckMuted}{HTML}{63756B}
+\definecolor{DeckGold}{HTML}{B88A2B}
+\definecolor{DeckMint}{HTML}{168F85}
+\setbeamercolor{normal text}{fg=DeckInk,bg=white}
+\setbeamercolor{frametitle}{fg=CalPolyGreen,bg=white}
+\setbeamercolor{structure}{fg=CalPolyGreen}
+\setbeamercolor{block title}{fg=white,bg=CalPolyGreen}
+\setbeamercolor{block body}{fg=DeckInk,bg=DeckSoft}
+\setbeamercolor{itemize item}{fg=CalPolyGreen}
+\setbeamercolor{itemize subitem}{fg=CalPolyGreen}
+\setbeamercolor{enumerate item}{fg=CalPolyGreen}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}[circle]
+\setbeamertemplate{itemize subitem}[triangle]
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip\vspace*{.08cm}\hspace{.34cm}\insertframetitle\par
+  \hspace{.34cm}{\color{CalPolyGreen}\rule{.85\paperwidth}{.7pt}}\vspace{.04cm}
+}
+\setbeamertemplate{footline}{%
+  \leavevmode\hbox{\begin{beamercolorbox}[wd=.83\paperwidth,ht=2.8ex,dp=1.2ex,leftskip=.43in]{normal text}%
+  {\scriptsize\color{DeckMuted}\insertshortauthor\quad\insertshorttitle}%
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.17\paperwidth,ht=2.8ex,dp=1.2ex,rightskip=.43in plus1fil]{normal text}%
+  {\scriptsize\color{DeckMuted}\hfill\insertframenumber/\inserttotalframenumber}%
+  \end{beamercolorbox}}%
+}
+\setbeamertemplate{headline}{}
+\RequirePackage{tikz}
+\newcommand{\coursenumber}[1]{\def\csCourseNumber{#1}}
+\newcommand{\coursetitle}[1]{\def\csCourseTitle{#1}}
+\newcommand{\lecturenumber}[1]{\def\csLectureNumber{#1}}
+\newcommand{\lecturetitle}[1]{\def\csLectureTitle{#1}\title[Natural Language Processing]{#1}}
+\newcommand{\lecturedate}[1]{\def\csLectureDate{#1}}
+\newcommand{\lecturedisplaytitle}[1]{\def\csDisplayTitle{#1}}
+\newcommand{\courseunit}[1]{\def\csCourseUnit{#1}}
+\newcommand{\makedecktitle}{%
+\begin{frame}[plain]
+\begin{tikzpicture}[remember picture,overlay]
+\fill[CalPolyGreen] (current page.north west) rectangle ([xshift=0.48in]current page.south west);
+\end{tikzpicture}
+\vspace*{.48in}\hspace*{.60in}%
+\begin{minipage}{.75\paperwidth}
+{\large\bfseries\color{DeckMuted}\csCourseNumber\quad\csCourseTitle\par}\vspace{.30in}
+{\fontsize{24}{29}\selectfont\bfseries\color{CalPolyGreen}\raggedright\csDisplayTitle\par}\vspace{.20in}
+{\Large\color{DeckInk}Lecture \csLectureNumber\par}\vspace{.28in}
+{\normalsize\color{DeckMuted}\csCourseUnit\quad\textbullet\quad\csLectureDate\par}
+\end{minipage}
+\end{frame}}
+\newenvironment{keyidea}{%
+\par\vspace{3pt}\begin{beamercolorbox}[rounded=true,shadow=false,sep=5pt,wd=\linewidth]{block body}%
+\color{CalPolyGreen}\textbf{Key idea.}\,\color{DeckInk}%
+}{\end{beamercolorbox}}
+\author[CS 4880]{CS 4880 Artificial Intelligence}

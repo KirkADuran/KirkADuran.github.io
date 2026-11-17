@@ -1,54 +1,703 @@
-\documentclass[aspectratio=169]{beamer}
-\input{../../common/preamble.tex}
+\documentclass[aspectratio=169,10pt]{beamer}
+\input{../assets/lecture-34/preamble.tex}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,booktabs,array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\pdfstringdefDisableCommands{\def\translate#1{#1}}
+\graphicspath{{../assets/lecture-34/}}
 
+% CS 4880, Lecture 34, November 18, 2026. Approximately 50 minutes.
+% Pedagogical arcs: motivation+history 6; symbolic grammars+ELIZA 9;
+% tokenization+N-grams 12; vectors+word2vec 11; seq2seq 9; bridge 3.
+% Original, locally generated diagrams. Illustration coordinates are not
+% pretrained embeddings. All examples/pseudocode are explicitly labelled.
+% All claims and historical dates sourced in the last two frames.
+% Rebuild original images with python ../assets/lecture-34/generate-figures.py.
+\newcommand{\lecturevisual}[2][2.15in]{%
+  \par{\centering\includegraphics[width=.98\linewidth,height=#1,keepaspectratio]{#2}\par}%
+}
+\newcommand{\conceptlead}[1]{{\small\bfseries\color{CalPolyGreen}#1\par}}
+\newenvironment{calculation}[1][Mathematical description]{%
+  \par\begingroup\setbeamercolor{calculation body}{bg=DeckSoft,fg=DeckInk}%
+  \begin{beamercolorbox}[sep=4pt,wd=\linewidth]{calculation body}%
+  \footnotesize{\bfseries\color{DeckMuted}#1\par}%
+  \setlength{\jot}{0pt}\setlength{\abovedisplayskip}{3pt}\setlength{\belowdisplayskip}{3pt}%
+}{\end{beamercolorbox}\endgroup}
+\newcommand{\microhead}[1]{{\footnotesize\bfseries\color{CalPolyGreen}#1\par}}
+
+\setbeamersize{text margin left=.42in,text margin right=.42in}
 \coursenumber{CS 4880}
 \coursetitle{Artificial Intelligence}
 \lecturenumber{34}
-\lecturetitle{Natural Language Processing -- language representation, sequence modeling, NLP tasks}
+\lecturetitle{Natural Language Processing: From Rules to Sequences}
+\lecturedisplaytitle{Natural Language Processing:\\[3pt]From Rules to Sequences}
 \lecturedate{November 18, 2026}
-\courseunit{Course sequence}
+\courseunit{Language and Representation}
 
 \begin{document}
-
 \makedecktitle
 
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Natural Language Processing -- language representation, sequence modeling, NLP tasks
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\section{Why Language Is Hard for Machines}
+
+\begin{frame}{Why Is Language a Hard AI Problem?}
+\small
+\conceptlead{Language is not merely a list of words: the same words can support different meanings.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.56\textwidth}
+\lecturevisual[2.40in]{ambiguity.png}
+\end{column}
+\begin{column}{.41\textwidth}
+\begin{itemize}
+\item People use grammar, context, shared experience, and world knowledge.
+\item Computers receive sequences of symbols or numbers, not interpretations.
+\item The same sentence may require several competing analyses.
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{keyidea}NLP is about representing and learning from language, not just matching text patterns.\end{keyidea}
 \end{frame}
 
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}{The Tasks We Want a Language System to Perform}
+\small
+\conceptlead{The task determines what information a model must preserve.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.31\textwidth}
+\begin{block}{Understand}
+Extract structure, entities, intentions, or sentiment.\\[3pt]
+\emph{``Who did what to whom?''}
+\end{block}
+\end{column}
+\begin{column}{.31\textwidth}
+\begin{block}{Predict}
+Estimate what word or token could come next.\\[3pt]
+\emph{``The robot opened the \ldots''}
+\end{block}
+\end{column}
+\begin{column}{.35\textwidth}
+\begin{block}{Transform / Generate}
+Translate, summarize, answer, or produce a sequence.\\[3pt]
+\emph{``The cat sleeps'' $\to$ ``Le chat dort''}
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}We will repeatedly ask: what can this method represent, and where does it break?\end{keyidea}
 \end{frame}
 
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}{A Brief History: Changing Representations, Recurring Problems}
+\small
+\lecturevisual[2.10in]{timeline.png}
+\begin{itemize}
+\item Symbolic, statistical, and neural traditions have \emph{overlapped}; this is not a straight line of replacement.
+\item Each generation solves one bottleneck and exposes another.
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\begin{frame}{1955--1956: Dartmouth Names the AI Ambition}
+\small
+\conceptlead{The 1955 proposal for the 1956 Dartmouth summer workshop explicitly asked how machines could use language.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.57\textwidth}
+\begin{block}{The research agenda}
+\begin{itemize}
+\item Make computers use language.
+\item Form abstractions and concepts.
+\item Solve problems and improve with experience.
+\end{itemize}
+\end{block}
+\begin{itemize}
+\item John McCarthy, Marvin Minsky, Nathaniel Rochester, and Claude Shannon authored the proposal.
+\item The workshop helped establish \emph{artificial intelligence} as a named research field.
+\end{itemize}
+\end{column}
+\begin{column}{.40\textwidth}
+\begin{calculation}[Historical distinction]
+\textbf{Proposal:} August 31, 1955\\[7pt]
+\textbf{Summer research project:} 1956\\[7pt]
+\textbf{Key question:} can intelligence, including language, be described precisely enough for a machine?
+\end{calculation}
+\end{column}
+\end{columns}
 \end{frame}
 
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}{Two Ideas Coexisted: Rules and Statistics}
+\small
+\conceptlead{One tradition tried to \emph{specify} linguistic structure; another tried to \emph{infer} regularities from data.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{Symbolic approach}
+\begin{itemize}
+\item Write grammars, lexicons, and transformation rules.
+\item Produce explicit, inspectable derivations.
+\item Challenge: exceptions, ambiguity, and unbounded real-world variation.
+\end{itemize}
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{Statistical approach}
+\begin{itemize}
+\item Count words and contexts in text collections.
+\item Estimate which alternatives are plausible.
+\item Challenge: sparse observations and weak long-range memory.
+\end{itemize}
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}These traditions ask different questions: \emph{what rules are valid?} versus \emph{what tends to occur?}\end{keyidea}
+\end{frame}
+
+\section{Symbolic NLP: Grammars, Trees, and ELIZA}
+
+\begin{frame}{A Grammar Is a Set of Rules for Building Sentences}
+\small
+\conceptlead{Formal grammars distinguish the structure of a sentence from the individual words.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.50\textwidth}
+\begin{calculation}[Tiny context-free grammar (CFG)]
+\[\begin{aligned}
+S &\to NP\ VP\\
+NP &\to Det\ N\\
+VP &\to V\ NP\\
+Det &\to \text{the}\\
+N &\to \text{robot}\mid\text{dog}\\
+V &\to \text{sees}
+\end{aligned}\]
+\end{calculation}
+\end{column}
+\begin{column}{.47\textwidth}
+\lecturevisual[1.85in]{grammar_pipeline.png}
+\begin{itemize}
+\item \textbf{Nonterminals:} $S$, $NP$, $VP$, $Det$, $N$, $V$.
+\item \textbf{Terminals:} actual words.
+\item \textbf{Parsing:} find a derivation consistent with the grammar.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Parse Trees Show How Rules Combine}
+\small
+\conceptlead{A parse tree makes the syntax of ``the robot sees the dog'' explicit.}
+\lecturevisual[1.98in]{parse_tree.png}
+\begin{keyidea}A tree captures nested structure, rather than treating a sentence as an unordered bag of words.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Why Grammar Alone Cannot Settle Meaning}
+\small
+\conceptlead{A sentence may admit more than one valid structural attachment.}
+\lecturevisual[2.02in]{parse_ambiguity.png}
+\begin{itemize}
+\item The phrase \emph{with a telescope} can modify the seeing event or the person seen.
+\item A parser can propose both analyses; context and world knowledge may select one.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{1966: ELIZA Shows How Far Surface Rules Can Go}
+\small
+\conceptlead{Joseph Weizenbaum's ELIZA matched keywords and rewrote parts of the user's input.}
+\lecturevisual[2.38in]{eliza_flow.png}
+\begin{itemize}
+\item \textbf{Decomposition:} locate an input pattern and capture variable text.
+\item \textbf{Reassembly:} insert captured text into a response template.
+\item The famous \emph{DOCTOR} script simulated a nondirective conversational style.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{An ELIZA-Style Conversation Can Feel Understanding}
+\small
+\lecturevisual[1.57in]{eliza_dialog.png}
+\begin{itemize}
+\item \textbf{Illustrative exchange created for this lecture}, not a historical transcript.
+\item A well-chosen question can be conversationally natural without tracking the truth of the situation.
+\end{itemize}
+\begin{keyidea}Fluent interaction can cause us to infer comprehension that the underlying program does not possess.\end{keyidea}
+\end{frame}
+
+\begin{frame}{What Worked---and What Failed---in Rule-Based NLP?}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{Strengths}
+\begin{itemize}
+\item Human-readable rules and derivations.
+\item Precise control in a narrow domain.
+\item Helpful for interpreters, validators, and structured language.
+\end{itemize}
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{Failure modes}
+\begin{itemize}
+\item Human language has ambiguities and exceptions.
+\item New vocabulary creates maintenance work.
+\item Matching a pattern does not ground claims in the world.
+\end{itemize}
+\end{block}
+\end{column}
+\end{columns}
+\begin{keyidea}We want to learn useful regularities from examples instead of writing every case manually.\end{keyidea}
+\end{frame}
+
+\section{Tokenization and Statistical Language Models}
+
+\begin{frame}{Before Learning from Text, We Must Define Tokens}
+\small
+\conceptlead{A model cannot count or embed words until it decides what the units are.}
+\lecturevisual[2.48in]{token_levels.png}
+\begin{itemize}
+\item \textbf{Character:} small vocabulary, longer sequences.
+\item \textbf{Word:} intuitive, but rare words and spelling variants proliferate.
+\item \textbf{Subword:} reusable fragments can represent uncommon words.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{A Tokenizer Is an Algorithm, Not a Universal Truth}
+\small
+\conceptlead{The same raw string can become different sequences under different vocabularies.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.54\textwidth}
+\lecturevisual[2.15in]{oov_subwords.png}
+\end{column}
+\begin{column}{.43\textwidth}
+\begin{itemize}
+\item Handle punctuation, case, apostrophes, emojis, and scripts without spaces.
+\item Assign each token an integer ID.
+\item Define unknown-token behavior or a scheme that decomposes unfamiliar words.
+\item Modern subword tokenizers may learn frequent fragments from a corpus.
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{keyidea}Tokenization changes sequence length, vocabulary size, and which patterns the model can learn.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Turning a Sentence into Model Inputs}
+\small
+\conceptlead{Text flows through a series of design decisions before any neural network sees it.}
+\lecturevisual[2.28in]{pipeline.png}
+\begin{calculation}[Illustrative mapping]
+\[\text{``the robot sees''}\ \to\ [\text{the},\text{robot},\text{sees}]\ \to\ [0,2,4].\]
+Here the IDs come from our chosen vocabulary, not from universal meanings of the words.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Shannon's Insight: Prediction Reveals Language Structure}
+\small
+\conceptlead{Claude Shannon investigated prediction and redundancy in English in 1951.}
+\begin{itemize}
+\item English has regularities: some letters and words are more predictable than others.
+\item A model can use observed history to assign probabilities to the next unit.
+\item Good predictions imply a representation of some regularity---not necessarily understanding.
+\end{itemize}
+\begin{calculation}[Language modeling task]
+\[P(w_{t}\mid w_1,w_2,\ldots,w_{t-1}).\]
+What is the probability of the next word, given everything written so far?
+\end{calculation}
+\begin{keyidea}Language models turn a seemingly open-ended text task into repeated conditional prediction.\end{keyidea}
+\end{frame}
+
+\begin{frame}{N-Grams Approximate History with a Short Window}
+\small
+\conceptlead{An $n$-gram is a run of $n$ consecutive tokens.}
+\lecturevisual[1.45in]{ngram_windows.png}
+\begin{calculation}[Bigram approximation]
+\[P(w_1,\ldots,w_T)\ \approx\ P(w_1)\prod_{t=2}^{T} P(w_t\mid w_{t-1}).\]
+Trigrams instead condition on the two preceding words. This is a modeling assumption, not a law of language.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Compute a Bigram Probability from a Tiny Corpus}
+\small
+\conceptlead{Count contexts, then divide by the number of times the context appears.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.56\textwidth}
+\lecturevisual[2.62in]{ngram_counts.png}
+\end{column}
+\begin{column}{.41\textwidth}
+\begin{calculation}[Maximum-likelihood bigram]
+\[P(w\mid h)=\frac{C(h,w)}{C(h)}.\]
+For $h=$ ``the'':
+\[P(\text{robot}\mid\text{the})=\frac{5}{9}\approx0.556.\]
+\end{calculation}
+\begin{itemize}
+\item This corpus contains 5 short sentences.
+\item These are \emph{measured counts} from that toy corpus.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo: Counting N-Grams in Python}
+\small
+\conceptlead{The numerator and denominator both come from the same observed training corpus.}
+{\footnotesize\begin{verbatim}
+from collections import Counter
+corpus = [
+    "the robot sees the dog",
+    "the robot sees a cat",
+    "the robot likes the dog",
+    "the dog sees the robot",
+    "the cat likes the robot",
+]
+prev, pairs = Counter(), Counter()
+for sentence in corpus:
+    words = sentence.split()
+    prev.update(words[:-1])
+    pairs.update(zip(words[:-1], words[1:]))
+print(pairs[("the", "robot")], prev["the"])
+print(round(pairs[("the", "robot")] / prev["the"], 3))
+\end{verbatim}}
+\begin{keyidea}Printed results: \texttt{5 9} and \texttt{0.556}. Change the corpus, and the probabilities change.\end{keyidea}
+\end{frame}
+
+\begin{frame}{An N-Gram Model Can Generate Text One Token at a Time}
+\small
+\conceptlead{Select a next word from the distribution, append it, then repeat.}
+\begin{enumerate}
+\item Start from a token such as \texttt{the}.
+\item Compute or look up $P(w_t\mid\texttt{the})$.
+\item Sample a word; suppose the model chooses \texttt{robot}.
+\item Use \texttt{robot} as the next bigram context and continue.
+\end{enumerate}
+\begin{calculation}[Hypothetical sampled trace]
+\[\texttt{the}\to\texttt{robot}\to\texttt{sees}\to\texttt{the}\to\texttt{dog}\]
+\end{calculation}
+\begin{keyidea}Probabilistic coherence for a few words does not guarantee a coherent paragraph or factual claim.\end{keyidea}
+\end{frame}
+
+\begin{frame}{The N-Gram Tradeoff: Short Memory or Sparse Counts}
+\small
+\conceptlead{A larger $n$ captures more context but produces far more rarely observed contexts.}
+\lecturevisual[1.70in]{ngram_sparsity.png}
+\begin{itemize}
+\item \textbf{Small $n$:} frequent observations but limited long-range information.
+\item \textbf{Large $n$:} more specific context, but many zero counts.
+\item Smoothing and backoff reduce brittle zero-probability behavior; they cannot learn arbitrary long relationships.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{What Happens to Words Never Seen During Training?}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.55\textwidth}
+\lecturevisual[2.40in]{unseen_counts.png}
+\end{column}
+\begin{column}{.42\textwidth}
+\begin{itemize}
+\item An unseen word has count zero under naive frequency estimation.
+\item A previously unseen $n$-gram can receive estimated probability zero.
+\item Unknown-token handling, smoothing, and subword tokenization address different parts of this problem.
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{keyidea}Counting exact strings never tells us that two different words are related.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Perplexity Evaluates a Language Model's Predictions}
+\small
+\conceptlead{Rather than asking whether text merely ``sounds good,'' measure predictions on held-out text.}
+\begin{calculation}[Average negative log likelihood and perplexity]
+\[\operatorname{NLL}=-\frac1T\sum_{t=1}^{T}\log P(w_t\mid\text{context}_t),\qquad
+\operatorname{PPL}=e^{\operatorname{NLL}}.\]
+\end{calculation}
+\begin{itemize}
+\item Lower perplexity means higher probability assigned to the held-out token sequence.
+\item Comparisons require the same evaluation data and tokenization convention.
+\item A lower value does not imply truthfulness, reasoning, or harmless behavior.
+\end{itemize}
+\end{frame}
+
+\section{From One-Hot Vectors to Word2Vec}
+
+\begin{frame}{Neural Networks Require Numerical Representations}
+\small
+\conceptlead{An integer token ID is a lookup key, not a meaningful coordinate.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.52\textwidth}
+\lecturevisual[2.55in]{one_hot.png}
+\end{column}
+\begin{column}{.45\textwidth}
+\begin{itemize}
+\item A vocabulary of size $V$ can use a $V$-dimensional one-hot vector.
+\item Exactly one coordinate is 1; all others are 0.
+\item Every distinct word has its own basis direction.
+\item One-hot encoding preserves identity, not semantic similarity.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Why One-Hot Vectors Cannot Express Word Similarity}
+\small
+\conceptlead{All distinct one-hot vectors are equally far apart in Euclidean distance.}
+\begin{calculation}[For any two distinct one-hot vectors $e_i,e_j$]
+\[e_i^\top e_j=0,\qquad \lVert e_i-e_j\rVert_2=\sqrt2.\]
+\end{calculation}
+\begin{itemize}
+\item \texttt{cat} and \texttt{dog} are just as different as \texttt{cat} and \texttt{microscope}.
+\item Large vocabularies create high-dimensional, sparse vectors.
+\item We want words used in similar contexts to share statistical information.
+\end{itemize}
+\begin{keyidea}The right \emph{representation} can matter as much as the prediction algorithm.\end{keyidea}
+\end{frame}
+
+\begin{frame}{A Dense Vector Can Encode Similarity Through Geometry}
+\small
+\lecturevisual[2.19in]{geometry.png}
+\begin{itemize}
+\item \textbf{One-hot:} coordinates are fixed and nonsemantic.
+\item \textbf{Dense learned embeddings:} related words can occupy nearby regions in a smaller space.
+\item This is a \emph{schematic}, not evidence that a particular model learned these positions.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Distributional Learning: Meaning from Usage}
+\small
+\conceptlead{Words that occur in related contexts often acquire related representations.}
+\lecturevisual[1.99in]{word2vec_neighbors.png}
+\begin{itemize}
+\item We do not hand-label every word with properties such as \texttt{animal} or \texttt{vehicle}.
+\item Instead, an objective based on nearby words supplies a training signal.
+\item Similarity is useful, but co-occurrence also reflects corpus biases and coincidental associations.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{2013: Word2Vec Makes Distributed Word Vectors Practical}
+\small
+\conceptlead{Mikolov and colleagues introduced efficient neural objectives for learning word representations from large corpora.}
+\lecturevisual[1.88in]{word2vec_objectives.png}
+\begin{itemize}
+\item \textbf{Skip-gram:} given a center word, predict surrounding words.
+\item \textbf{CBOW:} given a context window, predict the center word.
+\item Their small prediction tasks produce vectors that can be reused elsewhere.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{The Word2Vec Learning Problem}
+\small
+\conceptlead{Train embeddings so observed word-context pairs score higher than unlikely pairs.}
+\begin{calculation}[Conceptual skip-gram likelihood]
+\[\max_{E}\ \sum_{t=1}^{T}\ \sum_{\substack{-c\le j\le c\\ j\ne0}}
+\log P\!\left(w_{t+j}\mid w_t\right).\]
+\end{calculation}
+\begin{itemize}
+\item $c$ is the context window radius; $E$ contains learned vectors.
+\item Practical implementations use efficient approximations such as negative sampling.
+\item The output is not a dictionary definition: it is a learned numeric representation.
+\end{itemize}
+\begin{keyidea}Learning from many small prediction problems can discover transferable features.\end{keyidea}
+\end{frame}
+
+\begin{frame}{An Embedding Layer Is a Trainable Lookup Table}
+\small
+\conceptlead{The one-hot representation is usually not materialized as a huge dense array.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.55\textwidth}
+\lecturevisual[2.45in]{embedding_lookup.png}
+\end{column}
+\begin{column}{.42\textwidth}
+\begin{calculation}[Embedding lookup]
+\[E\in\mathbb R^{V\times d},\qquad z_t=E[w_t]\in\mathbb R^d.\]
+$V$: vocabulary size\\
+$d$: learned vector dimension
+\end{calculation}
+\begin{itemize}
+\item Each token ID retrieves a row.
+\item Training modifies these rows through gradient descent.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Demo: One-Hot Encoding Versus Embedding Lookup}
+\small
+\conceptlead{A dense embedding is a table of learned parameters; an ID only selects its row.}
+{\footnotesize\begin{verbatim}
+import numpy as np
+
+vocab = {"cat": 0, "dog": 1, "robot": 2}
+ids = np.array([vocab["dog"], vocab["robot"]])
+one_hot = np.eye(len(vocab))[ids]
+
+# Example values, NOT a trained word2vec model:
+E = np.array([[ 0.2, 0.5],
+              [ 0.3, 0.4],
+              [-0.7, 0.1]])
+print(one_hot.shape)   # (2, 3)
+print(E[ids].shape)    # (2, 2)
+\end{verbatim}}
+\begin{keyidea}Embedding dimensions are chosen by the designer and learned from data; token IDs are arbitrary labels.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Word2Vec's Important Failure: Words Change Meaning}
+\small
+\conceptlead{A conventional word2vec vocabulary assigns a single vector to a word type, independent of a particular sentence.}
+\lecturevisual[1.78in]{polysemy.png}
+\begin{itemize}
+\item A single type-level vector must combine financial and geographical uses of \texttt{bank}.
+\item Word meaning also depends on word order, syntax, and surrounding discourse.
+\item Next step: represent \emph{sequences}, not only isolated word types.
+\end{itemize}
+\end{frame}
+
+\section{Learning to Map One Sequence to Another}
+
+\begin{frame}{Word Order Can Completely Change a Sentence}
+\small
+\lecturevisual[2.45in]{sequence_order.png}
+\begin{itemize}
+\item Both sentences use the same words and have the same bag-of-words representation.
+\item Their meanings differ because syntax and positions differ.
+\item A sequence model must combine content with order and context.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Recurrent Networks Represent a Prefix of a Sentence}
+\small
+\conceptlead{An RNN updates a hidden state as each token arrives.}
+\lecturevisual[1.94in]{rnn_chain.png}
+\begin{calculation}[Simple recurrent update]
+\[h_t=\tanh(W_x x_t+W_hh_{t-1}+b).\]
+$h_t$ compresses the current token and information carried forward from earlier tokens.
+\end{calculation}
+\end{frame}
+
+\begin{frame}{Seq2Seq: Translate One Variable-Length Sequence into Another}
+\small
+\conceptlead{An encoder reads the source; a decoder generates target tokens step by step.}
+\lecturevisual[1.91in]{seq2seq.png}
+\begin{itemize}
+\item A classic 2014 approach used LSTM encoder and decoder networks.
+\item Source and target lengths need not match.
+\item Early architectures passed a fixed-length context vector between the two.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{What Probability Does the Decoder Learn?}
+\small
+\conceptlead{Translation becomes a chain of next-token predictions conditioned on the source.}
+\begin{calculation}[Conditional factorization]
+\[P(y_1,\ldots,y_M\mid x_1,\ldots,x_N)
+=\prod_{t=1}^{M}P(y_t\mid y_{<t},\,x_1,\ldots,x_N).\]
+\end{calculation}
+\begin{itemize}
+\item $x_1,\dots,x_N$ are the source tokens.
+\item $y_1,\dots,y_M$ are the target tokens; the decoder emits one token at a time.
+\item Training rewards the model for putting high probability on the correct target tokens.
+\end{itemize}
+\begin{keyidea}Seq2seq changes the \emph{task} from predicting one local continuation to producing an entire conditioned output sequence.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Teacher Forcing Makes Seq2Seq Training Easier}
+\small
+\conceptlead{During training, the decoder can receive the correct previous target token.}
+\lecturevisual[1.98in]{teacher_forcing.png}
+\begin{itemize}
+\item Feed the previous \emph{gold} token rather than the previous model prediction.
+\item Compute a cross-entropy loss for the next target token.
+\item At inference, the gold next token is unavailable: the model consumes its own outputs.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Seq2Seq Failure 1: Errors Accumulate at Inference}
+\small
+\conceptlead{The model learns with correct prefixes but must generate from its own possibly incorrect prefixes.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.48\textwidth}
+\begin{block}{Training}
+\texttt{<START> the cat ...}\\[6pt]
+Every step can use the reference previous token.
+\end{block}
+\end{column}
+\begin{column}{.48\textwidth}
+\begin{block}{Inference}
+\texttt{<START> a cat ...}\\[6pt]
+An early alternative prediction changes later contexts.
+\end{block}
+\end{column}
+\end{columns}
+\begin{itemize}
+\item This train--test difference is often called \emph{exposure bias}.
+\item Teacher forcing is useful but does not eliminate the mismatch.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Seq2Seq Failure 2: One Fixed Context Is a Bottleneck}
+\small
+\lecturevisual[1.72in]{context_bottleneck.png}
+\begin{itemize}
+\item Distant dependencies and fine-grained source details must compete for the same fixed-size code.
+\item Longer sequences strain this summary representation, even when LSTMs improve memory.
+\item Recurrent decoding also generates tokens sequentially rather than all at once.
+\end{itemize}
+\begin{keyidea}Can the decoder look back at whichever source words matter \emph{right now}?\end{keyidea}
+\end{frame}
+
+\begin{frame}{The Attention Idea: Let the Decoder Look Back}
+\small
+\conceptlead{Instead of forcing everything through one fixed code, expose the source states to the decoder.}
+\lecturevisual[1.98in]{attention_preview.png}
+\begin{itemize}
+\item Different output tokens can emphasize different input positions.
+\item Early neural attention mechanisms were developed to improve encoder--decoder translation.
+\item \emph{Next lecture:} how attention scores are computed, and how transformers change the architecture.
+\end{itemize}
+\end{frame}
+
+\section{Synthesis and the Transformer Setup}
+
+\begin{frame}{Which Problem Did Each Representation Solve?}
+\small
+\lecturevisual[2.32in]{failure_ladder.png}
+\vspace{-4pt}
+\begin{keyidea}The history of NLP is a history of how to capture more context without becoming too brittle, sparse, or computationally expensive.\end{keyidea}
+\end{frame}
+
+\begin{frame}{How Would We Know a Language Model Actually Helps?}
+\small
+\begin{itemize}
+\item \textbf{Language modeling:} held-out likelihood or perplexity using consistent tokenization.
+\item \textbf{Translation:} task-level evaluation plus human inspection; a good language-model score alone is insufficient.
+\item \textbf{Meaning and robustness:} test ambiguity, negation, unseen words, long inputs, dialects, and distribution shift.
+\item \textbf{Data hygiene:} separate train and test; avoid memorized evaluation examples.
+\item \textbf{Human impact:} fluent outputs may be unsupported or misleading; avoid assuming comprehension from surface form.
+\end{itemize}
+\begin{keyidea}Optimization metrics are evidence about one task, not proof of general linguistic understanding.\end{keyidea}
+\end{frame}
+
+\begin{frame}{Exit Ticket: Three Questions Before Transformers}
+\small
+\begin{enumerate}
+\item If a word never appears in a word-level bigram corpus, what happens under an unsmoothed count model? What could help?
+\vspace{9pt}
+\item Why can \texttt{cat} and \texttt{dog} be close in a learned embedding but not in a one-hot representation?
+\vspace{9pt}
+\item An encoder compresses 100 source tokens into one vector. What might an attentive decoder do differently?
+\end{enumerate}
+\vspace{8pt}
+\begin{keyidea}Next lecture: \textbf{attention scores, queries/keys/values, positional information, and the transformer}.\end{keyidea}
+\end{frame}
+
+\begin{frame}{References and Historical Context (1/2)}
+\scriptsize
+\begin{itemize}
+\item McCarthy, Minsky, Rochester, and Shannon (1955), \href{https://www-formal.stanford.edu/jmc/history/dartmouth.pdf}{A Proposal for the Dartmouth Summer Research Project on Artificial Intelligence}. Proposal dated Aug. 31, 1955; workshop held summer 1956.
+\item Chomsky (1957), \emph{Syntactic Structures}. Context-free-style rewrite rules and syntactic theory are used here as pedagogical tools; modern linguistics includes many other formalisms.
+\item Shannon (1951), \href{https://doi.org/10.1002/j.1538-7305.1951.tb01366.x}{Prediction and Entropy of Printed English}. The n-gram corpus and numerical counts in the lecture are \emph{original toy examples}, not Shannon's measurements.
+\item Weizenbaum (1966), \href{https://doi.org/10.1145/365153.365168}{ELIZA---A Computer Program for the Study of Natural Language Communication Between Man and Machine}, \emph{Communications of the ACM} 9(1).
+\item Sennrich, Haddow, and Birch (2016), \href{https://aclanthology.org/P16-1162/}{Neural Machine Translation of Rare Words with Subword Units}, ACL. Subword slides use illustrative token splits; no claim that a particular tokenizer produces them.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{References and Historical Context (2/2)}
+\scriptsize
+\begin{itemize}
+\item Mikolov, Chen, Corrado, and Dean (2013), \href{https://arxiv.org/abs/1301.3781}{Efficient Estimation of Word Representations in Vector Space}. Word2vec diagrams are conceptual and not trained embeddings.
+\item Mikolov et al. (2013), \href{https://arxiv.org/abs/1310.4546}{Distributed Representations of Words and Phrases and their Compositionality}; describes Skip-gram training refinements and limits of composing independent word types.
+\item Sutskever, Vinyals, and Le (2014), \href{https://proceedings.neurips.cc/paper_files/paper/2014/hash/5a18e133cbf9f257297f410bb7eca942-Abstract.html}{Sequence to Sequence Learning with Neural Networks}.
+\item Bahdanau, Cho, and Bengio (2015), \href{https://arxiv.org/abs/1409.0473}{Neural Machine Translation by Jointly Learning to Align and Translate}. Attention improves a fixed-vector encoder--decoder bottleneck.
+\item Vaswani et al. (2017), \href{https://proceedings.neurips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html}{Attention Is All You Need}. This is the subject of the next lecture, \emph{not} a model taught here.
+\end{itemize}
 \end{frame}
 
 \end{document}
