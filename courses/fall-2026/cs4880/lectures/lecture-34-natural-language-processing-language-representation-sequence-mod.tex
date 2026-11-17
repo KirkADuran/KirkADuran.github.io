@@ -13,7 +13,7 @@
 % tokenization+N-grams 12; vectors+word2vec 11; seq2seq 9; bridge 3.
 % Original, locally generated diagrams. Illustration coordinates are not
 % pretrained embeddings. All examples/pseudocode are explicitly labelled.
-% All claims and historical dates sourced in the last two frames.
+% References appear in the last two frames and on the document-vector slide.
 % Rebuild original images with python ../assets/lecture-34/generate-figures.py.
 \newcommand{\lecturevisual}[2][2.15in]{%
   \par{\centering\includegraphics[width=.98\linewidth,height=#1,keepaspectratio]{#2}\par}%
@@ -407,7 +407,33 @@ print(round(pairs[("the", "robot")] / prev["the"], 3))
 \end{itemize}
 \end{frame}
 
-\section{From One-Hot Vectors to Word2Vec}
+\section{From Document Vectors to Word2Vec}
+
+\begin{frame}{Bag of Words and TF--IDF: Representing a Document}
+\small
+\conceptlead{Count terms, then discount words that appear in many documents.}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{.49\textwidth}
+\microhead{Bag of words: one document $\to$ one count vector}
+\lecturevisual[1.25in]{bag-of-words.png}
+\end{column}
+\begin{column}{.48\textwidth}
+\microhead{TF--IDF: reweight the same vocabulary coordinates}
+\lecturevisual[1.25in]{tf-idf.png}
+\end{column}
+\end{columns}
+\begin{calculation}[Term frequency (TF) $\times$ inverse document frequency (IDF)]
+\[
+\operatorname{tfidf}(t,d)=C(t,d)\,\ln\!\frac{N}{\operatorname{df}(t)}.
+\qquad
+\operatorname{tfidf}(\texttt{cat},D_1)=2\ln(3/1)\approx2.20.
+\]
+$C(t,d)$ counts occurrences in $d$; $N=3$ documents; $\operatorname{df}(t)$ counts documents containing $t$.\\
+Here \texttt{the} has weight $1\ln(3/3)=0$. Toy variant: raw counts, no smoothing or normalization.
+\end{calculation}
+{\footnotesize\textbf{Use:} document search/classification. \textbf{Limit:} no order or learned word similarity.\par}
+{\scriptsize\color{DeckMuted}Source: \href{https://nlp.stanford.edu/IR-book/html/htmledition/tf-idf-weighting-1.html}{Manning, Raghavan, and Sch\"utze (2008), \emph{Introduction to Information Retrieval}, \S6.2}.}
+\end{frame}
 
 \begin{frame}{Neural Networks Require Numerical Representations}
 \small
