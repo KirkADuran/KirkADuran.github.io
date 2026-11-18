@@ -19,6 +19,7 @@
 \makedecktitle
 \begin{frame}[fragile]{Today: a complete data pipeline}
 \begin{itemize}
+\item Locate files using absolute and relative paths.
 \item Read human-readable text using with open(...).
 \item Choose a format: plain text, CSV, or JSON.
 \item Rebuild Python objects from saved attributes.
@@ -36,6 +37,131 @@
 \end{itemize}
 \end{column}\end{columns}
 \end{frame}
+% Establish path resolution before introducing open().
+\begin{frame}[fragile]{Files live in a directory hierarchy}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.56\textwidth}
+\begin{block}{Example tree: macOS / Linux}
+\begin{Verbatim}[fontsize=\scriptsize]
+/
+`-- Users/
+    `-- student/
+        `-- cs1001/
+            |-- lecture33/
+            |   `-- total.py
+            `-- lecture34/
+                |-- read_notes.py
+                |-- message.txt
+                `-- data/
+                    `-- scores.csv
+\end{Verbatim}
+\end{block}
+\end{column}
+\begin{column}{0.41\textwidth}
+\small\begin{itemize}
+\item A directory (folder) contains files and other directories.
+\item The root directory, \texttt{/}, is the top of this tree.
+\item A parent contains its children: \texttt{data} is a child of \texttt{lecture34}.
+\item A path describes a route through the hierarchy to a directory or file.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Absolute and relative paths}
+\begin{block}{Two paths to the same file: macOS / Linux}
+\begin{Verbatim}[fontsize=\footnotesize]
+# Absolute: start at the filesystem root
+/Users/student/cs1001/lecture34/data/scores.csv
+
+# Relative: start at /Users/student/cs1001/lecture34
+data/scores.csv
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}
+\item An absolute path specifies its starting root; it does not depend on the working directory.
+\item A relative path is interpreted from the current working directory.
+\item These identify the same file only with the working directory shown above.
+\end{itemize}
+{\scriptsize Windows absolute paths commonly include a drive, for example
+\texttt{C:\textbackslash{}Users\textbackslash{}student\textbackslash{}notes.txt}.}
+\end{frame}
+
+\begin{frame}[fragile]{Relative paths: current folder and parent folder}
+\begin{block}{Working directory: /Users/student/cs1001/lecture34}
+\begin{Verbatim}[fontsize=\footnotesize]
+message.txt             # a file in the current folder
+./message.txt           # the same file: . means here
+data/scores.csv         # descend into the data folder
+../lecture33/total.py   # go to parent, then lecture33
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}
+\item \texttt{.} refers to the current directory; \texttt{..} refers to its parent.
+\item Read path components left to right; each \texttt{/} separates components.
+\item A relative path is a description of a location; writing it does not change the working directory.
+\end{itemize}
+\begin{activity}\small From inside \texttt{lecture34/data}, which relative path reaches \texttt{message.txt}?\end{activity}
+\end{frame}
+
+\begin{frame}[fragile]{Relative paths follow the working directory}
+\begin{block}{Terminal: two ways to launch the same script}
+\begin{Verbatim}[fontsize=\scriptsize]
+# Start in /Users/student/cs1001
+python lecture34/read_notes.py
+# "message.txt" refers to cs1001/message.txt
+
+cd lecture34
+python read_notes.py
+# "message.txt" now refers to lecture34/message.txt
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}
+\item A script normally inherits its working directory from the terminal that launches it.
+\item Passing a script's path to Python does not move into that script's folder.
+\item An IDE can choose a working directory too; check it when a file cannot be found.
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Use the terminal to navigate and create files}
+\begin{block}{macOS / Linux shell (also Git Bash / WSL)}
+\begin{Verbatim}[fontsize=\scriptsize]
+pwd                         # print the working directory
+ls                          # list this directory's contents
+# From your cs1001 course folder, create a practice folder:
+mkdir lecture34             # make a directory
+cd lecture34                # change into it
+mkdir data
+touch read_notes.py message.txt data/scores.csv
+ls                          # read_notes.py, message.txt, data
+cd data                     # descend into a child directory
+pwd                         # ends with /cs1001/lecture34/data
+cd ..                       # return to lecture34
+\end{Verbatim}
+\end{block}
+\small \texttt{touch} creates a missing file; for an existing file it updates timestamps and keeps its contents.
+\par\vspace{3pt}
+{\scriptsize In Windows PowerShell, use \texttt{New-Item notes.txt -ItemType File} to create a file; \texttt{touch} is not a built-in command.}
+\end{frame}
+
+\begin{frame}[fragile]{Check paths from Python before opening files}
+\begin{block}{Python: run with lecture34 as the working directory}
+\begin{Verbatim}[fontsize=\footnotesize]
+from pathlib import Path
+
+path = Path("data") / "scores.csv"
+print(path)           # data/scores.csv (on macOS / Linux)
+print(path.exists())  # True if this path exists
+print(Path.cwd())     # current working directory
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}
+\item The \texttt{/} operator joins path components using the platform's separators.
+\item An absolute path can also be stored in a \texttt{Path} object.
+\item Next, \texttt{open("message.txt", ...)} looks for a file inside this working directory.
+\end{itemize}
+\end{frame}
+
 \begin{frame}[fragile]{Opening and reading a file}
 \begin{block}{Python / sample data}\begin{Verbatim}[fontsize=\footnotesize]
 f = open("message.txt", "r", encoding="utf-8")
@@ -111,21 +237,6 @@ with open("names.txt", "r", encoding="utf-8") as f:
 \small\begin{itemize}
 \item Why might there be blank lines between printed names?
 \item What would print(line.strip()) change?
-\end{itemize}
-\end{frame}
-\begin{frame}[fragile]{File paths: where are we looking?}
-\begin{block}{Python / sample data}\begin{Verbatim}[fontsize=\footnotesize]
-from pathlib import Path
-
-path = Path("data") / "message.txt"
-print(path)           # data/message.txt (on Unix)
-print(path.exists())  # True or False
-print(Path.cwd())     # current working directory
-\end{Verbatim}
-\end{block}
-\small\begin{itemize}
-\item Relative paths start from the process working directory.
-\item Path combines directory and filename without manually typing separators.
 \end{itemize}
 \end{frame}
 \begin{frame}[fragile]{File modes in one picture}
@@ -373,12 +484,12 @@ students = [Student(r["name"], r["score"]) for r in rows]
 \end{Verbatim}
 \end{block}
 \end{frame}
-\begin{frame}[fragile]{The filesystem is a tree}
+\begin{frame}[fragile]{Searching means visiting a subtree}
 \begin{columns}[T,onlytextwidth]\begin{column}{0.56\textwidth}\centering\lectureimage[2.1in]{oswalk-tree.png}\end{column}\begin{column}{0.42\textwidth}
 \small\begin{itemize}
-\item Directories contain files and other directories.
-\item Paths identify locations within the tree.
-\item Tools can act on a single path or visit an entire subtree.
+\item Start from a directory identified by a path.
+\item Its subtree includes its files and all nested directories.
+\item A traversal visits these directories so we can search them.
 \end{itemize}
 \end{column}\end{columns}
 \end{frame}
@@ -577,6 +688,7 @@ for key in range(26):
 \end{frame}
 \begin{frame}[fragile]{One-minute exit ticket}
 \begin{itemize}
+\item Where does a relative path start?
 \item Why is with open(...) preferred to manual close()?
 \item Which open mode could overwrite an existing file?
 \item When would you choose CSV instead of JSON?
