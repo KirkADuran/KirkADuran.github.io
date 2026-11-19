@@ -1,54 +1,413 @@
-\documentclass[aspectratio=169]{beamer}
+\documentclass[aspectratio=169,10pt]{beamer}
 \input{../../common/preamble.tex}
-
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+\usepackage{tabularx}
+\graphicspath{{../assets/lecture-35/}}
+\setbeamersize{text margin left=0.42in,text margin right=0.42in}
+\newcommand{\lectureimage}[2][1.81in]{\includegraphics[width=0.93\linewidth,height=#1,keepaspectratio]{#2}}
 \coursenumber{CS 1001}
 \coursetitle{Introduction to Computing}
 \lecturenumber{35}
-\lecturetitle{Exceptions, Validation, and File Formats}
+\lecturetitle{Exceptions and Error Handling}
 \lecturedate{November 20, 2026}
 \courseunit{13. Input, Files, and Robust Programs}
-
 \begin{document}
-
 \makedecktitle
-
-\begin{frame}{Today}
-  \begin{itemize}
-    \item Course unit: \CourseUnit
-    \item Big idea: Exceptions, Validation, and File Formats
-    \item Placeholder for announcements and context.
-  \end{itemize}
+\begin{frame}[fragile]{Today: errors are part of the interface}
+\begin{itemize}\item Recognize and handle common exceptions with \texttt{try} / \texttt{except}.\item Choose specific handlers, inspect error messages, and avoid over-catching.\item Understand propagation, \texttt{raise}, and custom exceptions.\item Verify failures with \textbf{two forms} of \texttt{unittest.assertRaises}.\end{itemize}
+\vspace{0.06in}\begin{keyidea}\small Design for bad input, not just the happy path.\end{keyidea}
 \end{frame}
-
-\begin{frame}{Learning Goals}
-  \begin{itemize}
-    \item Define the key vocabulary for this lecture.
-    \item Work through one representative example.
-    \item Connect today's idea to the previous and next class meetings.
-  \end{itemize}
+\begin{frame}[fragile]{A file can exist and still contain bad data}
+\begin{columns}[T,onlytextwidth]\begin{column}{0.52\textwidth}\begin{block}{Example}
+\begin{Verbatim}[fontsize=\footnotesize]
+line = "Ada,not-a-number"
+name, raw_score = line.split(",")
+score = int(raw_score)  # ValueError
+\end{Verbatim}
+\end{block}\end{column}\begin{column}{0.45\textwidth}\small\begin{itemize}\item Lecture 34 taught us how to read and parse text.\item But \texttt{int()} cannot convert arbitrary text.\item Should the whole program crash, ignore it, or explain the problem?\end{itemize}\end{column}\end{columns}
+\vspace{0.06in}\begin{keyidea}\small Today: decide where and how failures are handled.\end{keyidea}
 \end{frame}
-
-\begin{frame}{Core Ideas}
-  \placeholdernote
-  \begin{itemize}
-    \item Main concept 1.
-    \item Main concept 2.
-    \item Main concept 3.
-  \end{itemize}
+\begin{frame}[fragile]{Two paths through one program}
+\begin{center}\lectureimage{exception-fork.png}\end{center}
+\small\begin{itemize}\item Normal flow produces a value.\item Exceptional flow produces an exception object.\item A matching handler can recover or report the problem.\end{itemize}
 \end{frame}
-
-\begin{frame}{Example or Activity}
-  \begin{block}{In class}
-    Add a short worked example, code trace, proof sketch, discussion prompt, or board activity here.
-  \end{block}
+\begin{frame}[fragile]{Definition: an exception}
+\begin{itemize}\item An \textbf{exception} is an object signaling that an operation could not proceed normally.\item Python \textbf{raises} an exception when it detects a problem.\item An \texttt{except} clause can \textbf{catch} a matching exception.\item Without a handler, Python reports an unhandled exception and traceback.\end{itemize}
+\vspace{0.06in}\begin{keyidea}\small An exception is not the same thing as printing an error message.\end{keyidea}
 \end{frame}
-
-\begin{frame}{Wrap-Up}
-  \begin{itemize}
-    \item What should students be able to do after today?
-    \item What should they practice before the next meeting?
-    \item What question should they bring to class next time?
-  \end{itemize}
+\begin{frame}[fragile]{Python can raise exceptions for us}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+int("not a number")      # ValueError
+10 / 0                   # ZeroDivisionError
+values = [1, 2]
+print(values[9])         # IndexError
+open("missing.txt", "r") # FileNotFoundError
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item The \textbf{operation} decides when it cannot continue.\item Different failures have different exception types.\end{itemize}
 \end{frame}
+\sectionframe{Part 1: Catching Exceptions}
+\begin{frame}[fragile]{Catch the conversion error}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+text = input("Enter a whole number: ")
 
+try:
+    number = int(text)
+    print(number * 2)
+except ValueError:
+    print("Please enter a valid integer.")
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item Only a matching \texttt{ValueError} runs this handler.\item Execution resumes after the \texttt{try} / \texttt{except} statement.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{The \texttt{try} / \texttt{except} decision}
+\begin{center}\lectureimage{try-except-control.png}\end{center}
+\small\begin{itemize}\item No exception: skip the handler.\item Exception: jump to the first matching handler.\item Statements after the failing operation are skipped.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{A failing statement skips the rest of \texttt{try}}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+try:
+    score = int("oops")
+    print("converted")
+except ValueError:
+    print("invalid score")
+
+print("afterwards")
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item Predict the printed lines.\item Why does \texttt{"converted"} never appear?\end{itemize}
+\begin{activity}\small Ask students to trace the control flow before revealing the answer.\end{activity}
+\end{frame}
+\begin{frame}[fragile]{Output and reasoning}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+invalid score
+afterwards
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item \texttt{int("oops")} raises \texttt{ValueError}.\item Control jumps straight to \texttt{except ValueError}.\item The program continues after the handled exception.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{What if the exception type does not match?}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+try:
+    result = 10 / 0
+except ValueError:
+    print("Bad numeric text")
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item The error is \textbf{ZeroDivisionError}, not \texttt{ValueError}.\item No matching handler exists here.\item The exception propagates to the caller.\end{itemize}
+\vspace{0.06in}\begin{keyidea}\small Catching one exception does not automatically catch every exception.\end{keyidea}
+\end{frame}
+\begin{frame}[fragile]{Handle several errors differently}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+try:
+    number = int(raw)
+    result = 100 / number
+except ValueError:
+    print("Expected an integer")
+except ZeroDivisionError:
+    print("Cannot divide by zero")
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item One operation may fail in different ways.\item Each branch gives a response appropriate to the failure.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Handler order matters}
+\begin{center}\lectureimage{specific-first-handlers.png}\end{center}
+\small\begin{itemize}\item Python checks handlers from top to bottom.\item The \textbf{first} matching handler runs.\item Put specific exception types before a broad parent type.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Combine types when the response is identical}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+try:
+    answer = 100 / int(raw)
+except (ValueError, ZeroDivisionError):
+    print("Cannot compute an answer")
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item One handler can catch a \textbf{tuple} of exception types.\item Use separate branches if users need distinct messages.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{A generic catch: \texttt{Exception}}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+try:
+    process_record(raw)
+except Exception as exc:
+    print("Something went wrong:", exc)
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item \texttt{Exception} catches most ordinary application errors.\item This is sometimes useful at the program boundary.\item Inside a helper, it can hide programming bugs.\end{itemize}
+\vspace{0.06in}\begin{keyidea}\small Prefer the narrowest exception that you actually know how to handle.\end{keyidea}
+\end{frame}
+\begin{frame}[fragile]{Why not just write bare \texttt{except:}?}
+\begin{itemize}\item \texttt{except:} also catches exceptions such as \texttt{KeyboardInterrupt} and \texttt{SystemExit}.\item It may stop a user from interrupting a program normally.\item \texttt{except Exception:} is narrower, but still broad.\item Often the correct choice is a specific type such as \texttt{ValueError} or \texttt{OSError}.\end{itemize}
+\vspace{0.06in}\begin{keyidea}\small Do not silently swallow all failures with \texttt{except: pass}.\end{keyidea}
+\end{frame}
+\begin{frame}[fragile]{Capture the exception message}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+try:
+    value = int("four")
+except ValueError as exc:
+    print("Conversion failed:", exc)
+    print(type(exc).__name__)
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item \texttt{as exc} binds the \textbf{exception object}.\item \texttt{str(exc)} gives a readable message.\item The type and message can help explain or log the failure.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Keep the \texttt{try} block small}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+try:
+    count = int(raw_count)
+except ValueError:
+    print("Invalid count")
+else:
+    print("Count is", count)
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item Catch only failures you expect from the relevant operation.\item \texttt{else} executes only if the \texttt{try} block completed without an exception.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Cleanup: \texttt{finally}, and why \texttt{with} still matters}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\scriptsize]
+try:
+    print("start")
+    value = int(raw)
+finally:
+    print("cleanup step")
+
+# For files, prefer:
+with open("scores.txt") as f:
+    text = f.read()
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item \texttt{finally} runs when leaving \texttt{try} (including exceptional exits).\item Use \texttt{with} for files: it manages closing them.\item Do not replace \texttt{with open(...)} with manual close logic.\end{itemize}
+\end{frame}
+\sectionframe{Part 2: Propagation and \texttt{raise}}
+\begin{frame}[fragile]{An exception travels up the call stack}
+\begin{center}\lectureimage{stack-unwinding.png}\end{center}
+\small\begin{itemize}\item \texttt{parse\_score()} can raise.\item \texttt{load\_scores()} can leave that exception unhandled.\item \texttt{main()} can catch it and decide what to tell the user.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Propagation needs no special syntax}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+def parse_number(raw: str) -> int:
+    return int(raw)
+
+def double(raw: str) -> int:
+    number = parse_number(raw)
+    return number * 2
+
+double("oops")  # ValueError propagates
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item No \texttt{except} in either helper.\item The caller receives the raised exception automatically.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Handle at the right boundary}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\scriptsize]
+def parse_number(raw: str) -> int:
+    return int(raw)
+
+def main() -> None:
+    raw = input("Number: ")
+    try:
+        print(parse_number(raw))
+    except ValueError:
+        print("Please enter a valid number")
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item Helpers report failure through exceptions.\item The user-facing \texttt{main()} chooses the friendly message.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Raise a problem deliberately}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+def set_age(age: int) -> None:
+    if age < 0:
+        raise ValueError("age cannot be negative")
+    print("Age accepted:", age)
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item Use \texttt{raise ExceptionType("message")}.\item Code after \texttt{raise} does not run on that path.\item The caller may catch the exception or let it propagate.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{When is \texttt{None} better than an exception?}
+\begin{center}\lectureimage{return-vs-raise.png}\end{center}
+\small\begin{itemize}\item \texttt{None} can mean an ordinary, expected absence.\item An exception can represent an invalid input that violates a function contract.\item Be consistent: document what callers should expect.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{The difference between \texttt{raise} and \texttt{raise exc}}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+try:
+    parse_record(line)
+except ValueError:
+    log_bad_record(line)
+    raise  # re-raise the same active exception
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item Bare \texttt{raise} inside an \texttt{except} re-raises the active exception.\item Use it when you record context but cannot recover.\item \texttt{raise exc} also raises it, but can alter traceback presentation.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Add context without hiding the original cause}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+try:
+    score = int(raw_score)
+except ValueError as exc:
+    raise ValueError("score must be an integer") from exc
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item \texttt{raise ... from exc} chains exceptions.\item The message gets more specific to your application.\item The original error remains available as the cause.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Exception chaining, visualized}
+\begin{center}\lectureimage{exception-chaining.png}\end{center}
+\small\begin{itemize}\item Low-level failure: invalid integer.\item Higher-level failure: invalid score record.\item Both explanations can appear in the traceback.\end{itemize}
+\end{frame}
+\sectionframe{Part 3: Custom Exceptions}
+\begin{frame}[fragile]{Why invent an exception type?}
+\begin{itemize}\item \texttt{ValueError} tells us a value is unacceptable.\item But applications have specific problems: a malformed student-score record, for example.\item A custom exception lets callers catch \textbf{that kind of failure} separately.\item Start with a simple subclass of an existing built-in exception.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Defining a custom exception is simple}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+class MalformedScoreError(ValueError):
+    """A student score record is invalid."""
+    pass
+
+raise MalformedScoreError("expected name,score")
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item Subclassing \texttt{ValueError} means general \texttt{ValueError} handlers still work.\item The base class already stores the message; no custom \texttt{\_\_init\_\_} needed.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Exception types form a family tree}
+\begin{center}\lectureimage{exception-family.png}\end{center}
+\small\begin{itemize}\item Built-in exceptions inherit from common parent classes.\item \texttt{MalformedScoreError} is also a \texttt{ValueError}.\item Use specific handler first if both are present.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{A parser with an explicit contract}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\scriptsize]
+def parse_score(line: str) -> tuple[str, int]:
+    parts = line.strip().split(",")
+    if len(parts) != 2:
+        raise MalformedScoreError("expected name,score")
+    name, raw = parts
+    try:
+        score = int(raw)
+    except ValueError as exc:
+        raise MalformedScoreError("bad integer") from exc
+    if not 0 <= score <= 100:
+        raise MalformedScoreError("score out of range")
+    return name, score
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item Valid input returns a tuple. Invalid input raises.\item No silent fallback or magic number is returned.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{The caller handles the useful categories}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+try:
+    with open(filename, encoding="utf-8") as f:
+        records = [parse_score(line) for line in f]
+except OSError as exc:
+    print("Cannot read file:", exc)
+except MalformedScoreError as exc:
+    print("Bad score record:", exc)
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item I/O failures and malformed content are \textbf{different categories}.\item Neither exception needs to be caught inside \texttt{parse\_score()}.\end{itemize}
+\end{frame}
+\sectionframe{Part 4: Testing Exceptions}
+\begin{frame}[fragile]{Two forms of \texttt{assertRaises}}
+\begin{center}\lectureimage{assert-raises-two-forms.png}\end{center}
+\small\begin{itemize}\item Function-call form: pass the function object and arguments.\item Context-manager form: put the failing call in the \texttt{with} body.\item Both pass only when the specified exception is raised.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Syntax A: function-call form}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+import unittest
+
+class ScoreTests(unittest.TestCase):
+    def test_bad_score(self):
+        self.assertRaises(
+            MalformedScoreError, parse_score, "Ada,nope"
+        )
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item Do \textbf{not} call \texttt{parse\_score(...)} before passing it.\item The test framework calls the function for you.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Syntax B: context-manager form}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+class ScoreTests(unittest.TestCase):
+    def test_bad_range(self):
+        with self.assertRaises(MalformedScoreError):
+            parse_score("Ada,150")
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item Best when the operation needs several lines of setup.\item Only place the expected failing statement inside the context.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Check the message too}
+\begin{block}{Python / sample output}
+\begin{Verbatim}[fontsize=\footnotesize]
+with self.assertRaisesRegex(
+    MalformedScoreError, "out of range"
+):
+    parse_score("Ada,150")
+
+with self.assertRaises(MalformedScoreError) as ctx:
+    parse_score("Ada,150")
+self.assertIn("range", str(ctx.exception))
+\end{Verbatim}
+\end{block}
+\small\begin{itemize}\item \texttt{assertRaisesRegex} checks exception type and message.\item \texttt{as ctx} exposes the captured exception object.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Common mistake: accidentally call it first}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}\begin{block}{Left}
+\begin{Verbatim}[fontsize=\footnotesize]
+WRONG
+self.assertRaises(ValueError, int("oops"))
+\end{Verbatim}
+\end{block}\end{column}
+\begin{column}{0.48\textwidth}\begin{block}{Right}
+\begin{Verbatim}[fontsize=\footnotesize]
+RIGHT
+self.assertRaises(ValueError, int, "oops")
+
+with self.assertRaises(ValueError):
+    int("oops")
+\end{Verbatim}
+\end{block}\end{column}
+\end{columns}
+\vspace{0.06in}\begin{keyidea}\small The exception must be raised inside the test assertion, not before it.\end{keyidea}
+\end{frame}
+\begin{frame}[fragile]{Test the success path AND failure paths}
+\begin{itemize}\item Valid: \texttt{parse\_score("Ada,87")} returns \texttt{("Ada", 87)}.\item Wrong shape: \texttt{"Ada"} raises \texttt{MalformedScoreError}.\item Wrong type: \texttt{"Ada,abc"} raises \texttt{MalformedScoreError}.\item Out of range: \texttt{"Ada,150"} raises \texttt{MalformedScoreError}.\item Use \texttt{assertEqual} for normal returns and \texttt{assertRaises} for exceptions.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Mini-capstone: robust score importer}
+\begin{center}\lectureimage{score-validation-pipeline.png}\end{center}
+\small\begin{itemize}\item A CSV-style file contains lines like \texttt{"Ada,87"}.\item A malformed line should produce a \textbf{specific} error.\item The entry-point prints a useful message and exits cleanly.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Walkthrough: assign responsibilities}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.31\textwidth}\begin{block}{Parser}\small \texttt{parse\_score(line)}\\- validates one record\\- raises \texttt{MalformedScoreError}\end{block}\end{column}
+\begin{column}{0.31\textwidth}\begin{block}{Loader}\small \texttt{load\_scores(path)}\\- opens and reads records\\- lets I/O errors propagate\end{block}\end{column}
+\begin{column}{0.31\textwidth}\begin{block}{Entry point}\small \texttt{main()}\\- catches errors\\- prints user-facing feedback\end{block}\end{column}
+\end{columns}
+\vspace{0.06in}\begin{keyidea}\small Catch errors at the layer that can make a meaningful decision.\end{keyidea}
+\end{frame}
+\begin{frame}[fragile]{Your turn: choose a response}
+\begin{activity}\small For each failure, should the helper return a value, raise an exception, or catch one?\\1. User enters "42" for a score.\\2. Score record contains "Ada,purple".\\3. File does not exist.\\4. A helper logs an error but cannot repair it.\end{activity}
+\small\begin{itemize}\item Pair up: justify each choice using the function contract.\end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Takeaways / exit ticket}
+\begin{itemize}\item \texttt{try} / \texttt{except} handles \textbf{expected} exceptions; prefer specific types.\item \texttt{as exc} gives the raised object and its message.\item Uncaught exceptions propagate through function calls.\item \texttt{raise}, custom exception classes, and \texttt{raise ... from} communicate failures.\item Test failure behavior using \textbf{both} \texttt{assertRaises} \textbf{syntaxes}.\end{itemize}
+\vspace{0.06in}\begin{keyidea}\small Exit ticket: When would you let \texttt{ValueError} propagate instead of catching it?\end{keyidea}
+\end{frame}
 \end{document}
